@@ -1,5 +1,6 @@
 import numpy as np
 import metric
+import util
 class Generator:
    def __init__(self, database):
       self._database = database
@@ -21,28 +22,27 @@ class Generator:
          curr = db[0]
       else:
          curr = initial_state
+      weights = np.zeros(len(db), float)
       while counter < T/T0:
          # Find best match
          state_end = dict()
          for var in self._database.vars():
             state_end[var] = curr[var][-1]
-         Ibest = -1
-         min_score = 1e7
          for i in range(0, len(db)):
             state_start = dict()
             for var in self._database.vars():
                state_start[var] = db[i][var][0]
-            curr_score = metric.Rmsd.compute(state_start, state_end)
-            if Ibest == -1 or curr_score < min_score:
-               Ibest = i
-               min_score = curr_score
+            weights[i] = 1.0/metric.Rmsd.compute(state_start, state_end)
             #print state_end, state_start, curr_score
          #print state_end, Ibest, min_score
 
+         # Do a weighted random choice of the weights
+         Inext = util.random_weighted(weights)
+
          indices = range(counter*T0, (counter+1) * T0)
          for var in self._database.vars():
-            trajectory[var][indices] = db[Ibest][var]
+            trajectory[var][indices] = db[Inext][var]
          counter = counter + 1
-         curr = db[Ibest]
+         curr = db[Inext]
 
       return trajectory
