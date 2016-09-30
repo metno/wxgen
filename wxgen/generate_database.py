@@ -11,7 +11,7 @@ ifilenames = sys.argv[1:-1]
 ofilename = sys.argv[-1]
 
 # Which variables to output
-vars = ["air_temperature_2m", "x_wind_10m"]
+vars = ["air_temperature_2m", "x_wind_10m", "y_wind_10m"]
 
 # Which gridpoints to averages across
 xrange = range(100, 130)

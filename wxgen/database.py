@@ -1,6 +1,9 @@
 import numpy as np
+from netCDF4 import Dataset as netcdf
+
 class Database:
    pass
+
 
 # Trajectories based on gaussian random walk
 class Random(Database):
@@ -27,21 +30,29 @@ class Random(Database):
          data[var] = np.cumsum(np.random.randn(T)*np.sqrt(self._variance))
       return data
 
+
 class Netcdf(Database):
    def __init__(self, filename):
       self._filename = filename
+      self._file = netcdf(self._filename)
+      self._data = self._file.variables["air_temperature_2m"]
 
    # Number of days
    def days(self):
-      pass
+      return self._file.dimensions["leadtime"].size
 
    # Number of trajectories
    def size(self):
-      pass
+      return self._num_members() * self._file.dimensions["date"].size
+
+   def _num_members(self):
+      return self._file.dimensions["member"].size
 
    def vars(self):
-      pass
+      return ["air_temperature_2m"]
 
    def get(self, index):
-      pass
+      d = index / self._num_members()
+      m = index % self._num_members()
+      return {"air_temperature_2m": self._data[d, :, m]}
 

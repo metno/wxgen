@@ -22,6 +22,8 @@ class Generator:
          curr = db[0]
       else:
          curr = initial_state
+      for var in curr:
+         curr[var] = np.zeros(1, float)+curr[var][0]
       weights = np.zeros(len(db), float)
       while counter < T/T0:
          # Find best match
