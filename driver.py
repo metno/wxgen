@@ -1,8 +1,9 @@
 import sys
 import matplotlib.pylab as mpl
-from database import *
+import database
 from trajectory import *
 from generator import *
+import verif
 
 if len(sys.argv) < 3:
    print "Weather generator"
@@ -18,15 +19,16 @@ N = int(sys.argv[1])
 T = int(sys.argv[2])
 #np.random.seed(1)
 
-database = Database("database.nc")
+db = database.Random()
 
-generator = Generator(database)
-#T = 50 # How long is the trajectory?
-#N = 10 # How many trajectories?
+generator = Generator(db)
 initial_state = {"T": 0+np.zeros(1, float)}
-trajectory = [generator.get(T, initial_state)["T"] for i in range(0, N)]
+trajectories = [generator.get(T, initial_state) for i in range(0, N)]
 
-for tr in trajectory:
-   mpl.plot(tr, 'k.-', lw=0.5)
+#for tr in trajectories:
+   #mpl.plot(tr["T"], 'k.-', lw=0.5)
    #mpl.plot(np.diff(tr))
+
+v = verif.Change()
+mpl.plot(np.linspace(0.5, T-0.5, T-1), v.compute(trajectories), 'k.-')
 mpl.show()
