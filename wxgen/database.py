@@ -1,8 +1,21 @@
 import numpy as np
+import util
 from netCDF4 import Dataset as netcdf
 
 class Database:
-   pass
+   # Returns the trajectory with the best metric
+   def get_min(self, target_state, metric):
+      weights = np.zeros(self.size(), float)
+      for i in range(0, self.size()):
+         curr = self.get(i)
+         state = dict()
+         for var in self.vars():
+            state[var] = curr[var][0]
+         weights[i] = 1.0/metric.compute(target_state, state)
+
+      # Do a weighted random choice of the weights
+      I = util.random_weighted(weights)
+      return self.get(I)
 
 
 # Trajectories based on gaussian random walk
@@ -35,7 +48,11 @@ class Netcdf(Database):
    def __init__(self, filename):
       self._filename = filename
       self._file = netcdf(self._filename)
-      self._data = self._file.variables["air_temperature_2m"]
+      self._data = dict()
+      vars = self._file.variables
+      self._vars = [var for var in vars if var not in ["date", "leadtime"]]
+      for var in self.vars():
+         self._data[var] = self._file.variables[var]
 
    # Number of days
    def days(self):
@@ -49,10 +66,14 @@ class Netcdf(Database):
       return self._file.dimensions["member"].size
 
    def vars(self):
-      return ["air_temperature_2m"]
+      return self._vars
 
+   #@profile
    def get(self, index):
       d = index / self._num_members()
       m = index % self._num_members()
-      return {"air_temperature_2m": self._data[d, :, m]}
+      values = dict()
+      for var in self.vars():
+         values[var] = self._data[var][d, :, m]
+      return values
 

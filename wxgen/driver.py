@@ -5,6 +5,7 @@ from trajectory import *
 from generator import *
 import verif
 
+#@profile
 def run(argv):
    if len(sys.argv) < 3:
       print "Weather generator"
@@ -37,7 +38,11 @@ def run(argv):
 
    generator = Generator(db)
    initial_state = {var: 280+np.zeros(1, float)}
-   trajectories = [generator.get(T, initial_state) for i in range(0, N)]
+   initial_state = {"air_temperature_2m": 280+np.zeros(1, float),
+                     "x_wind_10m": np.zeros(1, float),
+                     "y_wind_10m": np.zeros(1, float),
+                     "precipitation_amount": np.zeros(1, float)}
+   trajectories = generator.get(N, T, initial_state)
 
    for tr in trajectories:
       mpl.plot(tr[var], 'k.-', lw=0.5)
