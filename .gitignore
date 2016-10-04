@@ -5,3 +5,5 @@
 *.png
 *.jpg
 *.egg-info
+*.prof
+*.lprof
