@@ -36,7 +36,7 @@ for d in range(0, D):
       data = ifile.variables[var][:, 0, :, xrange, yrange]
       temp = np.mean(np.mean(data, axis=3), axis=2)
       for t in range(0, 10):
-         I = range(t*4, (t+1)*4)
+         I = range(t * 4, (t + 1) * 4)
          values[var][d, t, :] = np.mean(temp[I, :], axis=0)
    ifile.close()
 

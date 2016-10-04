@@ -7,6 +7,7 @@ import wxgen.trajectory
 import wxgen.generator
 import wxgen.verif
 import wxgen.output
+import wxgen.version
 
 #@profile
 def run(argv):
@@ -30,6 +31,8 @@ def run(argv):
    parser.add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    parser.add_argument('-o', type=str, default=None, help="Output filename", dest="output_filename")
    parser.add_argument('--seed', type=int, default=None, help="Random number seed")
+   parser.add_argument('--debug', help="Display debug information", action="store_true")
+   parser.add_argument('--version', action="version", version=wxgen.version.__version__)
 
    args = parser.parse_args()
 
@@ -37,9 +40,13 @@ def run(argv):
    if args.seed is not None:
       np.random.seed(args.seed)
    if args.db is None:
-      db = wxgen.database.Random(args.n, args.t, args.v)
+      # Don't use args.t as the segment length, because then you never get to join
+      # Don't use args.n as the number of segments, because then you never get to join
+      db = wxgen.database.Random(100, 10, args.v)
    else:
       db = wxgen.database.Netcdf(args.db, V=args.v)
+   if args.debug:
+      db.info()
 
    # Generate trajectories
    generator = wxgen.generator.Generator(db)

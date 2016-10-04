@@ -6,6 +6,12 @@ except:
    from scipy.io.netcdf import netcdf_file as netcdf
 
 class Database(object):
+   def info(self):
+      print "Database information:"
+      print "  Length of segments: %d" % self.days()
+      print "  Number of segments: %d" % self.size()
+      print "  Number of variables: %d" % self.num_vars()
+
    def get(self, index):
       values = self._data[:,:,index]
       return values
