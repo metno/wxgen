@@ -19,6 +19,7 @@ class Database(object):
    # Returns a (weighted) random segment
    #@profile
    def get_random(self, target_state, metric):
+      debug = False
       weights = metric.compute(target_state, self._data[0,:,:])
 
       # Flip the metric if it is negative oriented
@@ -31,6 +32,10 @@ class Database(object):
 
       # Do a weighted random choice of the weights
       I = util.random_weighted(weights)
+      if debug:
+         print "Data: ", self._data[0,:,I]
+         print "Weight: ", weights[I]
+         print "Max weight: ", np.max(weights)
       return self.get(I)
 
 

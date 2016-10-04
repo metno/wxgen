@@ -67,8 +67,9 @@ class Exp(Metric):
    def compute(self, state1, state2):
       F = np.resize(self._factors, state2.shape)
       if state1.shape != state2.shape:
-         total = np.sum(np.exp(-F*abs(np.resize(state1, state2.shape) - state2)), axis=0)
+         s1 = np.reshape(np.repeat(state1, state2.shape[1]), state2.shape)
+         total = np.exp(np.sum(-F*abs(s1 - state2), axis=0))
       else:
-         total = np.sum(np.exp(-F*abs(state1 - state2)))
+         total = np.exp(np.sum(-F*abs(state1 - state2)))
       return total
 

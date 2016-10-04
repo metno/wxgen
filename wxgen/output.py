@@ -50,7 +50,7 @@ class Timeseries(Output):
             mpl.plot(x, tr[:,v], 'k.-', lw=0.5)
 
             # Plot the starting state of each segment
-            I = range(0, T-1, Tsegment-1)
+            I = range(0, T, Tsegment-1)
             mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
 
          mpl.xlabel("Time (days)")
