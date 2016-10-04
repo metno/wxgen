@@ -44,4 +44,9 @@ Example
 
 .. code-block:: bash
 
-   wxgen 10 100
+   wxgen 10 30
+
+.. image:: examples/example.gif
+    :alt: Example plot
+    :width: 400
+    :align: center

@@ -46,6 +46,10 @@ def run(argv):
       mpl.plot(tr[:,v], 'k.-', lw=0.5)
       #mpl.plot(np.diff(tr))
       #print tr[var]
+   mpl.xlabel("Time (days)")
+   mpl.ylabel("Value")
+   mpl.grid()
+   mpl.xlim([0, T])
 
    v = verif.Change()
    #mpl.plot(np.linspace(0.5, T-0.5, T-1), v.compute(trajectories), 'k.-')
