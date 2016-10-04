@@ -20,3 +20,44 @@ def error(message):
 
 def warning(message):
    print "\033[1;33mWarning: " + message + "\033[0m"
+
+
+# allowable formats:
+# num
+# num1,num2,num3
+# start:end
+# start:step:end
+def parseNumbers(numbers, isDate=False):
+   # Check if valid string
+   if(any(char not in set('-01234567890.:,') for char in numbers)):
+      error("Could not translate '" + numbers + "' into numbers")
+
+   values = list()
+   commaLists = numbers.split(',')
+   for commaList in commaLists:
+      colonList = commaList.split(':')
+      if(len(colonList) == 1):
+         values.append(float(colonList[0]))
+      elif(len(colonList) <= 3):
+         start = float(colonList[0])
+         step = 1
+         if(len(colonList) == 3):
+            step = float(colonList[1])
+         stepSign = step / abs(step)
+         # arange does not include the end point:
+         end = float(colonList[-1]) + stepSign * 0.0001
+         if(isDate):
+            date = min(start, end)
+            curr = list()
+            while date <= max(start, end):
+               curr.append(date)
+               date = getDate(date, step)
+            values = values + list(curr)
+         else:
+            values = values + list(np.arange(start, end, step))
+      else:
+         error("Could not translate '" + numbers + "' into numbers")
+      if(isDate):
+         for i in range(0, len(values)):
+            values[i] = int(values[i])
+   return values

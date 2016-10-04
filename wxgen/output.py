@@ -1,6 +1,24 @@
-import numpy as np
+import inspect
 import matplotlib.pylab as mpl
+import numpy as np
+import sys
 import wxgen.util
+
+
+# Returns a list of all metric classes
+def get_all():
+   temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+   return temp
+
+
+# Returns a metric object of a class with the given name
+def get(name):
+   outputs = get_all()
+   m = None
+   for mm in outputs:
+      if(name == mm[0].lower()):
+         m = mm[1]
+   return m
 
 
 class Output(object):
@@ -70,3 +88,31 @@ class Text(Output):
          if n < N-1:
             fid.write("\n")
       fid.close()
+
+
+class Veriffication(Output):
+   def plot(self, trajectories):
+      N = len(trajectories)
+      T = trajectories[0].shape[0]
+      V = trajectories[0].shape[1]
+      Tsegment = self._db.days()
+      vars = self._db.vars()
+      changes = np.zeros(Tsegment, float)
+      counter = np.zeros(Tsegment, int)
+      for v in range(0, V):
+         mpl.subplot(V, 1, v+1)
+         mpl.title(vars[v])
+         x = np.linspace(0, Tsegment-1, Tsegment)
+         for t in range(0, T-1):
+            ar = np.array([abs(trajectories[i][t,v] - trajectories[i][t+1,v]) for i in range(0, N)])
+            changes[t % Tsegment] = changes[t % Tsegment] + np.mean(ar)
+            counter[t % Tsegment] = counter[t % Tsegment] + 1
+         mpl.plot(x, changes / counter, 'k-')
+         mpl.xlabel("Day")
+         mpl.ylabel("Average absolute change to next day")
+         mpl.grid()
+         mpl.xlim([0, Tsegment-1])
+         ylim = mpl.ylim()
+         mpl.ylim([0, ylim[1]])
+      self._finish_plot()
+
