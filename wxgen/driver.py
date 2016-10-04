@@ -62,8 +62,10 @@ def run(argv):
       output = wxgen.output.Timeseries(db, args.output_filename)
    elif args.type == "db":
       output = wxgen.output.Database(db, args.output_filename)
-   else:
+   elif args.type == "text":
       output = wxgen.output.Text(db, args.output_filename)
+   else:
+      wxgen.util.error("Could not parse --type")
    output.plot(trajectories)
 
 
