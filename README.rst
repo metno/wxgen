@@ -1,6 +1,11 @@
 Large-scale weather generator
 =============================
 
+.. image:: https://travis-ci.org/tnipen/wxgen.svg?branch=master
+  :target: https://travis-ci.org/tnipen/wxgen
+.. image:: https://coveralls.io/repos/tnipen/wxgen/badge.svg?branch=master&service=github
+  :target: https://coveralls.io/github/tnipen/wxgen?branch=master
+
 This python package generates arbitrarily long time-series of weather data, by sampling from a database of shorter time-series.
 
 Database
