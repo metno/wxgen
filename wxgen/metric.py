@@ -15,6 +15,8 @@ def get(name):
    for mm in metrics:
       if(name == mm[0].lower()):
          m = mm[1]()
+   if m is None:
+      wxgen.util.error("Cannot find metric called '%s'" % name)
    return m
 
 
@@ -57,15 +59,15 @@ class Weighted(Metric):
 # The score is exp(-factor * diff)
 class Exp(Metric):
    _orientation = 1
-   def __init__(self, factor):
-      self._factor = factor
+   def __init__(self, factors=None):
+      self._factors = factors
 
-   @staticmethod
    #@profile
-   def compute(state1, state2):
+   def compute(self, state1, state2):
+      F = np.resize(self._factors, state2.shape)
       if state1.shape != state2.shape:
-         total = np.sum(np.exp(-self._factor*(np.resize(state1, state2.shape) - state2)), axis=0)
+         total = np.sum(np.exp(-F*abs(np.resize(state1, state2.shape) - state2)), axis=0)
       else:
-         total = np.sum(np.exp(-self._factor*(state1 - state2)))
+         total = np.sum(np.exp(-F*abs(state1 - state2)))
       return total
 

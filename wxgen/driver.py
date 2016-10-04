@@ -28,13 +28,15 @@ def run(argv):
    parser.add_argument('-n', type=int, help="Number of trajectories", required=True)
    parser.add_argument('-t', type=int, help="Length of trajectory", required=True)
    parser.add_argument('-v', type=int, help="Number of variables", required=False)
-   parser.add_argument('--type', type=str, default="plot", help="Output type (text or plot)")
+   parser.add_argument('--type', type=str, default="timeseries", help="Output type (text or plot)")
    parser.add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    parser.add_argument('-o', type=str, default=None, help="Output filename", dest="output_filename")
    parser.add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
    parser.add_argument('--seed', type=int, default=None, help="Random number seed")
    parser.add_argument('--debug', help="Display debug information", action="store_true")
    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
+   parser.add_argument('--weights', type=str)
+   parser.add_argument('--initial', type=str, default=None, help="Initial state")
 
    args = parser.parse_args()
 
@@ -49,23 +51,30 @@ def run(argv):
       db = wxgen.database.Netcdf(args.db, V=args.v)
    if args.debug:
       db.info()
+   V = db.num_vars()
+
+   if args.initial is None:
+      initial_state = np.zeros(V, float)
+   else:
+      initial_state = np.array(wxgen.util.parse_numbers(args.initial))
+      if len(initial_state) != V:
+         wxgen.util.error("Initial state must match the number of variables (%d)" % (V))
 
    # Generate trajectories
-   metric = wxgen.metric.get(args.m)
+   if args.weights is not None:
+      weights = np.array(wxgen.util.parse_numbers(args.weights))
+      if args.m == "weighted":
+         metric = wxgen.metric.Weighted(weights)
+      elif args.m == "exp":
+         metric = wxgen.metric.Exp(weights)
+   else:
+      metric = wxgen.metric.get(args.m)
+
    generator = wxgen.generator.Generator(db, metric)
-   initial_state = np.array([270, 0, 0, 0])
-   initial_state = np.array([270])
    trajectories = generator.get(args.n, args.t, initial_state)
 
    # Create output
-   if args.type == "plot":
-      output = wxgen.output.Timeseries(db, args.output_filename)
-   elif args.type == "db":
-      output = wxgen.output.Database(db, args.output_filename)
-   elif args.type == "text":
-      output = wxgen.output.Text(db, args.output_filename)
-   else:
-      wxgen.util.error("Could not parse --type")
+   output = wxgen.output.get(args.type)(db, args.output_filename)
    output.plot(trajectories)
 
 

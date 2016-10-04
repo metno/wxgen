@@ -18,6 +18,8 @@ def get(name):
    for mm in outputs:
       if(name == mm[0].lower()):
          m = mm[1]
+   if m is None:
+      wxgen.util.error("Cannot find output called '%s'" % name)
    return m
 
 
@@ -90,7 +92,7 @@ class Text(Output):
       fid.close()
 
 
-class Veriffication(Output):
+class Verification(Output):
    def plot(self, trajectories):
       N = len(trajectories)
       T = trajectories[0].shape[0]

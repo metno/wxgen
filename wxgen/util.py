@@ -27,7 +27,7 @@ def warning(message):
 # num1,num2,num3
 # start:end
 # start:step:end
-def parseNumbers(numbers, isDate=False):
+def parse_numbers(numbers, isDate=False):
    # Check if valid string
    if(any(char not in set('-01234567890.:,') for char in numbers)):
       error("Could not translate '" + numbers + "' into numbers")
