@@ -6,14 +6,8 @@ Large-scale weather generator
 .. image:: https://coveralls.io/repos/tnipen/wxgen/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/tnipen/wxgen?branch=master
 
-This python package generates arbitrarily long time-series of weather data, by sampling from a database of shorter time-series.
+``wxgen`` is a command-line tool that generates arbitrarily long trajectories (time-series) of weather data. It samples a database of shorter time-series and joins these together to form long trajectories. The database contains short trajectories produced by, for example, numerical weather prediction models.
 
-Database
---------
-The database contains  N trajectories  with T days in each trajectory and V number of atmospheric variables.
-
-Method
-------
 Longer trajectories are created by concatinating the shorter trajectories from the database. This is done by matching the end state of one trajectory with the beginning state of another. The matching is done using a specified metric, such as the sum of the square differences  between states (with some kind of normalization strategy  as each atmospheric variable has different variances).
 
 Installation
