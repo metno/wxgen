@@ -17,13 +17,15 @@ class Output(object):
 class Timeseries(Output):
    def plot(self, trajectories):
       T = trajectories[0].shape[0]
-      v = 0
-      for tr in trajectories:
-         mpl.plot(tr[:,v], 'k.-', lw=0.5)
-      mpl.xlabel("Time (days)")
-      mpl.ylabel("Value")
-      mpl.grid()
-      mpl.xlim([0, T])
+      V = trajectories[0].shape[1]
+      for v in range(0, V):
+         mpl.subplot(V,1,v+1)
+         for tr in trajectories:
+            mpl.plot(tr[:,v], 'k.-', lw=0.5)
+         mpl.xlabel("Time (days)")
+         mpl.ylabel("Value")
+         mpl.grid()
+         mpl.xlim([0, T])
       self._finish_plot()
 
 class Text(Output):

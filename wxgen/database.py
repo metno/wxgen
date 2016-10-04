@@ -30,6 +30,8 @@ class Random(Database):
    def __init__(self, N, T, V, variance=1):
       self._N = N
       self._T = T
+      if V == None:
+         V = 1
       self._V = V
       self._variance = variance
       self._data = np.zeros([T, V, N], float)
@@ -52,12 +54,13 @@ class Random(Database):
 
 
 class Netcdf(Database):
-   def __init__(self, filename):
+   def __init__(self, filename, V=None):
       self._filename = filename
       self._file = netcdf(self._filename)
       vars = self._file.variables
       self._vars = [var for var in vars if var not in ["date", "leadtime"]]
-      self._vars = ["air_temperature_2m"]
+      if V is not None:
+         self._vars = self._vars[0:V]
       self._size = self._num_members() * self._file.dimensions["date"].size
       self._num_vars = len(self._vars)
 
