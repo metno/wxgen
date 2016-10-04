@@ -30,6 +30,7 @@ class Generator(object):
             for var in self._database.vars():
                trajectory[indices, :] = segment_curr
             counter = counter + 1
+            state_curr = segment_curr[-1, :]
 
          trajectories.append(trajectory)
       return trajectories

@@ -50,15 +50,17 @@ def run(argv):
 
    # Generate trajectories
    generator = wxgen.generator.Generator(db)
-   initial_state = np.array([275, 0, 0, 0])
-   initial_state = np.array([275])
+   initial_state = np.array([270, 0, 0, 0])
+   initial_state = np.array([270])
    trajectories = generator.get(args.n, args.t, initial_state)
 
    # Create output
    if args.type == "plot":
-      output = wxgen.output.Timeseries(args.output_filename)
+      output = wxgen.output.Timeseries(db, args.output_filename)
+   elif args.type == "db":
+      output = wxgen.output.Database(db, args.output_filename)
    else:
-      output = wxgen.output.Text(args.output_filename)
+      output = wxgen.output.Text(db, args.output_filename)
    output.plot(trajectories)
 
 
