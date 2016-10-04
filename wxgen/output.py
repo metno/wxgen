@@ -96,29 +96,37 @@ class Text(Output):
 
 
 class Verification(Output):
+   _pool = True
    def plot(self, trajectories):
       N = len(trajectories)
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
       Tsegment = self._db.days()
       vars = self._db.vars()
-      changes = np.zeros(Tsegment-1, float)
-      counter = np.zeros(Tsegment-1, int)
+      if self._pool:
+         size = Tsegment-1
+         x = np.linspace(0, Tsegment-2, Tsegment-1)
+      else:
+         size = T
+         x = np.linspace(0, T-1, T)
+      changes = np.zeros(size, float)
+      counter = np.zeros(size, int)
       for v in range(0, V):
          mpl.subplot(V, 1, v+1)
          mpl.title(vars[v])
-         x = np.linspace(0, Tsegment-2, Tsegment-1)
          for t in range(0, T-1):
             ar = np.array([abs(trajectories[i][t,v] - trajectories[i][t+1,v]) for i in range(0, N)])
-            I = t % (Tsegment-1)  # use this to pool similar leadtimes
-            I = t
+            if self._pool:
+               I = t % (Tsegment-1)  # use this to pool similar leadtimes
+            else:
+               I = t
             changes[I] = changes[I] + np.mean(ar)
             counter[I] = counter[I] + 1
          mpl.plot(x, changes / counter, 'k-')
          mpl.xlabel("Day")
          mpl.ylabel("Average absolute change to next day")
          mpl.grid()
-         mpl.xlim([0, Tsegment-2])
+         mpl.xlim([0, size])
          ylim = mpl.ylim()
          mpl.ylim([0, ylim[1]])
       self._finish_plot()
