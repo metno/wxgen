@@ -49,7 +49,7 @@ Example
 
 .. code-block:: bash
 
-   wxgen 10 30
+   wxgen -n 10 -t 30
 
 .. image:: examples/example.gif
     :alt: Example plot

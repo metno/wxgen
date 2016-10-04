@@ -1,6 +1,9 @@
 import numpy as np
 import util
-from netCDF4 import Dataset as netcdf
+try:
+   from netCDF4 import Dataset as netcdf
+except:
+   from scipy.io.netcdf import netcdf_file as netcdf
 
 class Database(object):
    def get(self, index):
