@@ -20,10 +20,10 @@ def run(argv):
 
    N = int(sys.argv[1])
    T = int(sys.argv[2])
-   #np.random.seed(1)
+   np.random.seed(1)
    if len(sys.argv) == 3:
-      db = database.Random()
-
+      V = 1
+      db = database.Random(N, T, V)
    else:
       db_filename = sys.argv[3]
       db = database.Netcdf(db_filename)
@@ -37,15 +37,13 @@ def run(argv):
       sys.exit()
 
    generator = Generator(db)
-   initial_state = {var: 280+np.zeros(1, float)}
-   initial_state = {"air_temperature_2m": 280+np.zeros(1, float),
-                     "x_wind_10m": np.zeros(1, float),
-                     "y_wind_10m": np.zeros(1, float),
-                     "precipitation_amount": np.zeros(1, float)}
+   initial_state = np.array([275, 0, 0, 0])
+   initial_state = np.array([275])
    trajectories = generator.get(N, T, initial_state)
 
+   v = 0
    for tr in trajectories:
-      mpl.plot(tr[var], 'k.-', lw=0.5)
+      mpl.plot(tr[:,v], 'k.-', lw=0.5)
       #mpl.plot(np.diff(tr))
       #print tr[var]
 

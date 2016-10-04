@@ -1,6 +1,6 @@
 import numpy as np
-import metric
-import util
+import wxgen.metric
+import wxgen.util
 class Generator:
    def __init__(self, database):
       self._database = database
@@ -9,35 +9,26 @@ class Generator:
    def get(self, N, T, initial_state=None):
       # Initialize
       trajectories = list()
+      V = self._database.num_vars()
       for n in range(0, N):
-         trajectory = dict()
-         for var in self._database.vars():
-            trajectory[var] = np.zeros(T, float)
+         trajectory = np.zeros([T, V], float)
 
          T0 = self._database.days()
          assert(T % T0 == 0)
 
-         db = [self._database.get(i) for i in range(0, self._database.size())]
-
          # Assemble a trajectory by concatenating appropriate trajectories
          counter = 0
          if initial_state is None:
-            curr = db[0]
+            state_curr = self._database.get(0)[0,:]
          else:
-            curr = initial_state
-         for var in curr:
-            curr[var] = np.zeros(1, float)+curr[var][0]
-         weights = np.zeros(len(db), float)
+            state_curr = initial_state
+
          while counter < T/T0:
-            # Find best match
-            state_end = dict()
-            for var in self._database.vars():
-               state_end[var] = curr[var][-1]
+            segment_curr = self._database.get_random(state_curr, wxgen.metric.Rmsd)
 
             indices = range(counter*T0, (counter+1) * T0)
-            curr = self._database.get_min(state_end, metric.Rmsd)
             for var in self._database.vars():
-               trajectory[var][indices] = curr[var]
+               trajectory[indices, :] = segment_curr
             counter = counter + 1
 
          trajectories.append(trajectory)

@@ -8,11 +8,12 @@ class Metric:
 
 class Rmsd(Metric):
    @staticmethod
+   #@profile
    def compute(state1, state2):
-      total = 0
-      for var in state1:
-         curr = (state1[var] - state2[var])**2
-         total = total + curr
+      if state1.shape != state2.shape:
+         total = np.sum(abs(np.resize(state1, state2.shape) - state2)**2, axis=0)
+      else:
+         total = np.sum(state1 - state2)**2
       return np.sqrt(total)
 
 class Weighted(Metric):
@@ -21,9 +22,16 @@ class Weighted(Metric):
       self._weights = weights
 
    def compute(state1, state2):
-      total = 0
-      for var in state1:
-         weight = self._weights[var]
-         curr = weight * (state1[var] - state2[var])**2
-         total = total + curr
+      total = np.sum(weights * (state1 - state2)**2)
       return np.sqrt(total)
+
+class Exp(Metric):
+   @staticmethod
+   #@profile
+   def compute(state1, state2):
+      if state1.shape != state2.shape:
+         total = np.sum(abs(np.resize(state1, state2.shape) - state2)**2, axis=0)
+      else:
+         total = np.sum(state1 - state2)**2
+      return np.sqrt(total)
+

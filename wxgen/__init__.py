@@ -1,9 +1,9 @@
 import sys
-import wxgen.driver as driver
+import wxgen.driver
 
 
 def main():
-   driver.run(sys.argv)
+   wxgen.driver.run(sys.argv)
 
 if __name__ == '__main__':
    main()
