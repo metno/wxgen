@@ -51,13 +51,12 @@ class Timeseries(Output):
 
             # Plot the starting state of each segment
             I = range(0, T-1, Tsegment-1)
-            mpl.plot(x[I], tr[I,v], 'ro')
+            mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
 
          mpl.xlabel("Time (days)")
          mpl.ylabel(vars[v])
          mpl.grid()
          mpl.xlim([0, T])
-         mpl.xticks(np.linspace(0, T, T / Tsegment+1))
       self._finish_plot()
 
 class Database(Output):
