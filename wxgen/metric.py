@@ -1,6 +1,7 @@
 import inspect
 import numpy as np
 import sys
+import wxgen.util
 
 # Returns a list of all metric classes
 def get_all():

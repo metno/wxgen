@@ -46,9 +46,13 @@ class Timeseries(Output):
          mpl.subplot(V,1,v+1)
          x = np.linspace(0, T-1, T)
          for tr in trajectories:
+            # Plot the trajectory
             mpl.plot(x, tr[:,v], 'k.-', lw=0.5)
-            I = range(0, T-1, Tsegment)
+
+            # Plot the starting state of each segment
+            I = range(0, T-1, Tsegment-1)
             mpl.plot(x[I], tr[I,v], 'ro')
+
          mpl.xlabel("Time (days)")
          mpl.ylabel(vars[v])
          mpl.grid()
@@ -99,21 +103,23 @@ class Verification(Output):
       V = trajectories[0].shape[1]
       Tsegment = self._db.days()
       vars = self._db.vars()
-      changes = np.zeros(Tsegment, float)
-      counter = np.zeros(Tsegment, int)
+      changes = np.zeros(Tsegment-1, float)
+      counter = np.zeros(Tsegment-1, int)
       for v in range(0, V):
          mpl.subplot(V, 1, v+1)
          mpl.title(vars[v])
-         x = np.linspace(0, Tsegment-1, Tsegment)
+         x = np.linspace(0, Tsegment-2, Tsegment-1)
          for t in range(0, T-1):
             ar = np.array([abs(trajectories[i][t,v] - trajectories[i][t+1,v]) for i in range(0, N)])
-            changes[t % Tsegment] = changes[t % Tsegment] + np.mean(ar)
-            counter[t % Tsegment] = counter[t % Tsegment] + 1
+            I = t % (Tsegment-1)  # use this to pool similar leadtimes
+            I = t
+            changes[I] = changes[I] + np.mean(ar)
+            counter[I] = counter[I] + 1
          mpl.plot(x, changes / counter, 'k-')
          mpl.xlabel("Day")
          mpl.ylabel("Average absolute change to next day")
          mpl.grid()
-         mpl.xlim([0, Tsegment-1])
+         mpl.xlim([0, Tsegment-2])
          ylim = mpl.ylim()
          mpl.ylim([0, ylim[1]])
       self._finish_plot()
