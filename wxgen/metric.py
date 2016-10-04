@@ -32,15 +32,24 @@ class Metric(object):
    def __init__(self):
       pass
 
+   def compute(self, state1, state2):
+      # Ensure states are the same size
+      if state1.shape != state2.shape:
+         state1 = self.resize(state1, state2.shape)
+      return self._compute(state1, state2)
+
+   @staticmethod
+   def resize(vec, size):
+      if vec.shape[0] == size[0] and len(vec.shape) == 1:
+         vec_resized = np.reshape(np.repeat(vec, size[1]), size)
+      return vec_resized
+
 # The score is diff ** 2
 class Rmsd(Metric):
    _orientation = -1
-   #@profile
-   def compute(self, state1, state2):
-      if state1.shape != state2.shape:
-         total = np.sum(abs(np.resize(state1, state2.shape) - state2)**2, axis=0)
-      else:
-         total = np.sum(state1 - state2)**2
+   def _compute(self, state1, state2):
+      assert(state1.shape == state2.shape)
+      total = np.sum(abs(state1 - state2)**2, axis=0)
       return np.sqrt(total)
 
 # THe score is (weights * diff)**2
@@ -50,11 +59,12 @@ class Weighted(Metric):
    def __init__(self, weights):
       self._weights = weights
 
-   def compute(self, state1, state2):
-      if state1.shape != state2.shape:
-         total = np.sum(np.resize(self._weights, state2.shape)*abs(np.resize(state1, state2.shape) - state2)**2, axis=0)
+   def _compute(self, state1, state2):
+      if self._weights is None:
+         weights = 1
       else:
-         total = np.sum(self._weights*(state1 - state2)**2)
+         weights = self.resize(self._weights, state2.shape)
+      total = np.sum(weights*abs(state1 - state2)**2, axis=0)
       return np.sqrt(total)
 
 # The score is exp(-factor * diff)
@@ -63,13 +73,11 @@ class Exp(Metric):
    def __init__(self, factors=None):
       self._factors = factors
 
-   #@profile
-   def compute(self, state1, state2):
-      F = np.resize(self._factors, state2.shape)
-      if state1.shape != state2.shape:
-         s1 = np.reshape(np.repeat(state1, state2.shape[1]), state2.shape)
-         total = np.exp(np.sum(-F*abs(s1 - state2), axis=0))
+   def _compute(self, state1, state2):
+      if self._factors is None:
+         factors = 1
       else:
-         total = np.exp(np.sum(-F*abs(state1 - state2)))
+         factors = self.resize(self._factors, state2.shape)
+      total = np.exp(np.sum(-factors*abs(state1 - state2), axis=0))
       return total
 
