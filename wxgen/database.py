@@ -10,8 +10,15 @@ class Database:
    # Returns a (weighted) random segment
    #@profile
    def get_random(self, target_state, metric):
-      weights = np.zeros(self.size(), float)
-      weights = 1.0/metric.compute(target_state, self._data[0,:,:])
+      weights = metric.compute(target_state, self._data[0,:,:])
+
+      # Flip the metric if it is negative oriented
+      if metric._orientation == -1:
+         I0 = np.where(weights < 1e-3)[0]
+         I1 = np.where(weights >= 1e-3)[0]
+         # Ensure we do not get too high weights
+         weights[I1] = 1.0/weights[I1]
+         weights[I0] = 1e3
 
       # Do a weighted random choice of the weights
       I = util.random_weighted(weights)
