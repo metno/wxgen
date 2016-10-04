@@ -2,8 +2,9 @@ import numpy as np
 import wxgen.metric
 import wxgen.util
 class Generator(object):
-   def __init__(self, database):
+   def __init__(self, database, metric=wxgen.metric.Rmsd()):
       self._database = database
+      self._metric = metric
 
    #@profile
    def get(self, N, T, initial_state=None):
@@ -24,7 +25,7 @@ class Generator(object):
             state_curr = initial_state
 
          while counter < T/T0:
-            segment_curr = self._database.get_random(state_curr, wxgen.metric.Rmsd)
+            segment_curr = self._database.get_random(state_curr, self._metric)
 
             indices = range(counter*T0, (counter+1) * T0)
             for var in self._database.vars():

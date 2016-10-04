@@ -5,6 +5,7 @@ import matplotlib.pylab as mpl
 import wxgen.database
 import wxgen.trajectory
 import wxgen.generator
+import wxgen.metric
 import wxgen.verif
 import wxgen.output
 import wxgen.version
@@ -30,6 +31,7 @@ def run(argv):
    parser.add_argument('--type', type=str, default="plot", help="Output type (text or plot)")
    parser.add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    parser.add_argument('-o', type=str, default=None, help="Output filename", dest="output_filename")
+   parser.add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
    parser.add_argument('--seed', type=int, default=None, help="Random number seed")
    parser.add_argument('--debug', help="Display debug information", action="store_true")
    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
@@ -49,7 +51,8 @@ def run(argv):
       db.info()
 
    # Generate trajectories
-   generator = wxgen.generator.Generator(db)
+   metric = wxgen.metric.get(args.m)
+   generator = wxgen.generator.Generator(db, metric)
    initial_state = np.array([270, 0, 0, 0])
    initial_state = np.array([270])
    trajectories = generator.get(args.n, args.t, initial_state)
