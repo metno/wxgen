@@ -44,8 +44,12 @@ class Random(Database):
       self._V = V
       self._variance = variance
       self._data = np.zeros([T, V, N], float)
+
+      # Ensure that the signal has a constant variance over time
+      scale = 1./np.sqrt(np.linspace(1, T, T))
+
       for v in range(0, self._V):
-         self._data[:,v,:]  = np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
+         self._data[:,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
    # Number of days
    def days(self):
