@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 # Randomly selects an index in an array based on weights
 def random_weighted(weights):
@@ -10,3 +11,12 @@ def random_weighted(weights):
    else:
       I = temp[-1]
    return I
+
+
+def error(message):
+   print "\033[1;31mError: " + message + "\033[0m"
+   sys.exit(1)
+
+
+def warning(message):
+   print "\033[1;33mWarning: " + message + "\033[0m"

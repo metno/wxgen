@@ -1,7 +1,7 @@
 import numpy as np
 import wxgen.metric
 import wxgen.util
-class Generator:
+class Generator(object):
    def __init__(self, database):
       self._database = database
 

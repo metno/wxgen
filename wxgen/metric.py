@@ -2,7 +2,7 @@ import numpy as np
 # Must implement:
 #   Compute how close the two states are
 #   def compute(self, state1, state2):
-class Metric:
+class Metric(object):
    # +1 means higher values are better, -1 means lower values are better
    _orientation = 1
 

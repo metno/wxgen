@@ -2,7 +2,7 @@ import numpy as np
 import util
 from netCDF4 import Dataset as netcdf
 
-class Database:
+class Database(object):
    def get(self, index):
       values = self._data[:,:,index]
       return values

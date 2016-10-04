@@ -1,7 +1,7 @@
 import numpy as np
 
 # Compute verification statistics on trajectories
-class Verif:
+class Verif(object):
    pass
 
 class Change(Verif):
