@@ -76,7 +76,7 @@ class Random(Database):
    between different forecast variables.
    """
    def __init__(self, N, T, V, variance=1):
-      Database.__init__()
+      Database.__init__(self)
       self._N = N
       self._T = T
       if V == None:
