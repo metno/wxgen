@@ -78,7 +78,9 @@ def resize(vec, size):
    vec      A 1D or 2D numpy array
    size     A list of dimension sizes (e.g. [2,3])
    """
-   if vec.shape[0] == size[0] and len(vec.shape) == 1:
+   if not isinstance(vec, (np.ndarray)):
+      vec_resized = vec * np.ones(size)
+   elif vec.shape[0] == size[0] and len(vec.shape) == 1:
       vec_resized = np.reshape(np.repeat(vec, size[1]), size)
    elif vec.shape[0] == 1 and len(vec.shape) == 1:
       vec_resized = vec*np.ones(size)
