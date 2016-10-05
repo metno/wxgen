@@ -61,3 +61,16 @@ def parse_numbers(numbers, isDate=False):
          for i in range(0, len(values)):
             values[i] = int(values[i])
    return values
+
+
+def resize(vec, size):
+   if vec.shape[0] == size[0] and len(vec.shape) == 1:
+      vec_resized = np.reshape(np.repeat(vec, size[1]), size)
+   elif vec.shape[0] == 1 and len(vec.shape) == 1:
+      vec_resized = vec*np.ones(size)
+   else:
+      # Check that the output dims are multiples of input dims
+      assert(size[0] % vec.shape[0] == 0)
+      assert(size[1] % vec.shape[1] == 0)
+      vec_resized = np.tile(vec, (size[0] / vec.shape[0], size[1] / vec.shape[1]))
+   return vec_resized

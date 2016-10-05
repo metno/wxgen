@@ -35,14 +35,9 @@ class Metric(object):
    def compute(self, state1, state2):
       # Ensure states are the same size
       if state1.shape != state2.shape:
-         state1 = self.resize(state1, state2.shape)
+         state1 = wxgen.util.resize(state1, state2.shape)
       return self._compute(state1, state2)
 
-   @staticmethod
-   def resize(vec, size):
-      if vec.shape[0] == size[0] and len(vec.shape) == 1:
-         vec_resized = np.reshape(np.repeat(vec, size[1]), size)
-      return vec_resized
 
 # The score is diff ** 2
 class Rmsd(Metric):
@@ -63,7 +58,7 @@ class Weighted(Metric):
       if self._weights is None:
          weights = 1
       else:
-         weights = self.resize(self._weights, state2.shape)
+         weights = wxgen.util.resize(self._weights, state2.shape)
       total = np.sum(weights*abs(state1 - state2)**2, axis=0)
       return np.sqrt(total)
 
@@ -77,7 +72,7 @@ class Exp(Metric):
       if self._factors is None:
          factors = 1
       else:
-         factors = self.resize(self._factors, state2.shape)
+         factors = wxgen.util.resize(self._factors, state2.shape)
       total = np.exp(np.sum(-factors*abs(state1 - state2), axis=0))
       return total
 
