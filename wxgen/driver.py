@@ -63,8 +63,11 @@ def run(argv):
    # Generate trajectories
    if args.weights is not None:
       weights = np.array(wxgen.util.parse_numbers(args.weights))
-      if args.m == "weighted":
-         metric = wxgen.metric.Weighted(weights)
+      if len(weights) != db.num_vars():
+         wxgen.util.error("Weights must match the number of variables (%d)" % (V))
+
+      if args.m == "rmsd":
+         metric = wxgen.metric.Rmsd(weights)
       elif args.m == "exp":
          metric = wxgen.metric.Exp(weights)
    else:

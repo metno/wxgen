@@ -3,14 +3,14 @@ import numpy as np
 import sys
 import wxgen.util
 
-# Returns a list of all metric classes
 def get_all():
+   """ Returns a list of all metric classes """
    temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
    return temp
 
 
-# Returns a metric object of a class with the given name
 def get(name):
+   """ Returns a metric object of a class with the given name """
    metrics = get_all()
    m = None
    for mm in metrics:
@@ -21,11 +21,10 @@ def get(name):
    return m
 
 
-
-# Must implement:
-#   Compute how close the two states are
-#   def compute(self, state1, state2):
 class Metric(object):
+   """
+   Class to compute the similarity between two states
+   """
    # +1 means higher values are better, -1 means lower values are better
    _orientation = 1
 
@@ -33,46 +32,54 @@ class Metric(object):
       pass
 
    def compute(self, state1, state2):
-      # Ensure states are the same size
+      """
+      Compute the score
+
+      state1      A numpy array of dimensions (V,) or (V,N)
+      state2      A numpy array of dimensions (V,) or (V,N)
+
+      If state1 is (V,N), then state2 must also be (V,N). If state1 is (V,) and state2 (V,N),
+      then state1 ir repeated for all N.
+      """
       if state1.shape != state2.shape:
+         # Ensure states are the same size
          state1 = wxgen.util.resize(state1, state2.shape)
+
       return self._compute(state1, state2)
 
+   def _compute(self, state1, state2):
+      """
+      state1 and state2 are guaranteed to be the same size
+      """
+      raise NotImplementedError()
 
-# The score is diff ** 2
+
 class Rmsd(Metric):
+   """ Root mean squared difference of the states """
    _orientation = -1
-   def _compute(self, state1, state2):
-      assert(state1.shape == state2.shape)
-      total = np.sum(abs(state1 - state2)**2, axis=0)
-      return np.sqrt(total)
 
-# THe score is (weights * diff)**2
-class Weighted(Metric):
-   _orientation = -1
-   # weights: an array of variable-weights
-   def __init__(self, weights):
+   def __init__(self, weights=None):
+      """ weights    an array of variable-weights """
       self._weights = weights
+      if self._weights is None:
+         self._weights = 1
 
    def _compute(self, state1, state2):
-      if self._weights is None:
-         weights = 1
-      else:
-         weights = wxgen.util.resize(self._weights, state2.shape)
+      weights = wxgen.util.resize(self._weights, state2.shape)
       total = np.sum(weights*abs(state1 - state2)**2, axis=0)
       return np.sqrt(total)
 
-# The score is exp(-factor * diff)
 class Exp(Metric):
+   """ Exponential score based on sum(exp(-factor * diff)) """
    _orientation = 1
    def __init__(self, factors=None):
+      """ factors    an array of variable-weights """
       self._factors = factors
-
-   def _compute(self, state1, state2):
       if self._factors is None:
          factors = 1
-      else:
-         factors = wxgen.util.resize(self._factors, state2.shape)
+
+   def _compute(self, state1, state2):
+      factors = wxgen.util.resize(self._factors, state2.shape)
       total = np.exp(np.sum(-factors*abs(state1 - state2), axis=0))
       return total
 

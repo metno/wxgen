@@ -5,14 +5,14 @@ import sys
 import wxgen.util
 
 
-# Returns a list of all metric classes
 def get_all():
+   """ Returns a list of all metric classes """
    temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
    return temp
 
 
-# Returns a metric object of a class with the given name
 def get(name):
+   """ Returns a metric object of a class with the given name """
    outputs = get_all()
    m = None
    for mm in outputs:
@@ -24,6 +24,9 @@ def get(name):
 
 
 class Output(object):
+   """
+   A class for outputing trajectory information
+   """
    def __init__(self, db, filename=None):
       self._filename = filename
       self._db = db
@@ -37,6 +40,9 @@ class Output(object):
 
 
 class Timeseries(Output):
+   """
+   Draws all trajectories as lines. One variable per subplot.
+   """
    def plot(self, trajectories):
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
@@ -60,6 +66,9 @@ class Timeseries(Output):
       self._finish_plot()
 
 class Database(Output):
+   """
+   Draws the segments in the database. One variable per subplot.
+   """
    def plot(self, trajectories):
       data = self._db._data
       V = data.shape[1]
@@ -77,6 +86,10 @@ class Database(Output):
       self._finish_plot()
 
 class Text(Output):
+   """
+   Writes the trajectories to a text file. One variable in each column and each day on a separate
+   line. Trajectories are separated by a blank line.
+   """
    def plot(self, trajectories):
       if self._filename is None:
          wxgen.util.error("Text output requires a filename")
@@ -96,6 +109,9 @@ class Text(Output):
 
 
 class Verification(Output):
+   """
+   Plots verification data for the trajectories.
+   """
    _pool = True
    def plot(self, trajectories):
       N = len(trajectories)

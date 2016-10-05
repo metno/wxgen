@@ -5,21 +5,52 @@ try:
 except:
    from scipy.io.netcdf import netcdf_file as netcdf
 
+
 class Database(object):
+   """
+   Abstract class which stores weather segments (short time-series)
+   """
+   def __init__(self):
+      self._num_vars = None
+      self._debug = False
+
    def info(self):
       print "Database information:"
       print "  Length of segments: %d" % self.days()
       print "  Number of segments: %d" % self.size()
       print "  Number of variables: %d" % self.num_vars()
 
-   def get(self, index):
-      values = self._data[:,:,index]
+   def num_vars(self):
+      """ Get the number of variables in the database """
+      if self._num_vars is None:
+         self._num_vars = len(self.vars())
+      return self._num_vars
+
+   def size(self):
+      """ Get the number of segments in the database """
+      raise NotImplementedError()
+
+   def days(self):
+      """ Get the length of a segment in the database """
+      raise NotImplementedError()
+
+   def vars(self):
+      """ Get the names of the variables in the database """
+      raise NotImplementedError()
+
+   def get(self, i):
+      """ Get the i'th trajectory in the database """
+      values = self._data[:,:,i]
       return values
 
-   # Returns a (weighted) random segment
-   #@profile
    def get_random(self, target_state, metric):
-      debug = False
+      """
+      Returns a random segment from the database that is weighted
+      by the scores computed by metric.
+
+      target_state   A numpy array (length V)
+      metric         Of type wxgen.metric.Metric
+      """
       weights = metric.compute(target_state, self._data[0,:,:])
 
       # Flip the metric if it is negative oriented
@@ -32,16 +63,20 @@ class Database(object):
 
       # Do a weighted random choice of the weights
       I = util.random_weighted(weights)
-      if debug:
+      if self._debug:
          print "Data: ", self._data[0,:,I]
          print "Weight: ", weights[I]
          print "Max weight: ", np.max(weights)
       return self.get(I)
 
 
-# Trajectories based on gaussian random walk
 class Random(Database):
+   """
+   Trajectories are random Gaussian walks, with constant variance over time. There is no covariance
+   between different forecast variables.
+   """
    def __init__(self, N, T, V, variance=1):
+      Database.__init__()
       self._N = N
       self._T = T
       if V == None:
@@ -56,34 +91,42 @@ class Random(Database):
       for v in range(0, self._V):
          self._data[:,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
-   # Number of days
    def days(self):
       return self._T
 
-   # Number of trajectories
    def size(self):
       return self._N
 
    def vars(self):
       return range(0, self._V)
 
-   def num_vars(self):
-      return self._V
-
 
 class Netcdf(Database):
+   """
+   Segments stored in a netcdf database
+
+   Should have the following format:
+      dims: date, leadtime, member
+      vars: date(date), leadtime(leadtime)
+            variable_name(date, leadtime, member)
+   where variable_name is one or more names of weather variables
+   """
    def __init__(self, filename, V=None):
-      self._filename = filename
-      self._file = netcdf(self._filename)
-      vars = self._file.variables
-      self._vars = [var for var in vars if var not in ["date", "leadtime"]]
+      """
+      filename    Load data from this file
+      V           Only use the first V variables in the database
+      """
+      Database.__init__(self)
+      self._file = netcdf(filename)
+
+      # Set dimensions
+      self._vars = [var for var in self._file.variables if var not in ["date", "leadtime"]]
       if V is not None:
          self._vars = self._vars[0:V]
       self._size = self._num_members() * self._file.dimensions["date"].size
-      self._num_vars = len(self._vars)
 
       # Load data
-      V = self._num_vars
+      V = self.num_vars()
       N = self.size()
       T = self.days()
       self._data = np.zeros([T, V, N], float)
@@ -93,11 +136,9 @@ class Netcdf(Database):
          for t in range(0, T):
             self._data[t,v,:] = temp[:,t,:].flatten()
 
-   # Number of days
    def days(self):
       return self._file.dimensions["leadtime"].size
 
-   # Number of trajectories
    def size(self):
       return self._size
 
@@ -106,6 +147,3 @@ class Netcdf(Database):
 
    def vars(self):
       return self._vars
-
-   def num_vars(self):
-      return self._num_vars
