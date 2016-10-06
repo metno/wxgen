@@ -12,18 +12,6 @@ import wxgen.version
 
 #@profile
 def run(argv):
-   if 0:
-      if len(sys.argv) < 3:
-         print "Weather generator"
-         print "usage: wxgen N T [db]"
-         print ""
-         print "Arguments:"
-         print "  N: Number of trajectories"
-         print "  T: Number of days in trajectory"
-         print "  db: Filename of Netcdf database of trajectory"
-
-         sys.exit()
-
    parser = argparse.ArgumentParser(description="Weather generator")
    parser.add_argument('-n', type=int, help="Number of trajectories", required=True)
    parser.add_argument('-t', type=int, help="Length of trajectory", required=True)

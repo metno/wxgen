@@ -6,13 +6,13 @@ import wxgen.util
 
 
 def get_all():
-   """ Returns a list of all metric classes """
+   """ Returns a list of all output classes """
    temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
    return temp
 
 
 def get(name):
-   """ Returns a metric object of a class with the given name """
+   """ Returns an output object of a class with the given name """
    outputs = get_all()
    m = None
    for mm in outputs:
@@ -63,27 +63,9 @@ class Timeseries(Output):
          mpl.ylabel(vars[v])
          mpl.grid()
          mpl.xlim([0, T])
+      mpl.xlabel("Time (days)")
       self._finish_plot()
 
-class Database(Output):
-   """
-   Draws the segments in the database. One variable per subplot.
-   """
-   def plot(self, trajectories):
-      data = self._db._data
-      V = data.shape[1]
-      T = data.shape[0]
-      N = 1000#data.shape[2]
-      vars = self._db.vars()
-      for v in range(0, V):
-         mpl.subplot(V,1,v+1)
-         x = np.linspace(0, T, T)
-         mpl.plot(x, data[:,v, :], 'k.-', lw=0.5)
-         mpl.xlabel("Time (days)")
-         mpl.ylabel(vars[v])
-         mpl.grid()
-         mpl.xlim([0, T])
-      self._finish_plot()
 
 class Text(Output):
    """
