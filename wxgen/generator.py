@@ -44,8 +44,11 @@ class Generator(object):
          # repeating, overwrite the end state of the previous segment. This means that if the
          # segment is 10 days long, we are only using 9 days of the segment.
          start = 0  # Starting index into output trajectory where we are inserting a segment
+         day_of_year = 1
          while start < T:
-            segment_curr = self._database.get_random(state_curr, self._metric)
+            month_of_year = day_of_year / 30
+            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
+            #segment_curr = self._database.get_random(state_curr, self._metric)
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
@@ -58,6 +61,9 @@ class Generator(object):
                print "Segment indices: ", Iin
             state_curr = segment_curr[-1, :]
             start = start + Tsegment-1
+            day_of_year = day_of_year + Tsegment-1
+            if day_of_year > 365:
+               day_of_year = day_of_year - 365
 
          if self._debug:
             print "Trajectory: ", trajectory

@@ -1,5 +1,7 @@
 import numpy as np
-import util
+import wxgen.util
+import datetime
+import copy
 try:
    from netCDF4 import Dataset as netcdf
 except:
@@ -9,10 +11,18 @@ except:
 class Database(object):
    """
    Abstract class which stores weather segments (short time-series)
+
+   The database is stored in self._data, which has dimensions (T, V, N) where T is the segment
+   length, V is the number of variables, and N is the number of segments. A subclass must populate
+   this field during initialization.
    """
    def __init__(self):
       self._num_vars = None
       self._debug = False
+      """
+      External state (such as the month of the year)
+      """
+      self._ext_state = None
 
    def info(self):
       print "Database information:"
@@ -43,13 +53,19 @@ class Database(object):
       values = self._data[:,:,i]
       return values
 
-   def get_random(self, target_state, metric):
+   def get_truth(self):
+      trajectory = np.squeeze(self._data[0, :, :])
+      trajectory = trajectory.transpose()
+      return trajectory
+
+   def get_random(self, target_state, metric, ext_state=None):
       """
       Returns a random segment from the database that is weighted
       by the scores computed by metric.
 
       target_state   A numpy array (length V)
       metric         Of type wxgen.metric.Metric
+      ext_state      External state
       """
       weights = metric.compute(target_state, self._data[0,:,:])
 
@@ -61,8 +77,19 @@ class Database(object):
          weights[I1] = 1.0/weights[I1]
          weights[I0] = 1e3
 
+      # ext state
+      Iall = range(0, len(weights))
+      if ext_state is not None and self._ext_state is not None:
+         II = np.where(self._ext_state == ext_state)[0]
+         if len(II) == 0:
+            wxgen.util.error("Cannot find a segment with  external state = %s" % str(ext_state))
+         weights = weights[II]
+         I = wxgen.util.random_weighted(weights)
+         I = II[I]
+      else:
+         I = wxgen.util.random_weighted(weights)
+
       # Do a weighted random choice of the weights
-      I = util.random_weighted(weights)
       if self._debug:
          print "Data: ", self._data[0,:,I]
          print "Weight: ", weights[I]
@@ -111,6 +138,7 @@ class Netcdf(Database):
             variable_name(date, leadtime, member)
    where variable_name is one or more names of weather variables
    """
+   _debug0 = False
    def __init__(self, filename, V=None):
       """
       filename    Load data from this file
@@ -118,6 +146,8 @@ class Netcdf(Database):
       """
       Database.__init__(self)
       self._file = netcdf(filename)
+
+      self._datename = "date"
 
       # Set dimensions
       self._vars = [var for var in self._file.variables if var not in ["date", "leadtime"]]
@@ -130,11 +160,31 @@ class Netcdf(Database):
       N = self.size()
       T = self.days()
       self._data = np.zeros([T, V, N], float)
+      self._ext_state = np.zeros(N, float)
+      assert(self._ext_state.shape[0] == N)
       for v in range(0, V):
          var = self.vars()[v]
-         temp = self._file.variables[var]
+         temp = self._copy(self._file.variables[var]) # dims: date,leadtime,member
+
+         # Quality control
+         if var == "precipitation_amount":
+            temp[temp < 0] = np.nan
          for t in range(0, T):
             self._data[t,v,:] = temp[:,t,:].flatten()
+            if self._debug0 and t == 0:
+               print self._data[t, v, :]
+               print temp[0:2,t,0:2]
+               print temp[0:2,t,0]
+               print temp[0:2,t,0:2].flatten()
+      times = self._file.variables[self._datename]
+      day_of_year = np.zeros(times.shape)
+      for d in range(0, times.shape[0]):
+         day_of_year[d] = datetime.datetime.fromtimestamp(times[d]).strftime('%j')
+      month_of_year = day_of_year.astype(int)/ 30
+      self._ext_state = np.repeat(month_of_year, self._num_members())
+      if self._debug0:
+         print self._ext_state
+
 
    def days(self):
       return self._file.dimensions["leadtime"].size
@@ -147,3 +197,12 @@ class Netcdf(Database):
 
    def vars(self):
       return self._vars
+
+   def _copy(self, data):
+      data = data[:].astype(float)
+      q = copy.deepcopy(data)
+      # Remove missing values. Convert to -999 and then back to nan to avoid
+      # warning messages when doing <, >, and == comparisons with nan.
+      q[np.isnan(q)] = -999
+      q[(q == -999) | (q < -1000000) | (q > 1e30)] = np.nan
+      return q
