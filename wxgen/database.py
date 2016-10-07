@@ -206,3 +206,58 @@ class Netcdf(Database):
       q[np.isnan(q)] = -999
       q[(q == -999) | (q < -1000000) | (q > 1e30)] = np.nan
       return q
+
+class Lorenz63(Database):
+   """
+   Trajectories based on the Lorenz 63 model.
+   """
+   def __init__(self, N, T, R=28, S=10, B=2.6667, dt=0.0001):
+      Database.__init__(self)
+      self._N = N
+      self._T = T
+      self._R = R
+      self._S = S
+      self._B = B
+      self._dt = dt
+      self._V = 3  # Number of variables
+      self._data = np.zeros([T, self._V, N], float)
+      self._initial_state = [-10, -10, 25]
+      self._std_initial_state = 0.1  # Standard deviation of initial condition error
+
+      # Initialize
+      for v in range(0, self._V):
+         self._data[0,v,:] = self._initial_state[v] + np.random.randn(N) * self._std_initial_state
+
+      TT = int(1 / self._dt)/10
+      # Iterate
+      for t in range(1, T):
+         x0 = copy.deepcopy(self._data[t-1,0,:])
+         y0 = copy.deepcopy(self._data[t-1,1,:])
+         z0 = copy.deepcopy(self._data[t-1,2,:])
+         # Iterate from t-1 to t
+         for tt in range(0, TT):
+            x1 = x0 + self._dt * self._S * (y0 - x0)
+            y1 = y0 + self._dt * (self._R * x0 - y0 - (x0 * z0))
+            z1 = z0 + self._dt * (x0*y0 - self._B*z0)
+
+            x2 = x1 + self._dt * self._S * (y1-x1)
+            y2 = y1 + self._dt * (self._R * x1 - y1 - x1*z1)
+            z2 = z1 + self._dt * (x1*y1 - self._B*z1)
+
+            x0 = 0.5 * (x2 + x0)
+            y0 = 0.5 * (y2 + y0)
+            z0 = 0.5 * (z2 + z0)
+
+         self._data[t,0,:] = x0
+         self._data[t,1,:] = y0
+         self._data[t,2,:] = z0
+
+
+   def days(self):
+      return self._T
+
+   def size(self):
+      return self._N
+
+   def vars(self):
+      return ["X", "Y", "Z"]

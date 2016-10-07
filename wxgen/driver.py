@@ -18,6 +18,7 @@ def run(argv):
    parser.add_argument('-v', type=int, help="Number of variables", required=False)
    parser.add_argument('--type', type=str, default="timeseries", help="Output type (text or plot)")
    parser.add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
+   parser.add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    parser.add_argument('-o', type=str, default=None, help="Output filename", dest="output_filename")
    parser.add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
    parser.add_argument('--seed', type=int, default=None, help="Random number seed")
@@ -34,7 +35,11 @@ def run(argv):
    if args.db is None:
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
-      db = wxgen.database.Random(100, 10, args.v)
+      if args.db_type is None or args.db_type == "random":
+         db = wxgen.database.Random(100, 10, args.v)
+         db = wxgen.database.Lorenz63(10, 500)
+      else:
+         wxgen.util.error("Cannot understand --db_type")
    else:
       db = wxgen.database.Netcdf(args.db, V=args.v)
    if args.debug:
