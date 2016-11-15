@@ -104,6 +104,7 @@ setup(
     entry_points={
         'console_scripts': [
             'wxgen=wxgen:main',
+            'wxgen_db=wxgen:main_db',
         ],
     },
 )
