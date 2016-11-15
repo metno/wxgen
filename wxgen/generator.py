@@ -27,7 +27,7 @@ class Generator(object):
       """
       # Initialize
       trajectories = list()
-      V = self._database.num_vars()
+      V = len(self._database.variables)
       Tsegment = self._database.days()
 
       for n in range(0, N):

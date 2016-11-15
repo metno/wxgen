@@ -1,6 +1,7 @@
 import numpy as np
 import wxgen.util
 import datetime
+import wxgen.variable
 import copy
 try:
    from netCDF4 import Dataset as netcdf
@@ -12,12 +13,15 @@ class Database(object):
    """
    Abstract class which stores weather segments (short time-series)
 
-   The database is stored in self._data, which has dimensions (T, V, N) where T is the segment
-   length, V is the number of variables, and N is the number of segments. A subclass must populate
-   this field during initialization.
+   The database is stored in self._data, which has dimensions (T, V, N, X, Y) where T is the segment
+   length, V is the number of variables, N is the number of segments, and X and Y are geographical
+   dimensions. A subclass must populate this field during initialization.
+
+   Attributes:
+   variables      A list of wxgen.variable.Variable
+
    """
    def __init__(self):
-      self._num_vars = None
       self._debug = False
       """
       External state (such as the month of the year)
@@ -28,13 +32,7 @@ class Database(object):
       print "Database information:"
       print "  Length of segments: %d" % self.days()
       print "  Number of segments: %d" % self.size()
-      print "  Number of variables: %d" % self.num_vars()
-
-   def num_vars(self):
-      """ Get the number of variables in the database """
-      if self._num_vars is None:
-         self._num_vars = len(self.vars())
-      return self._num_vars
+      print "  Number of variables: %d" % len(self.variables)
 
    def size(self):
       """ Get the number of segments in the database """
@@ -42,10 +40,6 @@ class Database(object):
 
    def days(self):
       """ Get the length of a segment in the database """
-      raise NotImplementedError()
-
-   def vars(self):
-      """ Get the names of the variables in the database """
       raise NotImplementedError()
 
    def get(self, i):
@@ -118,14 +112,13 @@ class Random(Database):
       for v in range(0, self._V):
          self._data[:,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
+      self.variables = [wxgen.variable.Variable(str(i)) for i in range(0, self._V)]
+
    def days(self):
       return self._T
 
    def size(self):
       return self._N
-
-   def vars(self):
-      return range(0, self._V)
 
 
 class Netcdf(Database):
@@ -150,24 +143,24 @@ class Netcdf(Database):
       self._datename = "date"
 
       # Set dimensions
-      self._vars = [var for var in self._file.variables if var not in ["date", "leadtime"]]
+      self.variables = [wxgen.variable.Variable(name) for name in self._file.variables if name not in ["date", "leadtime"]]
       if V is not None:
-         self._vars = self._vars[0:V]
+         self.variables = self.variables[0:V]
       self._size = self._num_members() * self._file.dimensions["date"].size
 
       # Load data
-      V = self.num_vars()
+      V = len(self.variables)
       N = self.size()
       T = self.days()
       self._data = np.zeros([T, V, N], float)
       self._ext_state = np.zeros(N, float)
       assert(self._ext_state.shape[0] == N)
       for v in range(0, V):
-         var = self.vars()[v]
-         temp = self._copy(self._file.variables[var]) # dims: date,leadtime,member
+         var = self.variables[v]
+         temp = self._copy(self._file.variables[var.name]) # dims: date,leadtime,member
 
          # Quality control
-         if var == "precipitation_amount":
+         if var.name == "precipitation_amount":
             temp[temp < 0] = np.nan
          for t in range(0, T):
             self._data[t,v,:] = temp[:,t,:].flatten()
@@ -194,9 +187,6 @@ class Netcdf(Database):
 
    def _num_members(self):
       return self._file.dimensions["member"].size
-
-   def vars(self):
-      return self._vars
 
    def _copy(self, data):
       data = data[:].astype(float)
@@ -252,12 +242,10 @@ class Lorenz63(Database):
          self._data[t,1,:] = y0
          self._data[t,2,:] = z0
 
+      self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
 
    def days(self):
       return self._T
 
    def size(self):
       return self._N
-
-   def vars(self):
-      return ["X", "Y", "Z"]

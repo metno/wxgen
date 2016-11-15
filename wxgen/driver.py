@@ -44,7 +44,7 @@ def run(argv):
       db = wxgen.database.Netcdf(args.db, V=args.v)
    if args.debug:
       db.info()
-   V = db.num_vars()
+   V = len(db.variables)
 
    if args.initial is None:
       initial_state = np.zeros(V, float)
@@ -56,7 +56,7 @@ def run(argv):
    # Generate trajectories
    if args.weights is not None:
       weights = np.array(wxgen.util.parse_numbers(args.weights))
-      if len(weights) != db.num_vars():
+      if len(weights) != len(db.variables):
          wxgen.util.error("Weights must match the number of variables (%d)" % (V))
 
       if args.m == "rmsd":

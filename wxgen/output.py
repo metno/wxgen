@@ -47,7 +47,7 @@ class Timeseries(Output):
    def plot(self, trajectories):
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
-      vars = self._db.vars()
+      variables = self._db.variables
       Tsegment = self._db.days()
       for v in range(0, V):
          mpl.subplot(V,1,v+1)
@@ -60,7 +60,7 @@ class Timeseries(Output):
             #I = range(0, T, Tsegment-1)
             #mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
 
-         mpl.ylabel(vars[v])
+         mpl.ylabel(variables[v].name)
          mpl.grid()
         
          if T > 740:
@@ -107,7 +107,7 @@ class Verification(Output):
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
       Tsegment = self._db.days()
-      vars = self._db.vars()
+      variables = self._db.variables
       if self._pool:
          size = Tsegment-1
          x = np.linspace(0, Tsegment-2, Tsegment-1)
@@ -118,7 +118,7 @@ class Verification(Output):
       counter = np.zeros(size, int)
       for v in range(0, V):
          mpl.subplot(V, 1, v+1)
-         mpl.title(vars[v])
+         mpl.title(variables[v].name)
          for t in range(0, T-1):
             ar = np.array([abs(trajectories[i][t,v] - trajectories[i][t+1,v]) for i in range(0, N)])
             if self._pool:
