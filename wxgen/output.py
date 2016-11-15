@@ -36,7 +36,8 @@ class Output(object):
       if self._filename is None:
          mpl.show()
       else:
-         mpl.savefig(self._filename, dpi=self._dpi)
+         mpl.gcf().set_size_inches(6,8)
+         mpl.savefig(self._filename, bbox_inches='tight', dpi=self._dpi)
 
 
 class Timeseries(Output):
@@ -53,15 +54,21 @@ class Timeseries(Output):
          x = np.linspace(0, T-1, T)
          for tr in trajectories:
             # Plot the trajectory
-            mpl.plot(x, tr[:,v], 'k.-', lw=0.5)
+            mpl.plot(x, tr[:,v], '-', lw=0.5)
 
             # Plot the starting state of each segment
-            I = range(0, T, Tsegment-1)
-            mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
+            #I = range(0, T, Tsegment-1)
+            #mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
 
-         mpl.xlabel("Time (days)")
          mpl.ylabel(vars[v])
          mpl.grid()
+        
+         if T > 740:
+            mpl.xticks(range(0, T, 365))
+         elif T > 70:
+            mpl.xticks(range(0, T, 30))
+         if v < V-1:
+            mpl.gca().set_xticklabels(['']*len(mpl.xticks()))
          mpl.xlim([0, T])
       mpl.xlabel("Time (days)")
       self._finish_plot()
