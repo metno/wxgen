@@ -3,10 +3,7 @@ import wxgen.util
 import datetime
 import wxgen.variable
 import copy
-try:
-   from netCDF4 import Dataset as netcdf
-except:
-   from scipy.io.netcdf import netcdf_file as netcdf
+import netCDF4
 
 
 class Database(object):
@@ -138,7 +135,7 @@ class Netcdf(Database):
       V           Only use the first V variables in the database
       """
       Database.__init__(self)
-      self._file = netcdf(filename)
+      self._file = netCDF4.Dataset(filename)
 
       self._datename = "date"
 
