@@ -48,8 +48,8 @@ class Generator(object):
          while start < T:
             # TODO
             month_of_year = 0 #day_of_year / 30
-            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year).get()
-            #segment_curr = self._database.get_random(state_curr, self._metric)
+
+            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year).extract()
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory

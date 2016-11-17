@@ -3,6 +3,12 @@ import wxgen.database
 
 
 class Trajectory(object):
+   """
+   Represents a trajectory of states. This is represented as a sequence of indicies into the
+   database: (Ensemble member index, day index).
+
+   The trajectory can be extracted either as an aggregated sequence or the full gridded sequence.
+   """
    def __init__(self, indices, database):
       """
       Arguments:
@@ -15,7 +21,7 @@ class Trajectory(object):
       self.indices = indices
       self.database = database
 
-   def get(self):
+   def extract(self):
       """ Returns the sequence as a 2D numpy array (T, V) """
       T = self.indices.shape[0]
       V = len(self.database.variables)
@@ -24,6 +30,6 @@ class Trajectory(object):
          trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
       return trajectory
 
-   def get_gridded(self):
+   def extract_gridded(self):
       """ Returns the sequence as a 4D numpy array (T, V, X, Y) """
       pass
