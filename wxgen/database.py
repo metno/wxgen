@@ -1,6 +1,7 @@
 import numpy as np
 import wxgen.util
 import datetime
+import wxgen.aggregator
 import wxgen.variable
 import copy
 import netCDF4
@@ -16,49 +17,57 @@ class Database(object):
 
    Attributes:
    variables      A list of wxgen.variable.Variable
+   length         Length of each trajectory (in number of days)
+   num            Number of trajectories
+   lats           2D grid of latitudes
+   lons           2D grid of longitudes
 
+   Internal:
+   _data          A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
+   _data_agg      A 3D numpy array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self):
       self._debug = False
-      """
-      External state (such as the month of the year)
-      """
+      """ External state (such as the month of the year) """
       self._ext_state = None
+      self.aggregator = wxgen.aggregator.Mean()
+      self._data_agg_cache = None
 
    def info(self):
       print "Database information:"
-      print "  Length of segments: %d" % self.days()
-      print "  Number of segments: %d" % self.size()
+      print "  Length of segments: %d" % self.length
+      print "  Number of segments: %d" % self.num
       print "  Number of variables: %d" % len(self.variables)
-
-   def size(self):
-      """ Get the number of segments in the database """
-      raise NotImplementedError()
-
-   def days(self):
-      """ Get the length of a segment in the database """
-      raise NotImplementedError()
 
    def get(self, i):
       """ Get the i'th trajectory in the database """
-      values = self._data[:,:,i]
-      return values
+      indices = np.zeros([self.length, 2], int)
+      indices[:,0] = i
+      indices[:,1] = np.arange(0, self.length)
+      return wxgen.trajectory.Trajectory(indices, self)
 
    def get_truth(self):
-      trajectory = np.squeeze(self._data[0, :, :])
-      trajectory = trajectory.transpose()
-      return trajectory
+      """ Concatenate the initialization state of all trajectories """
+      indices = np.zeros([self.num, 2], int)
+      indices[:,0] = np.arange(0, self.num)
+      indices[:,1] = 0
+      # TODO: Not quite right, since must account for multiple members
+      return wxgen.trajectory.Trajectory(indices, database)
 
    def get_random(self, target_state, metric, ext_state=None):
       """
       Returns a random segment from the database that is weighted
       by the scores computed by metric.
 
+      Arguments:
       target_state   A numpy array (length V)
       metric         Of type wxgen.metric.Metric
       ext_state      External state
+
+      Returns:
+      trajectory     Of type wxgen.trajectory.Trajectory
       """
-      weights = metric.compute(target_state, self._data[0,:,:])
+      weights = metric.compute(target_state, self._data_agg[0,:,:])
 
       # Flip the metric if it is negative oriented
       if metric._orientation == -1:
@@ -82,10 +91,32 @@ class Database(object):
 
       # Do a weighted random choice of the weights
       if self._debug:
-         print "Data: ", self._data[0,:,I]
+         print "Data: ", self._data_agg[0,:,I]
          print "Weight: ", weights[I]
          print "Max weight: ", np.max(weights)
       return self.get(I)
+
+   def get_sequence(self, indices):
+      """ Returns a gridded sequence of states
+      
+      Arguments:
+      indices     A numpy array of integers
+
+      Returns:
+      data        A 4D array (T, X, Y, V)
+      """
+      pass
+
+   @property
+   def _data_agg(self):
+      if self._data_agg_cache == None:
+         self._data_agg_cache = np.zeros([self.length, len(self.variables), self.num], float)
+         index = 0
+         for t in range(self._data.shape[0]):
+            for m in range(self._data.shape[2]):
+               self._data_agg_cache[:,:,index] = np.squeeze(self.aggregator(self._data[slice(t,t+1),:,slice(m,m+1),:,:,:]))
+               index = index + 1
+      return self._data_agg_cache
 
 
 class Random(Database):
@@ -95,8 +126,8 @@ class Random(Database):
    """
    def __init__(self, N, T, V, variance=1):
       Database.__init__(self)
-      self._N = N
-      self._T = T
+      self.num = N
+      self.length = T
       if V == None:
          V = 1
       self._V = V
@@ -110,12 +141,6 @@ class Random(Database):
          self._data[:,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
       self.variables = [wxgen.variable.Variable(str(i)) for i in range(0, self._V)]
-
-   def days(self):
-      return self._T
-
-   def size(self):
-      return self._N
 
 
 class Netcdf(Database):
@@ -137,53 +162,50 @@ class Netcdf(Database):
       Database.__init__(self)
       self._file = netCDF4.Dataset(filename)
 
-      self._datename = "date"
+      self._datename = "time"
 
       # Set dimensions
-      self.variables = [wxgen.variable.Variable(name) for name in self._file.variables if name not in ["date", "leadtime"]]
+      self.variables = [wxgen.variable.Variable(name) for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
       if V is not None:
          self.variables = self.variables[0:V]
-      self._size = self._num_members() * self._file.dimensions["date"].size
 
       # Load data
+      self.length = self._file.dimensions["time"].size
+      self._members = self._file.dimensions["ensemble_member"].size
       V = len(self.variables)
-      N = self.size()
-      T = self.days()
-      self._data = np.zeros([T, V, N], float)
-      self._ext_state = np.zeros(N, float)
-      assert(self._ext_state.shape[0] == N)
+      M = self._members
+      D = self._file.dimensions["forecast_reference_time"].size
+      T = self.length
+      X = self._file.dimensions["lon"].size
+      Y = self._file.dimensions["lat"].size
+      self.num = M * D
+      self._data = np.zeros([D, T, M, Y, X, V], float)
+      self._ext_state = np.zeros(self.num, float)
+      assert(self._ext_state.shape[0] == self.num)
       for v in range(0, V):
          var = self.variables[v]
+         print var.name
          temp = self._copy(self._file.variables[var.name]) # dims: date,leadtime,member
 
          # Quality control
          if var.name == "precipitation_amount":
             temp[temp < 0] = np.nan
-         for t in range(0, T):
-            self._data[t,v,:] = temp[:,t,:].flatten()
-            if self._debug0 and t == 0:
-               print self._data[t, v, :]
-               print temp[0:2,t,0:2]
-               print temp[0:2,t,0]
-               print temp[0:2,t,0:2].flatten()
-      times = self._file.variables[self._datename]
-      day_of_year = np.zeros(times.shape)
-      for d in range(0, times.shape[0]):
-         day_of_year[d] = datetime.datetime.fromtimestamp(times[d]).strftime('%j')
-      month_of_year = day_of_year.astype(int)/ 30
-      self._ext_state = np.repeat(month_of_year, self._num_members())
-      if self._debug0:
-         print self._ext_state
+         self._data[:,:,:,:,:,v] = temp
+         if self._debug0 and t == 0:
+            print self._data[t, v, :]
+            print temp[0:2,t,0:2]
+            print temp[0:2,t,0]
+            print temp[0:2,t,0:2].flatten()
+      if 1:
+         times = self._file.variables[self._datename]
+         day_of_year = np.zeros(times.shape)
+         for d in range(0, times.shape[0]):
+            day_of_year[d] = datetime.datetime.fromtimestamp(times[d]).strftime('%j')
+         month_of_year = day_of_year.astype(int)/ 30
+         self._ext_state = np.repeat(month_of_year, self._members)
+         if self._debug0:
+            print self._ext_state
 
-
-   def days(self):
-      return self._file.dimensions["leadtime"].size
-
-   def size(self):
-      return self._size
-
-   def _num_members(self):
-      return self._file.dimensions["member"].size
 
    def _copy(self, data):
       data = data[:].astype(float)
@@ -194,14 +216,15 @@ class Netcdf(Database):
       q[(q == -999) | (q < -1000000) | (q > 1e30)] = np.nan
       return q
 
+
 class Lorenz63(Database):
    """
    Trajectories based on the Lorenz 63 model.
    """
    def __init__(self, N, T, R=28, S=10, B=2.6667, dt=0.0001):
       Database.__init__(self)
-      self._N = N
-      self._T = T
+      self.num = N
+      self.length = T
       self._R = R
       self._S = S
       self._B = B
@@ -240,9 +263,3 @@ class Lorenz63(Database):
          self._data[t,2,:] = z0
 
       self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
-
-   def days(self):
-      return self._T
-
-   def size(self):
-      return self._N

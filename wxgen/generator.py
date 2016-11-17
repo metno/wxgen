@@ -15,9 +15,9 @@ class Generator(object):
 
    def get(self, N, T, initial_state=None):
       """
-      Returns a list of N trajectories. Each trajectory is a 2D numpy array with dimensions (T,V),
-      where T is the number of timesteps, and V is the number of variables in the database.
-      
+      Returns a 2D numpy array of trajectories. Each value is an index into the date and member of
+      the database.
+
       If initial_state is provided then the trajectory will start with a state similar to this. If
       no initial state is provided, start with a random segment from the database.
 
@@ -28,26 +28,27 @@ class Generator(object):
       # Initialize
       trajectories = list()
       V = len(self._database.variables)
-      Tsegment = self._database.days()
+      Tsegment = self._database.length
 
       for n in range(0, N):
          trajectory = np.zeros([T, V], float)
 
          if initial_state is None:
-            I = np.random.randint(self._database.size())
-            state_curr = self._database.get(0)[I,:]
+            I = np.random.randint(self._database.num)
+            state_curr = self._database.get(I)
          else:
             state_curr = initial_state
 
          # Assemble a trajectory by concatenating appropriate segments. Start by finding a segment
-         # that has a starting state that is similar to the requested initial state.  When
+         # that has a starting state that is similar to the requested initial state. When
          # repeating, overwrite the end state of the previous segment. This means that if the
          # segment is 10 days long, we are only using 9 days of the segment.
          start = 0  # Starting index into output trajectory where we are inserting a segment
          day_of_year = 1
          while start < T:
-            month_of_year = day_of_year / 30
-            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
+            # TODO
+            month_of_year = 0 #day_of_year / 30
+            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year).get()
             #segment_curr = self._database.get_random(state_curr, self._metric)
 
             end = min(start + Tsegment-1, T)  # Ending index

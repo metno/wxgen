@@ -48,7 +48,7 @@ class Timeseries(Output):
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
       variables = self._db.variables
-      Tsegment = self._db.days()
+      Tsegment = self._db.length
       for v in range(0, V):
          mpl.subplot(V,1,v+1)
          x = np.linspace(0, T-1, T)
@@ -82,6 +82,28 @@ class Text(Output):
    def plot(self, trajectories):
       if self._filename is None:
          wxgen.util.error("Text output requires a filename")
+
+      fid = open(self._filename, "w")
+      N = len(trajectories)
+      T = trajectories[0].shape[0]
+      V = trajectories[0].shape[1]
+      for n in range(0, N):
+         for t in range(0, T):
+            for v in range(0, V):
+               fid.write("%f " % trajectories[n][t,v])
+            fid.write("\n")
+         if n < N-1:
+            fid.write("\n")
+      fid.close()
+
+
+class Netcdf(Output):
+   """
+   Writes the trajectories to a netcdf file.
+   """
+   def plot(self, trajectories):
+      if self._filename is None:
+         wxgen.util.error("Netcdf output requires a filename")
 
       fid = open(self._filename, "w")
       N = len(trajectories)
