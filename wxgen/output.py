@@ -86,12 +86,13 @@ class Text(Output):
 
       fid = open(self._filename, "w")
       N = len(trajectories)
-      T = trajectories[0].shape[0]
-      V = trajectories[0].shape[1]
+      T = trajectories[0].length
+      V = len(trajectories[0].variables)
       for n in range(0, N):
+         values = trajectories[n].extract()
          for t in range(0, T):
             for v in range(0, V):
-               fid.write("%f " % trajectories[n][t,v])
+               fid.write("%f " % values[t,v])
             fid.write("\n")
          if n < N-1:
             fid.write("\n")
@@ -118,8 +119,6 @@ class Netcdf(Output):
       var_lat = file.createVariable("lat", "f4", ("lat"))
       var_lon = file.createVariable("lon", "f4", ("lon"))
       var_lat[:] = trajectories[0].database.lats
-      print trajectories[0].database.lats.shape
-      print trajectories[0].database.lons.shape
       var_lon[:] = trajectories[0].database.lons
       vars = dict()
       for var in variables:
