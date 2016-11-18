@@ -29,9 +29,11 @@ class Generator(object):
       trajectories = list()
       V = len(self._database.variables)
       Tsegment = self._database.length
+      X = self._database.X
+      Y = self._database.Y
 
       for n in range(0, N):
-         trajectory = np.zeros([T, V], float)
+         trajectory = np.zeros([T, X, Y, V], float)
 
          if initial_state is None:
             I = np.random.randint(self._database.num)
@@ -49,18 +51,19 @@ class Generator(object):
             # TODO
             month_of_year = 0 #day_of_year / 30
 
-            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year).extract()
+            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
+            curr = segment_curr.extract_gridded()
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
-            trajectory[Iout, :] = segment_curr[Iin, :]
+            trajectory[Iout, :, :, :] = curr[Iin, :, :, :]
             if self._debug:
                print "Current state: ", state_curr
                print "Chosen segment: ", segment_curr
                print "Trajectory indices: ", Iout
                print "Segment indices: ", Iin
-            state_curr = segment_curr[-1, :]
+            state_curr = segment_curr.extract()[-1,:]
             start = start + Tsegment-1
             day_of_year = day_of_year + Tsegment-1
             if day_of_year > 365:

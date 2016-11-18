@@ -31,5 +31,21 @@ class Trajectory(object):
       return trajectory
 
    def extract_gridded(self):
-      """ Returns the sequence as a 4D numpy array (T, V, X, Y) """
-      pass
+      """ Returns the sequence as a 4D numpy array (T, X, Y, V) """
+      T = self.indices.shape[0]
+      V = len(self.database.variables)
+      X = self.database.X
+      Y = self.database.Y
+      trajectory = np.zeros([T, X, Y, V], float)
+      # Loop over member, lead-time indices
+      for i in range(0, self.indices.shape[0]):
+         m = self.indices[i,0]
+         t = self.indices[i,1]
+         trajectory[i,:,:,:] = self.database._data[t, :, :, :, m]
+      return trajectory
+
+   def __str__(self):
+      str = ""
+      for i in range(0, self.indices.shape[0]):
+         str = "%s[%d,%d]," % (str, self.indices[i,0], self.indices[i,1])
+      return str

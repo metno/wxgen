@@ -21,9 +21,11 @@ class Database(object):
    num            Number of trajectories
    lats           2D grid of latitudes
    lons           2D grid of longitudes
+   X              Number of X-axis points
+   Y              Number of Y-axis points
 
    Internal:
-   _data          A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
+   _data          A 5D numpy array of data with dimensions (lead_time, lat, lon, variable, member*time)
    _data_agg      A 3D numpy array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self):
@@ -111,12 +113,11 @@ class Database(object):
    def _data_agg(self):
       if self._data_agg_cache == None:
          self._data_agg_cache = np.zeros([self.length, len(self.variables), self.num], float)
-         index = 0
-         for t in range(self._data.shape[0]):
-            for m in range(self._data.shape[2]):
-               self._data_agg_cache[:,:,index] = np.squeeze(self.aggregator(self._data[slice(t,t+1),:,slice(m,m+1),:,:,:]))
-               index = index + 1
+         self._data_agg_cache = np.squeeze(self.aggregator(self._data))
       return self._data_agg_cache
+
+   def index2(self):
+      pass
 
 
 class Random(Database):
@@ -152,6 +153,9 @@ class Netcdf(Database):
       vars: date(date), leadtime(leadtime)
             variable_name(date, leadtime, member)
    where variable_name is one or more names of weather variables
+
+   Internal
+   _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
    """
    _debug0 = False
    def __init__(self, filename, V=None):
@@ -176,26 +180,27 @@ class Netcdf(Database):
       M = self._members
       D = self._file.dimensions["forecast_reference_time"].size
       T = self.length
-      X = self._file.dimensions["lon"].size
-      Y = self._file.dimensions["lat"].size
+      self.X = self._file.dimensions["lon"].size
+      self.Y = self._file.dimensions["lat"].size
       self.num = M * D
-      self._data = np.zeros([D, T, M, Y, X, V], float)
+      self._data0 = np.zeros([D, T, M, self.Y, self.X, V], float)
+      self._data = np.zeros([T, self.Y, self.X, V, M*D], float)
       self._ext_state = np.zeros(self.num, float)
       assert(self._ext_state.shape[0] == self.num)
       for v in range(0, V):
          var = self.variables[v]
          print var.name
-         temp = self._copy(self._file.variables[var.name]) # dims: date,leadtime,member
+         temp = self._copy(self._file.variables[var.name]) # dims: D, T, M, X, Y)
+         #                                                         T, X, Y, D*M
 
          # Quality control
          if var.name == "precipitation_amount":
             temp[temp < 0] = np.nan
-         self._data[:,:,:,:,:,v] = temp
-         if self._debug0 and t == 0:
-            print self._data[t, v, :]
-            print temp[0:2,t,0:2]
-            print temp[0:2,t,0]
-            print temp[0:2,t,0:2].flatten()
+         index = 0
+         for d in range(0, D):
+            for m in range(0, M):
+               self._data[:,:,:,v,index] = temp[d, :, m, :, :]
+               index = index + 1
       if 1:
          times = self._file.variables[self._datename]
          day_of_year = np.zeros(times.shape)

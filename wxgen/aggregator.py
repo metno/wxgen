@@ -52,7 +52,7 @@ class Aggregator(object):
 
 class Mean(Aggregator):
    def __call__(self, array):
-      return np.mean(np.mean(array, axis=4), axis=3)
+      return np.mean(np.mean(array, axis=2), axis=1)
 
 
 class Median(Aggregator):
