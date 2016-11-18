@@ -182,8 +182,10 @@ class Netcdf(Database):
       T = self.length
       self.X = self._file.dimensions["lon"].size
       self.Y = self._file.dimensions["lat"].size
+      self.lats = self._copy(self._file.variables["lat"])
+      self.lons = self._copy(self._file.variables["lon"])
       self.num = M * D
-      self._data0 = np.zeros([D, T, M, self.Y, self.X, V], float)
+      print "Allocating %.2f GB" % (T*self.Y*self.X*V*M*D*4.0/1024/1024/1024)
       self._data = np.zeros([T, self.Y, self.X, V, M*D], float)
       self._ext_state = np.zeros(self.num, float)
       assert(self._ext_state.shape[0] == self.num)
@@ -210,6 +212,7 @@ class Netcdf(Database):
          self._ext_state = np.repeat(month_of_year, self._members)
          if self._debug0:
             print self._ext_state
+      self._file.close()
 
 
    def _copy(self, data):

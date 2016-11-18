@@ -15,8 +15,7 @@ class Generator(object):
 
    def get(self, N, T, initial_state=None):
       """
-      Returns a 2D numpy array of trajectories. Each value is an index into the date and member of
-      the database.
+      Returns a list of N trajectories, where each trahectry has a length of T.
 
       If initial_state is provided then the trajectory will start with a state similar to this. If
       no initial state is provided, start with a random segment from the database.
@@ -33,7 +32,7 @@ class Generator(object):
       Y = self._database.Y
 
       for n in range(0, N):
-         trajectory = np.zeros([T, X, Y, V], float)
+         trajectory_indices = np.zeros([T, 2], int)
 
          if initial_state is None:
             I = np.random.randint(self._database.num)
@@ -52,12 +51,12 @@ class Generator(object):
             month_of_year = 0 #day_of_year / 30
 
             segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
-            curr = segment_curr.extract_gridded()
+            indices_curr = segment_curr.indices
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
-            trajectory[Iout, :, :, :] = curr[Iin, :, :, :]
+            trajectory_indices[Iout, :] = indices_curr[Iin, :]
             if self._debug:
                print "Current state: ", state_curr
                print "Chosen segment: ", segment_curr
@@ -69,6 +68,7 @@ class Generator(object):
             if day_of_year > 365:
                day_of_year = day_of_year - 365
 
+         trajectory = wxgen.trajectory.Trajectory(trajectory_indices, self._database)
          if self._debug:
             print "Trajectory: ", trajectory
          trajectories.append(trajectory)

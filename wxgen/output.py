@@ -1,4 +1,5 @@
 import inspect
+import netCDF4
 import matplotlib.pylab as mpl
 import numpy as np
 import sys
@@ -104,19 +105,33 @@ class Netcdf(Output):
    def plot(self, trajectories):
       if self._filename is None:
          wxgen.util.error("Netcdf output requires a filename")
+      file = netCDF4.Dataset(self._filename, 'w')
 
+
+      variables = trajectories[0].variables
       fid = open(self._filename, "w")
-      N = len(trajectories)
-      T = trajectories[0].shape[0]
-      V = trajectories[0].shape[1]
-      for n in range(0, N):
-         for t in range(0, T):
-            for v in range(0, V):
-               fid.write("%f " % trajectories[n][t,v])
-            fid.write("\n")
-         if n < N-1:
-            fid.write("\n")
-      fid.close()
+      file.createDimension("time")
+      file.createDimension("ensemble_member", len(trajectories))
+      file.createDimension("lat", trajectories[0].Y)
+      file.createDimension("lon", trajectories[0].X)
+
+      var_lat = file.createVariable("lat", "f4", ("lat"))
+      var_lon = file.createVariable("lon", "f4", ("lon"))
+      var_lat[:] = trajectories[0].database.lats
+      print trajectories[0].database.lats.shape
+      print trajectories[0].database.lons.shape
+      var_lon[:] = trajectories[0].database.lons
+      vars = dict()
+      for var in variables:
+         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "lat", "lon"))
+
+      for m in range(0, len(trajectories)):
+         values = trajectories[m].extract_grid()
+         values = np.expand_dims(values,1)
+         for v in range(0, len(variables)):
+            vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]
+
+      file.close()
 
 
 class Verification(Output):

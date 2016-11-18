@@ -8,6 +8,11 @@ class Trajectory(object):
    database: (Ensemble member index, day index).
 
    The trajectory can be extracted either as an aggregated sequence or the full gridded sequence.
+
+   Attributes:
+   indices        Indices for database
+   length         Length of trajectory
+   variables      Variables
    """
    def __init__(self, indices, database):
       """
@@ -21,6 +26,22 @@ class Trajectory(object):
       self.indices = indices
       self.database = database
 
+   @property
+   def length(self):
+      return self.indices.shape[0]
+
+   @property
+   def variables(self):
+      return self.database.variables
+
+   @property
+   def X(self):
+      return self.database.X
+
+   @property
+   def Y(self):
+      return self.database.Y
+
    def extract(self):
       """ Returns the sequence as a 2D numpy array (T, V) """
       T = self.indices.shape[0]
@@ -30,7 +51,7 @@ class Trajectory(object):
          trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
       return trajectory
 
-   def extract_gridded(self):
+   def extract_grid(self):
       """ Returns the sequence as a 4D numpy array (T, X, Y, V) """
       T = self.indices.shape[0]
       V = len(self.database.variables)
