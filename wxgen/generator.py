@@ -48,7 +48,7 @@ class Generator(object):
          day_of_year = 1
          while start < T:
             # TODO
-            month_of_year = 0 #day_of_year / 30
+            month_of_year = day_of_year / 30
 
             segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
             indices_curr = segment_curr.indices

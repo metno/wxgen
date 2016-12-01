@@ -46,16 +46,17 @@ class Timeseries(Output):
    Draws all trajectories as lines. One variable per subplot.
    """
    def plot(self, trajectories):
-      T = trajectories[0].shape[0]
-      V = trajectories[0].shape[1]
-      variables = self._db.variables
+      T = trajectories[0].length
+      V = len(trajectories[0].variables)
+      variables = trajectories[0].variables
       Tsegment = self._db.length
       for v in range(0, V):
          mpl.subplot(V,1,v+1)
          x = np.linspace(0, T-1, T)
          for tr in trajectories:
+            values = tr.extract()
             # Plot the trajectory
-            mpl.plot(x, tr[:,v], '-', lw=0.5)
+            mpl.plot(x, values[:,v], '-', lw=0.5)
 
             # Plot the starting state of each segment
             #I = range(0, T, Tsegment-1)
