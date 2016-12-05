@@ -70,32 +70,31 @@ class Database(object):
       trajectory     Of type wxgen.trajectory.Trajectory
       """
       weights = metric.compute(target_state, self._data_agg[0,:,:])
+      Ivalid = np.where(np.isnan(weights) == 0)[0]
+      if ext_state is not None and self._ext_state is not None:
+         Iext_state = np.where(self._ext_state[Ivalid] == ext_state)[0]
+         if len(Iext_state) == 0:
+            wxgen.util.error("Cannot find a segment with  external state = %s" % str(ext_state))
+         Ivalid = Ivalid[Iext_state]
+
+      weights_v = weights[Ivalid]
 
       # Flip the metric if it is negative oriented
       if metric._orientation == -1:
-         I0 = np.where(weights < 1e-3)[0]
-         I1 = np.where(weights >= 1e-3)[0]
+         I0 = np.where(weights_v < 1e-3)[0]
+         I1 = np.where(weights_v >= 1e-3)[0]
          # Ensure we do not get too high weights
-         weights[I1] = 1.0/weights[I1]
-         weights[I0] = 1e3
+         weights_v[I1] = 1.0/weights_v[I1]
+         weights_v[I0] = 1e3
 
-      # ext state
-      Iall = range(0, len(weights))
-      if ext_state is not None and self._ext_state is not None:
-         II = np.where(self._ext_state == ext_state)[0]
-         if len(II) == 0:
-            wxgen.util.error("Cannot find a segment with  external state = %s" % str(ext_state))
-         weights = weights[II]
-         I = wxgen.util.random_weighted(weights)
-         I = II[I]
-      else:
-         I = wxgen.util.random_weighted(weights)
+      I_v = wxgen.util.random_weighted(weights_v)
+      I = Ivalid[I_v]
 
       # Do a weighted random choice of the weights
       if self._debug:
          print "Data: ", self._data_agg[0,:,I]
-         print "Weight: ", weights[I]
-         print "Max weight: ", np.max(weights)
+         print "Weight: ", weights_v[I_v]
+         print "Max weight: ", np.max(weights_v)
       return self.get(I)
 
    def get_sequence(self, indices):
@@ -176,7 +175,7 @@ class Netcdf(Database):
       Database.__init__(self)
       self._file = netCDF4.Dataset(filename)
 
-      self._datename = "forecast_reference_time"
+      self._initname = "forecast_reference_time"
 
       # Set dimensions
       var_names = [name for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
@@ -214,9 +213,10 @@ class Netcdf(Database):
          self.lons = [0]
       self.num = M * D
       print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
-      self._data = np.zeros([T, Y, X, V, M*D], float)
+      self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
       self._ext_state = np.zeros(self.num, float)
       assert(self._ext_state.shape[0] == self.num)
+
       for v in range(0, V):
          var = self.variables[v]
          print var.name
@@ -228,23 +228,28 @@ class Netcdf(Database):
          index = 0
          for d in range(0, D):
             for m in range(0, M):
-               if is_spatial:
+               if is_spatial: #and np.sum(np.isnan(temp[d, :, m, :, :])) == 0:
                   self._data[:,:,:,v,index] = temp[d, :, m, :, :]
-               else:
+               else: #if np.sum(np.isnan(temp[d, :, m])) == 0:
                   self._data[:,:,:,v,index] = np.reshape(temp[d, :, m], [T,Y,X])
                index = index + 1
-      if 1:
-         times = self._file.variables[self._datename]
-         #times = dates[:]*86400
-         day_of_year = np.zeros(times.shape)
-         for d in range(0, times.shape[0]):
-            day_of_year[d] = int(datetime.datetime.fromtimestamp(times[d]).strftime('%j'))
-         month_of_year = day_of_year.astype(int)/ 30
-         self._ext_state = np.repeat(month_of_year, self._members)
-         if self._debug0:
-            print self._ext_state
-      self._file.close()
 
+      # If one or more values are missing for a member, set all values to nan
+      for e in range(0, M*D):
+         if np.sum(np.isnan(self._data[:,:,:,:,e])) > 0:
+            self._data[:,:,:,:,e] = np.nan
+            # print "Removing %d" % e
+
+      times = self._file.variables[self._initname]
+      day_of_year = np.zeros(times.shape)
+      for d in range(0, times.shape[0]):
+         day_of_year[d] = int(datetime.datetime.fromtimestamp(times[d]).strftime('%j'))
+      month_of_year = day_of_year.astype(int)/ 30
+      self._ext_state = np.repeat(month_of_year, self._members)
+      if self._debug0:
+         print self._ext_state
+
+      self._file.close()
 
    def _copy(self, data):
       data = data[:].astype(float)
