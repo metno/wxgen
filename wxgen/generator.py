@@ -52,6 +52,7 @@ class Generator(object):
 
             segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
             indices_curr = segment_curr.indices
+            # print state_curr, segment_curr.extract()[0,:] 
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory

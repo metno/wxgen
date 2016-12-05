@@ -38,7 +38,7 @@ class Output(object):
       if self._filename is None:
          mpl.show()
       else:
-         mpl.gcf().set_size_inches(6,8)
+         mpl.gcf().set_size_inches(10,5)
          mpl.savefig(self._filename, bbox_inches='tight', dpi=self._dpi)
 
 
@@ -58,7 +58,8 @@ class Timeseries(Output):
          for tr in trajectories:
             values = tr.extract()
             # Plot the trajectory
-            mpl.plot(x, values[:,v], '-', lw=0.5)
+            assert(np.sum(np.isnan(values)) == 0)
+            mpl.plot(x, values[:,v], '-', lw=1)
 
             # Plot the starting state of each segment
             #I = range(0, T, Tsegment-1)
@@ -69,6 +70,15 @@ class Timeseries(Output):
          mpl.grid()
         
          mpl.gca().xaxis_date()
+         if np.max(x) - np.min(x) < 100:
+            locator = matplotlib.ticker.FixedLocator(np.arange(np.min(x), np.max(x), Tsegment-1))
+            # locator = matplotlib.ticker.MultipleLocator(Tsegment-1)
+            formatter = matplotlib.dates.DateFormatter('%Y-%m-%d')
+            mpl.gca().xaxis.set_major_locator(locator)
+            mpl.gca().xaxis.set_major_formatter(formatter)
+         if v != V-1:
+            mpl.gca().set_xticklabels([])
+         mpl.xlim(np.min(x), np.max(x))
       mpl.xlabel("Date")
       self._finish_plot()
 
