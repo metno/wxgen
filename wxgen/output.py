@@ -4,6 +4,7 @@ import matplotlib.pylab as mpl
 import numpy as np
 import sys
 import wxgen.util
+import matplotlib.dates
 
 
 def get_all():
@@ -52,7 +53,8 @@ class Timeseries(Output):
       Tsegment = self._db.length
       for v in range(0, V):
          mpl.subplot(V,1,v+1)
-         x = np.linspace(0, T-1, T)
+         start_date = matplotlib.dates.date2num(matplotlib.dates.datetime.datetime(2017, 1, 1, 0))
+         x = start_date + np.linspace(0, T-1, T)
          for tr in trajectories:
             values = tr.extract()
             # Plot the trajectory
@@ -65,14 +67,8 @@ class Timeseries(Output):
          mpl.ylabel(variables[v].name)
          mpl.grid()
         
-         if T > 740:
-            mpl.xticks(range(0, T, 365))
-         elif T > 70:
-            mpl.xticks(range(0, T, 30))
-         if v < V-1:
-            mpl.gca().set_xticklabels(['']*len(mpl.xticks()))
-         mpl.xlim([0, T])
-      mpl.xlabel("Time (days)")
+         mpl.gca().xaxis_date()
+      mpl.xlabel("Date")
       self._finish_plot()
 
 
