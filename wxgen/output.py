@@ -64,7 +64,8 @@ class Timeseries(Output):
             #I = range(0, T, Tsegment-1)
             #mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
 
-         mpl.ylabel(variables[v].name)
+         label = variables[v].pretty() #"%s (%s)" % (variables[v].label, variables[v].units)
+         mpl.ylabel(label)
          mpl.grid()
         
          mpl.gca().xaxis_date()

@@ -179,7 +179,17 @@ class Netcdf(Database):
       self._datename = "forecast_reference_time"
 
       # Set dimensions
-      self.variables = [wxgen.variable.Variable(name) for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
+      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
+      self.variables = list()
+      for var_name in var_names:
+         units = None
+         label = None
+         if hasattr(self._file.variables[var_name], "units"):
+            units = self._file.variables[var_name].units
+         if hasattr(self._file.variables[var_name], "standard_name"):
+            label = self._file.variables[var_name].standard_name
+         var = wxgen.variable.Variable(var_name, units, label)
+         self.variables.append(var)
       if V is not None:
          self.variables = self.variables[0:V]
 
