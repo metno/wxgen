@@ -23,6 +23,7 @@ class Database(object):
    lons           2D grid of longitudes
    X              Number of X-axis points
    Y              Number of Y-axis points
+   inittimes      numpy array with initialization time corresponding to each member
 
    Internal:
    _data          A 5D numpy array of data with dimensions (lead_time, lat, lon, variable, member*time)
@@ -50,11 +51,19 @@ class Database(object):
 
    def get_truth(self):
       """ Concatenate the initialization state of all trajectories """
-      indices = np.zeros([self.num, 2], int)
-      indices[:,0] = np.arange(0, self.num)
-      indices[:,1] = 0
-      # TODO: Not quite right, since must account for multiple members
-      return wxgen.trajectory.Trajectory(indices, database)
+      times = np.arange(np.min(self.inittimes), np.max(self.inittimes), 86400)
+      indices = np.nan*np.zeros([len(times), 2], int)
+      for i in range(0, len(times)):
+         time = times[i]
+         I = np.where(time >= self.inittimes)[0]
+         if len(I) == 0:
+            wxgen.error("Internal error")
+         inittime = self.inittimes[I[-1]]
+         lt = (time - inittime)/86400
+         if lt < self.length:
+            indices[i,0] = I[-1]
+            indices[i,1] = lt
+      return wxgen.trajectory.Trajectory(indices, self)
 
    def get_random(self, target_state, metric, ext_state=None):
       """
@@ -228,9 +237,9 @@ class Netcdf(Database):
          index = 0
          for d in range(0, D):
             for m in range(0, M):
-               if is_spatial: #and np.sum(np.isnan(temp[d, :, m, :, :])) == 0:
+               if is_spatial:
                   self._data[:,:,:,v,index] = temp[d, :, m, :, :]
-               else: #if np.sum(np.isnan(temp[d, :, m])) == 0:
+               else:
                   self._data[:,:,:,v,index] = np.reshape(temp[d, :, m], [T,Y,X])
                index = index + 1
 
@@ -245,6 +254,7 @@ class Netcdf(Database):
       for d in range(0, times.shape[0]):
          day_of_year[d] = int(datetime.datetime.fromtimestamp(times[d]).strftime('%j'))
       month_of_year = day_of_year.astype(int)/ 30
+      self.inittimes = np.repeat(times, self._members)
       self._ext_state = np.repeat(month_of_year, self._members)
       if self._debug0:
          print self._ext_state
