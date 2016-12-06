@@ -21,6 +21,11 @@ def run(argv):
    parser.add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    parser.add_argument('-o', type=str, default=None, help="Output filename", dest="output_filename")
    parser.add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
+   parser.add_argument('-fs', type=str, default=None, help="Figure size: width,height")
+   parser.add_argument('--xlog', help="x-axis limits: lower,upper", action="store_true")
+   parser.add_argument('--ylog', help="y-axis limits: lower,upper", action="store_true")
+   parser.add_argument('--xlim', type=str, default=None, help="x-axis limits: lower,upper")
+   parser.add_argument('--ylim', type=str, default=None, help="y-axis limits: lower,upper")
    parser.add_argument('--seed', type=int, default=None, help="Random number seed")
    parser.add_argument('--debug', help="Display debug information", action="store_true")
    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
@@ -71,7 +76,13 @@ def run(argv):
    trajectories = generator.get(args.n, args.t, initial_state)
 
    # Create output
-   output = wxgen.output.get(args.type)(db, args.output_filename)
+   output = wxgen.output.get(args.type)(db)
+   output.filename = args.output_filename
+   output.fig_size = wxgen.util.parse_numbers(args.fs)
+   output.xlim = wxgen.util.parse_numbers(args.xlim)
+   output.ylim = wxgen.util.parse_numbers(args.ylim)
+   output.xlog = args.xlog
+   output.ylog = args.ylog
    output.plot(trajectories)
 
 

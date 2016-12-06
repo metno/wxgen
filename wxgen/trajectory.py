@@ -46,9 +46,10 @@ class Trajectory(object):
       """ Returns the sequence as a 2D numpy array (T, V) """
       T = self.indices.shape[0]
       V = len(self.database.variables)
-      trajectory = np.zeros([T, V], float)
+      trajectory = np.nan*np.zeros([T, V], float)
       for i in range(0, self.indices.shape[0]):
-         trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
+         if not np.isnan(self.indices[i,1]):
+            trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
       return trajectory
 
    def extract_grid(self):

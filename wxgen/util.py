@@ -34,6 +34,9 @@ def parse_numbers(numbers, isDate=False):
       start:end
       start:step:end
    """
+   if numbers is None:
+      return None
+
    # Check if valid string
    if(any(char not in set('-01234567890.:,') for char in numbers)):
       error("Could not translate '" + numbers + "' into numbers")

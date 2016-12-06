@@ -29,17 +29,49 @@ class Output(object):
    """
    A class for outputing trajectory information
    """
-   def __init__(self, db, filename=None):
-      self._filename = filename
+   def __init__(self, db):
+      self.filename = None
       self._db = db
-      self._dpi = 300
+      self.dpi = 300
+      self.fig_size = [10,5]
+      self.xlim = None
+      self.ylim = None
+      self.xlog = False
+      self.ylog = False
+      self.xticks = None
+      self.yticks = None
+      self.xticklabels = None
+      self.yticklabels = None
+      self._sets_xticks = None
+      self._sets_yticks = None
 
    def _finish_plot(self):
-      if self._filename is None:
+      if self.xlim is not None:
+         mpl.xlim(self.xlim)
+      if self.ylim is not None:
+         mpl.ylim(self.ylim)
+      if self.xlog:
+         # Keep tany set ticks and labels
+         if self._sets_xticks:
+            xticks = mpl.gca().get_xticks()
+            xticklabels = mpl.gca().get_xticklabels()
+         mpl.gca().set_xscale("log")
+         if self._sets_xticks:
+            mpl.gca().set_xticks(xticks)
+            mpl.gca().set_xticklabels(xticklabels)
+      if self.ylog:
+         if self._sets_yticks:
+            yticks = mpl.gca().get_yticks()
+            yticklabels = mpl.gca().get_yticklabels()
+         mpl.gca().set_yscale("log")
+         if self._sets_yticks:
+            mpl.gca().set_yticks(yticks)
+            mpl.gca().set_yticklabels(yticklabels)
+      if self.filename is None:
          mpl.show()
       else:
-         mpl.gcf().set_size_inches(10,5)
-         mpl.savefig(self._filename, bbox_inches='tight', dpi=self._dpi)
+         mpl.gcf().set_size_inches(self.fig_size[0],self.fig_size[1])
+         mpl.savefig(self.filename, bbox_inches='tight', dpi=self.dpi)
 
 
 class Timeseries(Output):
@@ -83,16 +115,81 @@ class Timeseries(Output):
       self._finish_plot()
 
 
+class Variance(Output):
+   def __init__(self, db):
+      Output. __init__(self, db)
+      self._timescales = np.array([1, 7, 30, 365])
+      self._timescales = np.arange(1, 365)
+      #self._timescales_names = ["day", "week", "month", "year"]
+      self._sets_xticks = True
+      self._sets_yticks = False
+
+   def plot(self, trajectories):
+      truth = self._db.get_truth()
+      variables = self._db.variables
+      V = len(variables)
+      for v in range(V):
+         mpl.subplot(V,1,v+1)
+         x, y_obs, y_fcst = self.compute(truth, trajectories)
+         xx = range(len(self._timescales))
+         mpl.plot(x, y_obs[:,v], '-', lw=3, label='True')
+         mpl.plot(x, y_fcst[:,v], '-', lw=3, label='Simulated')
+         mpl.gca().set_xticks([1,7,30,365])
+         mpl.gca().set_xticklabels(["day", "week", "month", "year"])
+         mpl.xlabel("Time scale")
+         mpl.ylabel("Variance ($%s^2$)" % variables[v].units)
+         #ylim = [0, mpl.ylim()[1]]
+         #mpl.ylim(ylim)
+         mpl.grid()
+         mpl.legend()
+      self._finish_plot()
+
+   def compute(self, truth, trajectories):
+      S = len(self._timescales)
+      V = len(self._db.variables)
+      obs_variance = np.zeros([S, V], float)
+      fcst_variance = np.zeros([S,V], float)
+      fcst = np.zeros([trajectories[0].length, len(trajectories[0].variables), len(trajectories)])
+      obs0 = truth.extract()
+      obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
+      for i in range(0, int(np.ceil(obs0.shape[0]/365))):
+         I = range(i*365, (i+1)*365)
+         obs[:,:,i] = obs0[I,:]
+      for t in range(0, len(trajectories)):
+         fcst[:, :, t] = trajectories[t].extract()
+      clim = np.nanmean(obs, axis=2)
+      for i in range(0, obs.shape[2]):
+         obs[:,:,i] = obs[:,:,i] - clim
+      for i in range(0, fcst.shape[2]):
+         fcst[:,:,i] = fcst[:,:,i] - clim
+
+      for v in range(0, V):
+         for i in range(0, len(self._timescales)):
+            s = self._timescales[i]
+            c = [1.0/s]* s
+            obs_c = np.zeros([obs.shape[0], obs.shape[2]], float)
+            for e in range(0, obs.shape[2]):
+               obs_c[:,e] = np.convolve(obs[:,v,e], c, 'same')
+            obs_variance[i,v] = np.nanvar(obs_c)
+
+            fcst_c = np.zeros([fcst.shape[0], fcst.shape[2]], float)
+            for e in range(0, fcst.shape[2]):
+               fcst_c[:,e] = np.convolve(fcst[:,v,e], c, 'same')
+            fcst_variance[i,v] = np.nanvar(fcst_c)
+
+      return self._timescales, obs_variance, fcst_variance
+
+
 class Text(Output):
    """
    Writes the trajectories to a text file. One variable in each column and each day on a separate
    line. Trajectories are separated by a blank line.
    """
    def plot(self, trajectories):
-      if self._filename is None:
+      if self.filename is None:
          wxgen.util.error("Text output requires a filename")
 
-      fid = open(self._filename, "w")
+      fid = open(self.filename, "w")
       N = len(trajectories)
       T = trajectories[0].length
       V = len(trajectories[0].variables)
@@ -112,13 +209,13 @@ class Netcdf(Output):
    Writes the trajectories to a netcdf file.
    """
    def plot(self, trajectories):
-      if self._filename is None:
+      if self.filename is None:
          wxgen.util.error("Netcdf output requires a filename")
-      file = netCDF4.Dataset(self._filename, 'w')
+      file = netCDF4.Dataset(self.filename, 'w')
 
 
       variables = trajectories[0].variables
-      fid = open(self._filename, "w")
+      fid = open(self.filename, "w")
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
       file.createDimension("lat", trajectories[0].Y)
