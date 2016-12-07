@@ -1,0 +1,6 @@
+scipy
+numpy
+matplotlib
+coveralls
+pep8
+netCDF4
