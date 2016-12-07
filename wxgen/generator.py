@@ -1,6 +1,7 @@
 import numpy as np
 import wxgen.metric
 import wxgen.util
+import wxgen.climate_model
 
 
 class Generator(object):
@@ -8,10 +9,11 @@ class Generator(object):
    This class generates long trajectories from segments in a database
    """
 
-   def __init__(self, database, metric=wxgen.metric.Rmsd()):
+   def __init__(self, database, metric=wxgen.metric.Rmsd(), model=wxgen.climate_model.Bin(10)):
       self._database = database
       self._metric = metric
       self._debug = False
+      self._model = model
 
    def get(self, N, T, initial_state=None):
       """
@@ -36,7 +38,8 @@ class Generator(object):
 
          if initial_state is None:
             I = np.random.randint(self._database.num)
-            state_curr = self._database.get(I)
+            state_curr = self._database.get_random(np.zeros(V),
+                  wxgen.metric.Exp(np.zeros(V))).extract()[0,:]
          else:
             state_curr = initial_state
 
@@ -45,12 +48,12 @@ class Generator(object):
          # repeating, overwrite the end state of the previous segment. This means that if the
          # segment is 10 days long, we are only using 9 days of the segment.
          start = 0  # Starting index into output trajectory where we are inserting a segment
-         day_of_year = 1
+         time = wxgen.util.date_to_unixtime(20170101)
          while start < T:
             # TODO
-            month_of_year = day_of_year / 30
+            climate_state = self._model.get([time])[0]
 
-            segment_curr = self._database.get_random(state_curr, self._metric, month_of_year)
+            segment_curr = self._database.get_random(state_curr, self._metric, climate_state)
             indices_curr = segment_curr.indices
             # print state_curr, segment_curr.extract()[0,:] 
 
@@ -65,9 +68,7 @@ class Generator(object):
                print "Segment indices: ", Iin
             state_curr = segment_curr.extract()[-1,:]
             start = start + Tsegment-1
-            day_of_year = day_of_year + Tsegment-1
-            if day_of_year > 365:
-               day_of_year = day_of_year - 365
+            time = time + (Tsegment-1)*86400
 
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices, self._database)
          if self._debug:

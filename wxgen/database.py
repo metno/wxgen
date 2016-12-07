@@ -3,6 +3,7 @@ import wxgen.util
 import datetime
 import wxgen.aggregator
 import wxgen.variable
+import wxgen.climate_model
 import copy
 import netCDF4
 
@@ -24,6 +25,7 @@ class Database(object):
    X              Number of X-axis points
    Y              Number of Y-axis points
    inittimes      numpy array with initialization time corresponding to each member
+   climate_states A numpy array of climate states (one for each ensemble member)
 
    Internal:
    _data          A 5D numpy array of data with dimensions (lead_time, lat, lon, variable, member*time)
@@ -31,10 +33,9 @@ class Database(object):
    """
    def __init__(self):
       self._debug = False
-      """ External state (such as the month of the year) """
-      self._ext_state = None
       self.aggregator = wxgen.aggregator.Mean()
       self._data_agg_cache = None
+      self._model = wxgen.climate_model.Bin(10)
 
    def info(self):
       print "Database information:"
@@ -65,7 +66,7 @@ class Database(object):
             indices[i,1] = lt
       return wxgen.trajectory.Trajectory(indices, self)
 
-   def get_random(self, target_state, metric, ext_state=None):
+   def get_random(self, target_state, metric, climate_state=None):
       """
       Returns a random segment from the database that is weighted
       by the scores computed by metric.
@@ -73,18 +74,19 @@ class Database(object):
       Arguments:
       target_state   A numpy array (length V)
       metric         Of type wxgen.metric.Metric
-      ext_state      External state
+      climate_state      External state
 
       Returns:
       trajectory     Of type wxgen.trajectory.Trajectory
       """
       weights = metric.compute(target_state, self._data_agg[0,:,:])
       Ivalid = np.where(np.isnan(weights) == 0)[0]
-      if ext_state is not None and self._ext_state is not None:
-         Iext_state = np.where(self._ext_state[Ivalid] == ext_state)[0]
-         if len(Iext_state) == 0:
-            wxgen.util.error("Cannot find a segment with  external state = %s" % str(ext_state))
-         Ivalid = Ivalid[Iext_state]
+      if climate_state is not None:
+         Iclimate_state = np.where(self.climate_states[Ivalid] == climate_state)[0]
+         if len(Iclimate_state) == 0:
+            print np.unique(self.climate_states[Ivalid])
+            wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
+         Ivalid = Ivalid[Iclimate_state]
 
       weights_v = weights[Ivalid]
 
@@ -223,8 +225,7 @@ class Netcdf(Database):
       self.num = M * D
       print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
       self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
-      self._ext_state = np.zeros(self.num, float)
-      assert(self._ext_state.shape[0] == self.num)
+      self._date = np.zeros(self.num, float)
 
       for v in range(0, V):
          var = self.variables[v]
@@ -250,15 +251,9 @@ class Netcdf(Database):
             # print "Removing %d" % e
 
       times = self._file.variables[self._initname]
-      day_of_year = np.zeros(times.shape)
-      for d in range(0, times.shape[0]):
-         day_of_year[d] = int(datetime.datetime.fromtimestamp(times[d]).strftime('%j'))
-      month_of_year = day_of_year.astype(int)/ 30
       self.inittimes = np.repeat(times, self._members)
-      self._ext_state = np.repeat(month_of_year, self._members)
-      if self._debug0:
-         print self._ext_state
-
+      self.climate_states = self._model.get(self.inittimes)
+      print np.unique(self.climate_states)
       self._file.close()
 
    def _copy(self, data):

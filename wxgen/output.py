@@ -5,6 +5,8 @@ import numpy as np
 import sys
 import wxgen.util
 import matplotlib.dates
+import scipy.ndimage
+import astropy.convolution
 
 
 def get_all():
@@ -44,6 +46,7 @@ class Output(object):
       self.yticklabels = None
       self._sets_xticks = None
       self._sets_yticks = None
+      self.which_vars = None
 
    def _finish_plot(self):
       if self.xlim is not None:
@@ -83,21 +86,25 @@ class Timeseries(Output):
       V = len(trajectories[0].variables)
       variables = trajectories[0].variables
       Tsegment = self._db.length
-      for v in range(0, V):
-         mpl.subplot(V,1,v+1)
+      Ivar = range(0, V)
+      if self.which_vars is not None:
+         Ivar = self.which_vars
+      for v in range(0, len(Ivar)):
+         mpl.subplot(len(Ivar),1,v+1)
+         Iv = Ivar[v]
          start_date = matplotlib.dates.date2num(matplotlib.dates.datetime.datetime(2017, 1, 1, 0))
          x = start_date + np.linspace(0, T-1, T)
          for tr in trajectories:
             values = tr.extract()
             # Plot the trajectory
             assert(np.sum(np.isnan(values)) == 0)
-            mpl.plot(x, values[:,v], '-', lw=1)
+            mpl.plot(x, values[:,Iv], 'o-', lw=1)
 
             # Plot the starting state of each segment
             #I = range(0, T, Tsegment-1)
-            #mpl.plot(x[I], tr[I,v], 'ko', mfc='w')
+            #mpl.plot(x[I], tr[I,Iv], 'ko', mfc='w')
 
-         label = variables[v].pretty() #"%s (%s)" % (variables[v].label, variables[v].units)
+         label = variables[Iv].pretty() #"%s (%s)" % (variables[Iv].label, variables[Iv].units)
          mpl.ylabel(label)
          mpl.grid()
         
@@ -119,7 +126,7 @@ class Variance(Output):
    def __init__(self, db):
       Output. __init__(self, db)
       self._timescales = np.array([1, 7, 30, 365])
-      self._timescales = np.arange(1, 365)
+      self._timescales = np.arange(1, 365, 2)
       #self._timescales_names = ["day", "week", "month", "year"]
       self._sets_xticks = True
       self._sets_yticks = False
@@ -128,16 +135,20 @@ class Variance(Output):
       truth = self._db.get_truth()
       variables = self._db.variables
       V = len(variables)
-      for v in range(V):
-         mpl.subplot(V,1,v+1)
+      Ivar = range(0, V)
+      if self.which_vars is not None:
+         Ivar = self.which_vars
+      for v in range(0, len(Ivar)):
+         Iv = Ivar[v]
+         mpl.subplot(len(Ivar),1,v+1)
          x, y_obs, y_fcst = self.compute(truth, trajectories)
          xx = range(len(self._timescales))
-         mpl.plot(x, y_obs[:,v], '-', lw=3, label='True')
-         mpl.plot(x, y_fcst[:,v], '-', lw=3, label='Simulated')
+         mpl.plot(x, y_obs[:,Iv], '-', lw=3, label='True')
+         mpl.plot(x, y_fcst[:,Iv], '-', lw=3, label='Simulated')
          mpl.gca().set_xticks([1,7,30,365])
          mpl.gca().set_xticklabels(["day", "week", "month", "year"])
          mpl.xlabel("Time scale")
-         mpl.ylabel("Variance ($%s^2$)" % variables[v].units)
+         mpl.ylabel("Variance ($%s^2$)" % variables[Iv].units)
          #ylim = [0, mpl.ylim()[1]]
          #mpl.ylim(ylim)
          mpl.grid()
@@ -147,8 +158,8 @@ class Variance(Output):
    def compute(self, truth, trajectories):
       S = len(self._timescales)
       V = len(self._db.variables)
-      obs_variance = np.zeros([S, V], float)
-      fcst_variance = np.zeros([S,V], float)
+      obs_variance = np.nan*np.zeros([S, V], float)
+      fcst_variance = np.nan*np.zeros([S,V], float)
       fcst = np.zeros([trajectories[0].length, len(trajectories[0].variables), len(trajectories)])
       obs0 = truth.extract()
       obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
@@ -169,7 +180,9 @@ class Variance(Output):
             c = [1.0/s]* s
             obs_c = np.zeros([obs.shape[0], obs.shape[2]], float)
             for e in range(0, obs.shape[2]):
-               obs_c[:,e] = np.convolve(obs[:,v,e], c, 'same')
+               #obs_c[:,e] = np.convolve(obs[:,v,e], c, 'same')
+               #obs_c[:,e] = scipy.ndimage.convolve(obs[:,v,e], 1.0/s*np.ones(s), mode="mirror") 
+               obs_c[:,e] = astropy.convolution.convolve(obs[:,v,e], 1.0/s*np.ones(s))
             obs_variance[i,v] = np.nanvar(obs_c)
 
             fcst_c = np.zeros([fcst.shape[0], fcst.shape[2]], float)

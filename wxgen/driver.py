@@ -16,6 +16,7 @@ def run(argv):
    parser.add_argument('-n', type=int, help="Number of trajectories", required=True)
    parser.add_argument('-t', type=int, help="Length of trajectory", required=True)
    parser.add_argument('-v', type=int, help="Number of variables", required=False)
+   parser.add_argument('--which_vars', type=str, help="Which variables to plot?", required=False)
    parser.add_argument('--type', type=str, default="timeseries", help="Output type (text, netcdf, or plot)")
    parser.add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    parser.add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
@@ -53,7 +54,7 @@ def run(argv):
    V = len(db.variables)
 
    if args.initial is None:
-      initial_state = np.zeros(V, float)
+      initial_state = None
    else:
       initial_state = np.array(wxgen.util.parse_numbers(args.initial))
       if len(initial_state) != V:
@@ -83,6 +84,8 @@ def run(argv):
    output.ylim = wxgen.util.parse_numbers(args.ylim)
    output.xlog = args.xlog
    output.ylog = args.ylog
+   output.which_vars = wxgen.util.parse_numbers(args.which_vars)
+   print output.which_vars
    output.plot(trajectories)
 
 

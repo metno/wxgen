@@ -75,8 +75,8 @@ class Exp(Metric):
    def __init__(self, factors=None):
       """ factors    an array of variable-weights """
       self._factors = factors
-      if self._factors is None:
-         factors = 1
+      if factors is None:
+         self._factors = 1
 
    def _compute(self, state1, state2):
       factors = wxgen.util.resize(self._factors, state2.shape)

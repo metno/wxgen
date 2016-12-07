@@ -1,4 +1,6 @@
 import numpy as np
+import calendar
+import datetime
 import sys
 
 def random_weighted(weights):
@@ -46,15 +48,17 @@ def parse_numbers(numbers, isDate=False):
    for commaList in commaLists:
       colonList = commaList.split(':')
       if(len(colonList) == 1):
-         values.append(float(colonList[0]))
+         value = float(colonList[0])
+         if int(value) == value:
+            values.append(int(value))
+         else:
+            values.append(value)
       elif(len(colonList) <= 3):
          start = float(colonList[0])
          step = 1
          if(len(colonList) == 3):
             step = float(colonList[1])
-         stepSign = step / abs(step)
-         # arange does not include the end point:
-         end = float(colonList[-1]) + stepSign * 0.0001
+         end = float(colonList[-1])
          if(isDate):
             date = min(start, end)
             curr = list()
@@ -63,7 +67,13 @@ def parse_numbers(numbers, isDate=False):
                date = getDate(date, step)
             values = values + list(curr)
          else:
-            values = values + list(np.arange(start, end, step))
+            if int(start) == start and int(end) == end and int(step) == step:
+               # Generate integer list
+               values = values + list(range(int(start), int(end)+1, int(step)))
+            else:
+               # arange does not include the end point:
+               stepSign = step / abs(step)
+               values = values + list(np.arange(start, end+ stepSign*0.0001, step))
       else:
          error("Could not translate '" + numbers + "' into numbers")
       if(isDate):
@@ -93,3 +103,19 @@ def resize(vec, size):
       assert(size[1] % vec.shape[1] == 0)
       vec_resized = np.tile(vec, (size[0] / vec.shape[0], size[1] / vec.shape[1]))
    return vec_resized
+
+
+def date_to_unixtime(date):
+   year = date / 10000
+   month = date / 100 % 100
+   day = date % 100
+   ut = calendar.timegm(datetime.datetime(year, month, day).timetuple())
+   return ut
+
+
+def unixtime_to_date(unixtime):
+   dt = datetime.datetime.utcfromtimestamp(int(unixtime))
+   date = dt.year * 10000 + dt.month * 100 + dt.day
+   return date
+
+
