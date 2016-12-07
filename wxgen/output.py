@@ -168,11 +168,15 @@ class Variance(Output):
          obs[:,:,i] = obs0[I,:]
       for t in range(0, len(trajectories)):
          fcst[:, :, t] = trajectories[t].extract()
-      clim = np.nanmean(obs, axis=2)
+      # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+      # otherwise the fcst variance is higher because obs gets the advantage of using its own
+      # climatology.
+      obs_clim = np.nanmean(obs, axis=2)
+      fcst_clim = np.nanmean(fcst, axis=2)
       for i in range(0, obs.shape[2]):
-         obs[:,:,i] = obs[:,:,i] - clim
+         obs[:,:,i] = obs[:,:,i] - obs_clim
       for i in range(0, fcst.shape[2]):
-         fcst[:,:,i] = fcst[:,:,i] - clim
+         fcst[:,:,i] = fcst[:,:,i] - fcst_clim
 
       for v in range(0, V):
          for i in range(0, len(self._timescales)):
