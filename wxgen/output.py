@@ -163,11 +163,14 @@ class Variance(Output):
       fcst = np.zeros([trajectories[0].length, len(trajectories[0].variables), len(trajectories)])
       obs0 = truth.extract()
       obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
+      # Loop over all years in observation set
       for i in range(0, int(np.ceil(obs0.shape[0]/365))):
-         I = range(i*365, (i+1)*365)
-         obs[:,:,i] = obs0[I,:]
+         I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
+         I = range(0, len(I0))
+         obs[I,:,i] = obs0[I0,:]
       for t in range(0, len(trajectories)):
          fcst[:, :, t] = trajectories[t].extract()
+
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
       # climatology.
@@ -178,21 +181,24 @@ class Variance(Output):
       for i in range(0, fcst.shape[2]):
          fcst[:,:,i] = fcst[:,:,i] - fcst_clim
 
+      if obs.shape[0] > fcst.shape[0]:
+         print "Trimming observations (%d) so they have the same size as forecasts (%d)" % (obs.shape[0], fcst.shape[0])
+         obs = obs[0:fcst.shape[0],:,:]
+
       for v in range(0, V):
          for i in range(0, len(self._timescales)):
             s = self._timescales[i]
-            c = [1.0/s]* s
-            obs_c = np.zeros([obs.shape[0], obs.shape[2]], float)
-            for e in range(0, obs.shape[2]):
-               #obs_c[:,e] = np.convolve(obs[:,v,e], c, 'same')
-               #obs_c[:,e] = scipy.ndimage.convolve(obs[:,v,e], 1.0/s*np.ones(s), mode="mirror") 
-               obs_c[:,e] = astropy.convolution.convolve(obs[:,v,e], 1.0/s*np.ones(s))
-            obs_variance[i,v] = np.nanvar(obs_c)
+            if s < fcst.shape[0]:
+               c = [1.0/s]* s
+               obs_c = np.zeros([obs.shape[0], obs.shape[2]], float)
+               for e in range(0, obs.shape[2]):
+                  obs_c[:,e] = astropy.convolution.convolve(obs[:,v,e], 1.0/s*np.ones(s))
+               obs_variance[i,v] = np.nanvar(obs_c, ddof=1)
 
-            fcst_c = np.zeros([fcst.shape[0], fcst.shape[2]], float)
-            for e in range(0, fcst.shape[2]):
-               fcst_c[:,e] = np.convolve(fcst[:,v,e], c, 'same')
-            fcst_variance[i,v] = np.nanvar(fcst_c)
+               fcst_c = np.zeros([fcst.shape[0], fcst.shape[2]], float)
+               for e in range(0, fcst.shape[2]):
+                  fcst_c[:,e] = np.convolve(fcst[:,v,e], c, 'same')
+               fcst_variance[i,v] = np.nanvar(fcst_c, ddof=1)
 
       return self._timescales, obs_variance, fcst_variance
 
