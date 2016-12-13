@@ -70,7 +70,7 @@ class Rmsd(Metric):
       return np.sqrt(total)
 
 class Exp(Metric):
-   """ Exponential score based on sum(exp(-factor * diff)) """
+   """ Exponential score based on exp(-sum(|factor * diff|)) """
    _orientation = 1
    def __init__(self, factors=None):
       """ factors    an array of variable-weights """
@@ -80,6 +80,6 @@ class Exp(Metric):
 
    def _compute(self, state1, state2):
       factors = wxgen.util.resize(self._factors, state2.shape)
-      total = np.exp(np.sum(-factors*abs(state1 - state2), axis=0))
+      total = np.exp(-np.sum(factors*abs(state1 - state2), axis=0))
       return total
 
