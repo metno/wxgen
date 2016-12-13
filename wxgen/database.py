@@ -59,11 +59,14 @@ class Database(object):
          I = np.where(time >= self.inittimes)[0]
          if len(I) == 0:
             wxgen.error("Internal error")
-         inittime = self.inittimes[I[-1]]
+         inittime = np.max(self.inittimes[I])
          lt = (time - inittime)/86400
          if lt < self.length:
-            indices[i,0] = I[-1]
+            indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
+         else:
+            pass
+            # print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
       return wxgen.trajectory.Trajectory(indices, self)
 
    def get_random(self, target_state, metric, climate_state=None):
@@ -229,7 +232,6 @@ class Netcdf(Database):
 
       for v in range(0, V):
          var = self.variables[v]
-         print var.name
          temp = self._copy(self._file.variables[var.name]) # dims: D, T, M, X, Y)
 
          # Quality control
@@ -253,7 +255,6 @@ class Netcdf(Database):
       times = self._file.variables[self._initname]
       self.inittimes = np.repeat(times, self._members)
       self.climate_states = self._model.get(self.inittimes)
-      print np.unique(self.climate_states)
       self._file.close()
 
    def _copy(self, data):
