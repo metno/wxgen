@@ -33,10 +33,11 @@ class Metric(object):
 
    def compute(self, state1, state2):
       """
-      Compute the score
+      Compute the comparison score between the two states
 
-      state1      A numpy array of dimensions (V,) or (V,N)
-      state2      A numpy array of dimensions (V,) or (V,N)
+      Arguments:
+         state1 (np.array): An array of dimensions (V,) or (V,N)
+         state2 (np.array): An array of dimensions (V,) or (V,N)
 
       If state1 is (V,N), then state2 must also be (V,N). If state1 is (V,) and state2 (V,N),
       then state1 ir repeated for all N.
@@ -55,11 +56,14 @@ class Metric(object):
 
 
 class Rmsd(Metric):
-   """ Root mean squared difference of the states """
+   """ Root mean squared difference of the states
+
+   Arguments:
+      weights (np.array): array of variable-weights
+   """
    _orientation = -1
 
    def __init__(self, weights=None):
-      """ weights    an array of variable-weights """
       self._weights = weights
       if self._weights is None:
          self._weights = 1
@@ -70,10 +74,13 @@ class Rmsd(Metric):
       return np.sqrt(total)
 
 class Exp(Metric):
-   """ Exponential score based on exp(-sum(|factor * diff|)) """
+   """ Exponential score based on exp(-sum(|factor * diff|))
+      
+   Arguments:
+      factors (np.array): array of variable-weights
+   """
    _orientation = 1
    def __init__(self, factors=None):
-      """ factors    an array of variable-weights """
       self._factors = factors
       if factors is None:
          self._factors = 1
