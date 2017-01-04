@@ -9,7 +9,7 @@ class Variable(object):
 
    def pretty(self):
       if self.units is None:
-         label = "%s" % (self.label.captialize())
+         label = "%s" % (self.label.capitalize())
       else:
          label = "%s (%s)" % (self.label.capitalize(), self.units)
 
