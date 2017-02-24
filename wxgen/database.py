@@ -48,6 +48,7 @@ class Database(object):
       indices = np.zeros([self.length, 2], int)
       indices[:,0] = i
       indices[:,1] = np.arange(0, self.length)
+      assert(np.sum(np.isnan(indices)) == 0)
       return wxgen.trajectory.Trajectory(indices, self)
 
    def get_truth(self):
@@ -65,16 +66,13 @@ class Database(object):
             indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
          else:
-            pass
-            # print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
+            print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
       return wxgen.trajectory.Trajectory(indices, self)
 
    def get_random(self, target_state, metric, climate_state=None):
       """
       Returns a random segment from the database that is weighted
       by the scores computed by metric.
-
-      Arguments:
       target_state   A numpy array (length V)
       metric         Of type wxgen.metric.Metric
       climate_state      External state
@@ -101,11 +99,14 @@ class Database(object):
          weights_v[I1] = 1.0/weights_v[I1]
          weights_v[I0] = 1e3
 
+      # max_weight = np.max(weights_v)
+      # weights_v[np.where(weights_v < max_weight / 4)[0]] = 0
       I_v = wxgen.util.random_weighted(weights_v)
       I = Ivalid[I_v]
 
       # Do a weighted random choice of the weights
       if self._debug:
+         print "I: ", I
          print "Data: ", self._data_agg[0,:,I]
          print "Weight: ", weights_v[I_v]
          print "Max weight: ", np.max(weights_v)
@@ -212,6 +213,10 @@ class Netcdf(Database):
       V = len(self.variables)
       M = self._members
       D = self._file.dimensions["forecast_reference_time"].size
+      times = self._file.variables[self._initname][:]
+      Itimes = np.where(np.isnan(times) == 0)[0]
+      times = times[Itimes]
+      D = len(times)
       T = self.length
       if "lon" in self._file.dimensions:
          is_spatial = True
@@ -236,14 +241,14 @@ class Netcdf(Database):
 
          # Quality control
          if var.name == "precipitation_amount":
-            temp[temp < 0] = np.nan
+            temp[temp < 0] = 0#np.nan
          index = 0
          for d in range(0, D):
             for m in range(0, M):
                if is_spatial:
-                  self._data[:,:,:,v,index] = temp[d, :, m, :, :]
+                  self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
                else:
-                  self._data[:,:,:,v,index] = np.reshape(temp[d, :, m], [T,Y,X])
+                  self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
                index = index + 1
 
       # If one or more values are missing for a member, set all values to nan
@@ -252,8 +257,8 @@ class Netcdf(Database):
             self._data[:,:,:,:,e] = np.nan
             # print "Removing %d" % e
 
-      times = self._file.variables[self._initname]
       self.inittimes = np.repeat(times, self._members)
+
       self.climate_states = self._model.get(self.inittimes)
       self._file.close()
 

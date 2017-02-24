@@ -63,6 +63,8 @@ class Trajectory(object):
       for i in range(0, self.indices.shape[0]):
          m = self.indices[i,0]
          t = self.indices[i,1]
+         assert(not np.isnan(m))
+         assert(not np.isnan(t))
          trajectory[i,:,:,:] = self.database._data[t, :, :, :, m]
       return trajectory
 

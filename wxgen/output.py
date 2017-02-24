@@ -49,27 +49,28 @@ class Output(object):
       self.which_vars = None
 
    def _finish_plot(self):
-      if self.xlim is not None:
-         mpl.xlim(self.xlim)
-      if self.ylim is not None:
-         mpl.ylim(self.ylim)
-      if self.xlog:
-         # Keep tany set ticks and labels
-         if self._sets_xticks:
-            xticks = mpl.gca().get_xticks()
-            xticklabels = mpl.gca().get_xticklabels()
-         mpl.gca().set_xscale("log")
-         if self._sets_xticks:
-            mpl.gca().set_xticks(xticks)
-            mpl.gca().set_xticklabels(xticklabels)
-      if self.ylog:
-         if self._sets_yticks:
-            yticks = mpl.gca().get_yticks()
-            yticklabels = mpl.gca().get_yticklabels()
-         mpl.gca().set_yscale("log")
-         if self._sets_yticks:
-            mpl.gca().set_yticks(yticks)
-            mpl.gca().set_yticklabels(yticklabels)
+      for ax in mpl.gcf().get_axes():
+         if self.xlim is not None:
+            ax.set_xlim(self.xlim)
+         if self.ylim is not None:
+            ax.set_ylim(self.ylim)
+         if self.xlog:
+            # Keep tany set ticks and labels
+            if self._sets_xticks:
+               xticks = ax.get_xticks()
+               xticklabels = ax.get_xticklabels()
+            ax.set_xscale("log")
+            if self._sets_xticks:
+               ax.set_xticks(xticks)
+               ax.set_xticklabels(xticklabels)
+         if self.ylog:
+            if self._sets_yticks:
+               yticks = ax.get_yticks()
+               yticklabels = ax.get_yticklabels()
+            ax.set_yscale("log")
+            if self._sets_yticks:
+               ax.set_yticks(yticks)
+               ax.set_yticklabels(yticklabels)
       if self.filename is None:
          mpl.show()
       else:
@@ -94,11 +95,21 @@ class Timeseries(Output):
          Iv = Ivar[v]
          start_date = matplotlib.dates.date2num(matplotlib.dates.datetime.datetime(2017, 1, 1, 0))
          x = start_date + np.linspace(0, T-1, T)
+
+         # Plot obs
+         obs0 = self._db.get_truth().extract()
+         obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
+         # Loop over all years in observation set
+         for i in range(0, int(np.ceil(obs0.shape[0]/365))):
+            I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
+            I = range(0, len(I0))
+            obs[I,:,i] = obs0[I0,:]
+         mpl.plot(x, obs[:,Iv], 'r-', lw=2)
          for tr in trajectories:
-            values = tr.extract()
+            fcst = tr.extract()
             # Plot the trajectory
-            assert(np.sum(np.isnan(values)) == 0)
-            mpl.plot(x, values[:,Iv], 'o-', lw=1)
+            assert(np.sum(np.isnan(fcst)) == 0)
+            mpl.plot(x, fcst[:,Iv], 'b-', lw=2)
 
             # Plot the starting state of each segment
             #I = range(0, T, Tsegment-1)
@@ -126,7 +137,7 @@ class Variance(Output):
    def __init__(self, db):
       Output. __init__(self, db)
       self._timescales = np.array([1, 7, 30, 365])
-      self._timescales = np.arange(1, 365, 2)
+      self._timescales =np.array([1,3,5,7,9,13,21,31,61,121,221,363,365])#np.arange(1, 365, 2)
       #self._timescales_names = ["day", "week", "month", "year"]
       self._sets_xticks = True
       self._sets_yticks = False
@@ -138,9 +149,14 @@ class Variance(Output):
       Ivar = range(0, V)
       if self.which_vars is not None:
          Ivar = self.which_vars
+      Ysubplot = 1
+      if len(Ivar) >= 4:
+         Ysubplot = 2
+      Xsubplot = len(Ivar) / Ysubplot
+
       for v in range(0, len(Ivar)):
          Iv = Ivar[v]
-         mpl.subplot(len(Ivar),1,v+1)
+         mpl.subplot(Ysubplot,Xsubplot,v+1)
          x, y_obs, y_fcst = self.compute(truth, trajectories)
          xx = range(len(self._timescales))
          mpl.plot(x, y_obs[:,Iv], '-', lw=3, label='True')
@@ -153,6 +169,7 @@ class Variance(Output):
          #mpl.ylim(ylim)
          mpl.grid()
          mpl.legend()
+         mpl.title(self._db.variables[Iv].name)
       self._finish_plot()
 
    def compute(self, truth, trajectories):
@@ -199,6 +216,20 @@ class Variance(Output):
                for e in range(0, fcst.shape[2]):
                   fcst_c[:,e] = np.convolve(fcst[:,v,e], c, 'same')
                fcst_variance[i,v] = np.nanvar(fcst_c, ddof=1)
+               if 0 and v == 9:
+                  #mpl.plot(obs_c[:,0:2], 'r-')
+                  #mpl.plot(fcst_c[:,0:2], 'b-')
+                  #mpl.show()
+                  #mpl.plot(np.nanvar(obs_c[:,0:2], ddof=1, axis=1), '-r')
+                  #mpl.plot(np.nanvar(fcst_c[:,0:2], ddof=1, axis=1), '-b')
+                  #mpl.show()
+                  print np.nanmean(np.nanvar(obs_c[:,0:22], ddof=1, axis=1))
+                  print np.nanmean(np.nanvar(fcst_c[:,0:22], ddof=1, axis=1))
+                  print np.nanvar(obs_c[:,0:2], ddof=1)
+                  print np.nanvar(fcst_c[:,0:2], ddof=1)
+                  print obs_variance[i,v]
+                  print fcst_variance[i,v]
+                  sys.exit()
 
       return self._timescales, obs_variance, fcst_variance
 
