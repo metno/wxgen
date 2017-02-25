@@ -98,7 +98,7 @@ class Timeseries(Output):
 
          # Plot obs
          obs0 = self._db.get_truth().extract()
-         obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
+         obs = np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
          # Loop over all years in observation set
          for i in range(0, int(np.ceil(obs0.shape[0]/365))):
             I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
@@ -179,7 +179,7 @@ class Variance(Output):
       fcst_variance = np.nan*np.zeros([S,V], float)
       fcst = np.zeros([trajectories[0].length, len(trajectories[0].variables), len(trajectories)])
       obs0 = truth.extract()
-      obs = np.zeros([365, obs0.shape[1], np.ceil(obs0.shape[0]/365)])
+      obs = np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
       # Loop over all years in observation set
       for i in range(0, int(np.ceil(obs0.shape[0]/365))):
          I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
