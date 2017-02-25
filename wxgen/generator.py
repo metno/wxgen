@@ -38,7 +38,7 @@ class Generator(object):
 
          if initial_state is None:
             I = np.random.randint(self._database.num)
-            state_curr = self._database.get_random(np.zeros(V),
+            state_curr = self.get_random(np.zeros(V),
                   wxgen.metric.Exp(np.zeros(V))).extract()[0,:]
          else:
             state_curr = initial_state
@@ -53,7 +53,7 @@ class Generator(object):
             # TODO
             climate_state = self._model.get([time])[0]
 
-            segment_curr = self._database.get_random(state_curr, self._metric, climate_state)
+            segment_curr = self.get_random(state_curr, self._metric, climate_state)
             indices_curr = segment_curr.indices
             # print state_curr, segment_curr.extract()[0,:] 
 
@@ -76,3 +76,58 @@ class Generator(object):
          trajectories.append(trajectory)
 
       return trajectories
+
+   def get_random(self, target_state, metric, climate_state=None):
+      """
+      Returns a random segment from the database that is weighted
+      by the scores computed by metric.
+      target_state   A numpy array (length V)
+      metric         Of type wxgen.metric.Metric
+      climate_state      External state
+
+      Returns:
+      trajectory     Of type wxgen.trajectory.Trajectory
+      """
+      weights = metric.compute(target_state, self._database._data_agg[0,:,:])
+      Ivalid = np.where(np.isnan(weights) == 0)[0]
+      if climate_state is not None:
+         Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
+         if len(Iclimate_state) == 0:
+            print np.unique(self._database.climate_states[Ivalid])
+            wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
+         Ivalid = Ivalid[Iclimate_state]
+
+      weights_v = weights[Ivalid]
+
+      # Flip the metric if it is negative oriented
+      if metric._orientation == -1:
+         I0 = np.where(weights_v < 1e-3)[0]
+         I1 = np.where(weights_v >= 1e-3)[0]
+         # Ensure we do not get too high weights
+         weights_v[I1] = 1.0/weights_v[I1]
+         weights_v[I0] = 1e3
+
+      # max_weight = np.max(weights_v)
+      # weights_v[np.where(weights_v < max_weight / 4)[0]] = 0
+      I_v = wxgen.util.random_weighted(weights_v)
+      I = Ivalid[I_v]
+
+      # Do a weighted random choice of the weights
+      if self._database._debug:
+         print "I: ", I
+         print "Data: ", self._database._data_agg[0,:,I]
+         print "Weight: ", weights_v[I_v]
+         print "Max weight: ", np.max(weights_v)
+      return self._database.get(I)
+
+   def get_sequence(self, indices):
+      """ Returns a gridded sequence of states
+
+      Arguments:
+      indices     A numpy array of integers
+
+      Returns:
+      data        A 4D array (T, X, Y, V)
+      """
+      pass
+
