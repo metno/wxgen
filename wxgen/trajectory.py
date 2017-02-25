@@ -48,7 +48,7 @@ class Trajectory(object):
       V = len(self.database.variables)
       trajectory = np.nan*np.zeros([T, V], float)
       for i in range(0, self.indices.shape[0]):
-         if not np.isnan(self.indices[i,1]):
+         if self.indices[i,1] >= 0:
             trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
       return trajectory
 

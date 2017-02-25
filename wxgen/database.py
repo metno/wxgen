@@ -54,19 +54,20 @@ class Database(object):
    def get_truth(self):
       """ Concatenate the initialization state of all trajectories """
       times = np.arange(np.min(self.inittimes), np.max(self.inittimes), 86400)
-      indices = np.nan*np.zeros([len(times), 2], int)
+      indices = -1*np.ones([len(times), 2], int)
       for i in range(0, len(times)):
          time = times[i]
          I = np.where(time >= self.inittimes)[0]
          if len(I) == 0:
             wxgen.error("Internal error")
          inittime = np.max(self.inittimes[I])
-         lt = (time - inittime)/86400
+         lt = int((time - inittime)/86400)
          if lt < self.length:
             indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
          else:
-            print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
+            print "Did not find an index for %d = %d. This is probably not a good thing..." % (time, wxgen.util.unixtime_to_date(time))
+
       return wxgen.trajectory.Trajectory(indices, self)
 
    def get_random(self, target_state, metric, climate_state=None):
