@@ -70,6 +70,32 @@ class Database(object):
 
       return wxgen.trajectory.Trajectory(indices)
 
+   def extract(self, trajectory):
+      """ Returns the sequence as a 2D numpy array (T, V) """
+      T = trajectory.indices.shape[0]
+      V = len(self.variables)
+      values = np.nan*np.zeros([T, V], float)
+      for i in range(0, trajectory.indices.shape[0]):
+         if trajectory.indices[i,1] >= 0:
+            values[i,:] = self._data_agg[trajectory.indices[i,1],:,trajectory.indices[i,0]]
+      return values
+
+   def extract_grid(self, trajectory):
+      """ Returns the sequence as a 4D numpy array (T, X, Y, V) """
+      T = trajectory.indices.shape[0]
+      V = len(self.variables)
+      X = self.X
+      Y = self.Y
+      values = np.zeros([T, X, Y, V], float)
+      # Loop over member, lead-time indices
+      for i in range(0, trajectory.indices.shape[0]):
+         m = trajectory.indices[i,0]
+         t = trajectory.indices[i,1]
+         assert(not np.isnan(m))
+         assert(not np.isnan(t))
+         values[i,:,:,:] = self._data[t, :, :, :, m]
+      return values
+
    @property
    def _data_agg(self):
       if self._data_agg_cache is None:

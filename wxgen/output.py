@@ -84,8 +84,8 @@ class Timeseries(Output):
    """
    def plot(self, trajectories, database):
       T = trajectories[0].length
-      V = len(trajectories[0].variables)
-      variables = trajectories[0].variables
+      V = len(database.variables)
+      variables = database.variables
       Tsegment = database.length
       Ivar = range(0, V)
       if self.which_vars is not None:
@@ -97,8 +97,8 @@ class Timeseries(Output):
          x = start_date + np.linspace(0, T-1, T)
 
          # Plot obs
-         obs0 = database.get_truth().extract(database)
-         obs = np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
+         obs0 = database.extract(database.get_truth())
+         obs = np.nan*np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
          # Loop over all years in observation set
          for i in range(0, int(np.ceil(obs0.shape[0]/365))):
             I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
@@ -106,7 +106,7 @@ class Timeseries(Output):
             obs[I,:,i] = obs0[I0,:]
          mpl.plot(x, obs[:,Iv], 'r-', lw=2)
          for tr in trajectories:
-            fcst = tr.extract()
+            fcst = database.extract(tr)
             # Plot the trajectory
             assert(np.sum(np.isnan(fcst)) == 0)
             mpl.plot(x, fcst[:,Iv], 'b-', lw=2)
@@ -178,7 +178,7 @@ class Variance(Output):
       obs_variance = np.nan*np.zeros([S, V], float)
       fcst_variance = np.nan*np.zeros([S,V], float)
       fcst = np.zeros([trajectories[0].length, len(database.variables), len(trajectories)])
-      obs0 = truth.extract(database)
+      obs0 = database.extract(truth)
       obs = np.nan*np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
       # Loop over all years in observation set
       for i in range(0, int(np.ceil(obs0.shape[0]/365))):
@@ -186,7 +186,7 @@ class Variance(Output):
          I = range(0, len(I0))
          obs[I,:,i] = obs0[I0,:]
       for t in range(0, len(trajectories)):
-         fcst[:, :, t] = trajectories[t].extract(database)
+         fcst[:, :, t] = database.extract(trajectories[t])
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
@@ -248,7 +248,7 @@ class Text(Output):
       T = trajectories[0].length
       V = len(trajectories[0].variables)
       for n in range(0, N):
-         values = trajectories[n].extract(database)
+         values = database.extract(trajectories[n])
          for t in range(0, T):
             for v in range(0, V):
                fid.write("%f " % values[t,v])
@@ -294,7 +294,7 @@ class Netcdf(Output):
 
       # Write forecast variables
       for m in range(0, len(trajectories)):
-         values = trajectories[m].extract_grid(database)
+         values = database.extract_grid(trajectories[m])
          values = np.expand_dims(values,1)
          for v in range(0, len(variables)):
             vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]

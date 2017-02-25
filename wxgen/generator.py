@@ -39,8 +39,8 @@ class Generator(object):
 
          if initial_state is None:
             I = np.random.randint(self._database.num)
-            state_curr = self.get_random(np.zeros(V),
-                  wxgen.metric.Exp(np.zeros(V))).extract(self._database)[0,:]
+            tr = self.get_random(np.zeros(V), wxgen.metric.Exp(np.zeros(V)))
+            state_curr = self._database.extract(tr)[0,:]
          else:
             state_curr = initial_state
 
@@ -56,7 +56,6 @@ class Generator(object):
 
             segment_curr = self.get_random(state_curr, self._metric, climate_state)
             indices_curr = segment_curr.indices
-            # print state_curr, segment_curr.extract(self._database)[0,:]
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
@@ -67,7 +66,7 @@ class Generator(object):
                print "Chosen segment: ", segment_curr
                print "Trajectory indices: ", Iout
                print "Segment indices: ", Iin
-            state_curr = segment_curr.extract(self._database)[-1,:]
+            state_curr = self._database.extract(segment_curr)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
 
