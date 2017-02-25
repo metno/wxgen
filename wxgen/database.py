@@ -65,8 +65,8 @@ class Database(object):
          if lt < self.length:
             indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
-         else:
-            print "Did not find an index for %d = %d. This is probably not a good thing..." % (time, wxgen.util.unixtime_to_date(time))
+         elif self._debug:
+            print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
 
       return wxgen.trajectory.Trajectory(indices)
 
@@ -204,7 +204,8 @@ class Netcdf(Database):
          self.lats = [0]
          self.lons = [0]
       self.num = M * D
-      print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
+      if self._debug:
+         print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
       self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
       self._date = np.zeros(self.num, float)
 
