@@ -32,9 +32,8 @@ class Output(object):
    """
    A class for outputing trajectory information
    """
-   def __init__(self, db):
+   def __init__(self):
       self.filename = None
-      self._db = db
       self.dpi = 300
       self.fig_size = [10,5]
       self.xlim = None
@@ -83,11 +82,11 @@ class Timeseries(Output):
    """
    Draws all trajectories as lines. One variable per subplot.
    """
-   def plot(self, trajectories):
+   def plot(self, trajectories, database):
       T = trajectories[0].length
       V = len(trajectories[0].variables)
       variables = trajectories[0].variables
-      Tsegment = self._db.length
+      Tsegment = database.length
       Ivar = range(0, V)
       if self.which_vars is not None:
          Ivar = self.which_vars
@@ -98,7 +97,7 @@ class Timeseries(Output):
          x = start_date + np.linspace(0, T-1, T)
 
          # Plot obs
-         obs0 = self._db.get_truth().extract()
+         obs0 = database.get_truth().extract(database)
          obs = np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
          # Loop over all years in observation set
          for i in range(0, int(np.ceil(obs0.shape[0]/365))):
@@ -135,17 +134,17 @@ class Timeseries(Output):
 
 
 class Variance(Output):
-   def __init__(self, db):
-      Output. __init__(self, db)
+   def __init__(self):
+      Output. __init__(self)
       self._timescales = np.array([1, 7, 30, 365])
       self._timescales =np.array([1,3,5,7,9,13,21,31,61,121,221,363,365])#np.arange(1, 365, 2)
       #self._timescales_names = ["day", "week", "month", "year"]
       self._sets_xticks = True
       self._sets_yticks = False
 
-   def plot(self, trajectories):
-      truth = self._db.get_truth()
-      variables = self._db.variables
+   def plot(self, trajectories, database):
+      truth = database.get_truth()
+      variables = database.variables
       V = len(variables)
       Ivar = range(0, V)
       if self.which_vars is not None:
@@ -158,7 +157,7 @@ class Variance(Output):
       for v in range(0, len(Ivar)):
          Iv = Ivar[v]
          mpl.subplot(Ysubplot,Xsubplot,v+1)
-         x, y_obs, y_fcst = self.compute(truth, trajectories)
+         x, y_obs, y_fcst = self.compute(truth, trajectories, database)
          xx = range(len(self._timescales))
          mpl.plot(x, y_obs[:,Iv], '-', lw=3, label='True')
          mpl.plot(x, y_fcst[:,Iv], '-', lw=3, label='Simulated')
@@ -170,24 +169,24 @@ class Variance(Output):
          #mpl.ylim(ylim)
          mpl.grid()
          mpl.legend()
-         mpl.title(self._db.variables[Iv].name)
+         mpl.title(database.variables[Iv].name)
       self._finish_plot()
 
-   def compute(self, truth, trajectories):
+   def compute(self, truth, trajectories, database):
       S = len(self._timescales)
-      V = len(self._db.variables)
+      V = len(database.variables)
       obs_variance = np.nan*np.zeros([S, V], float)
       fcst_variance = np.nan*np.zeros([S,V], float)
-      fcst = np.zeros([trajectories[0].length, len(trajectories[0].variables), len(trajectories)])
-      obs0 = truth.extract()
-      obs = np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
+      fcst = np.zeros([trajectories[0].length, len(database.variables), len(trajectories)])
+      obs0 = truth.extract(database)
+      obs = np.nan*np.zeros([365, obs0.shape[1], int(np.ceil(obs0.shape[0]/365.0))])
       # Loop over all years in observation set
       for i in range(0, int(np.ceil(obs0.shape[0]/365))):
          I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
          I = range(0, len(I0))
          obs[I,:,i] = obs0[I0,:]
       for t in range(0, len(trajectories)):
-         fcst[:, :, t] = trajectories[t].extract()
+         fcst[:, :, t] = trajectories[t].extract(database)
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
@@ -240,7 +239,7 @@ class Text(Output):
    Writes the trajectories to a text file. One variable in each column and each day on a separate
    line. Trajectories are separated by a blank line.
    """
-   def plot(self, trajectories):
+   def plot(self, trajectories, database):
       if self.filename is None:
          wxgen.util.error("Text output requires a filename")
 
@@ -249,7 +248,7 @@ class Text(Output):
       T = trajectories[0].length
       V = len(trajectories[0].variables)
       for n in range(0, N):
-         values = trajectories[n].extract()
+         values = trajectories[n].extract(database)
          for t in range(0, T):
             for v in range(0, V):
                fid.write("%f " % values[t,v])
@@ -263,7 +262,7 @@ class Netcdf(Output):
    """
    Writes the trajectories to a netcdf file.
    """
-   def plot(self, trajectories):
+   def plot(self, trajectories, database):
       if self.filename is None:
          wxgen.util.error("Netcdf output requires a filename")
 
@@ -271,23 +270,23 @@ class Netcdf(Output):
 
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
-      file.createDimension("lat", trajectories[0].Y)
-      file.createDimension("lon", trajectories[0].X)
+      file.createDimension("lat", database.Y)
+      file.createDimension("lon", database.X)
 
       # Latitude
       var_lat = file.createVariable("lat", "f4", ("lat"))
       var_lat.units = "degrees_north"
       var_lat.standard_name = "latitude"
-      var_lat[:] = trajectories[0].database.lats
+      var_lat[:] = database.lats
 
       # Longitude
       var_lon = file.createVariable("lon", "f4", ("lon"))
       var_lon.units = "degrees_east"
       var_lon.standard_name = "longitude"
-      var_lon[:] = trajectories[0].database.lons
+      var_lon[:] = database.lons
 
       # Define forecast variables
-      variables = trajectories[0].variables
+      variables = database.variables
       vars = dict()
       for var in variables:
          vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "lat", "lon"))
@@ -295,7 +294,7 @@ class Netcdf(Output):
 
       # Write forecast variables
       for m in range(0, len(trajectories)):
-         values = trajectories[m].extract_grid()
+         values = trajectories[m].extract_grid(database)
          values = np.expand_dims(values,1)
          for v in range(0, len(variables)):
             vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]
@@ -311,12 +310,12 @@ class Verification(Output):
    Plots verification data for the trajectories.
    """
    _pool = True
-   def plot(self, trajectories):
+   def plot(self, trajectories, database):
       N = len(trajectories)
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]
-      Tsegment = self._db.days()
-      variables = self._db.variables
+      Tsegment = database.days()
+      variables = database.variables
       if self._pool:
          size = Tsegment-1
          x = np.linspace(0, Tsegment-2, Tsegment-1)

@@ -81,7 +81,7 @@ def run(argv):
    trajectories = generator.get(args.n, args.t, initial_state)
 
    # Create output
-   output = wxgen.output.get(args.type)(db)
+   output = wxgen.output.get(args.type)()
    output.filename = args.output_filename
    output.fig_size = wxgen.util.parse_numbers(args.fs)
    output.xlim = wxgen.util.parse_numbers(args.xlim)
@@ -89,7 +89,7 @@ def run(argv):
    output.xlog = args.xlog
    output.ylog = args.ylog
    output.which_vars = args.which_vars
-   output.plot(trajectories)
+   output.plot(trajectories, db)
 
 
 if __name__ == '__main__':

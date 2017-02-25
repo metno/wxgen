@@ -4,60 +4,45 @@ import wxgen.database
 
 class Trajectory(object):
    """
-   Represents a trajectory of states. This is represented as a sequence of indicies into the
+   Represents a trajectory of states. This is represented as a sequence of indicies into some
    database: (Ensemble member index, day index).
 
    The trajectory can be extracted either as an aggregated sequence or the full gridded sequence.
 
    Attributes:
-   indices        Indices for database
-   length         Length of trajectory
-   variables      Variables
+      indices (np.array): Indices for database
+      length (int): Length of trajectory
    """
-   def __init__(self, indices, database):
+   def __init__(self, indices):
       """
       Arguments:
-      indices     A two column numpy array of ints. The first column is the trajectory index and the
-                  second is the day index.
-      database    Of type wxgen.database.Database
+         indices (np.array): Array with two columns ints. The first column is the trajectory index
+            and the second is the day index.
       """
       assert(len(indices.shape) == 2)
       assert(indices.shape[1] == 2)
       self.indices = indices
-      self.database = database
 
    @property
    def length(self):
       return self.indices.shape[0]
 
-   @property
-   def variables(self):
-      return self.database.variables
-
-   @property
-   def X(self):
-      return self.database.X
-
-   @property
-   def Y(self):
-      return self.database.Y
-
-   def extract(self):
+   def extract(self, database):
       """ Returns the sequence as a 2D numpy array (T, V) """
       T = self.indices.shape[0]
-      V = len(self.database.variables)
+      V = len(database.variables)
       trajectory = np.nan*np.zeros([T, V], float)
       for i in range(0, self.indices.shape[0]):
          if self.indices[i,1] >= 0:
-            trajectory[i,:] = self.database._data_agg[self.indices[i,1],:,self.indices[i,0]]
+            trajectory[i,:] = database._data_agg[self.indices[i,1],:,self.indices[i,0]]
       return trajectory
 
-   def extract_grid(self):
+   def extract_grid(self, database):
       """ Returns the sequence as a 4D numpy array (T, X, Y, V) """
       T = self.indices.shape[0]
-      V = len(self.database.variables)
-      X = self.database.X
-      Y = self.database.Y
+      V = len(database.variables)
+      X = database.X
+      Y = database.Y
       trajectory = np.zeros([T, X, Y, V], float)
       # Loop over member, lead-time indices
       for i in range(0, self.indices.shape[0]):
@@ -65,7 +50,7 @@ class Trajectory(object):
          t = self.indices[i,1]
          assert(not np.isnan(m))
          assert(not np.isnan(t))
-         trajectory[i,:,:,:] = self.database._data[t, :, :, :, m]
+         trajectory[i,:,:,:] = database._data[t, :, :, :, m]
       return trajectory
 
    def __str__(self):

@@ -22,9 +22,10 @@ class Generator(object):
       If initial_state is provided then the trajectory will start with a state similar to this. If
       no initial state is provided, start with a random segment from the database.
 
-      N              Number of trajectories
-      T              Number of timesteps in each trajectory
-      initial_state  A numpy array of the initial state (must be of length V)
+      Arguments:
+         N (int): Number of trajectories
+         T (int): Number of timesteps in each trajectory
+         initial_state (np.array): An array of the initial state (must be of length V)
       """
       # Initialize
       trajectories = list()
@@ -39,7 +40,7 @@ class Generator(object):
          if initial_state is None:
             I = np.random.randint(self._database.num)
             state_curr = self.get_random(np.zeros(V),
-                  wxgen.metric.Exp(np.zeros(V))).extract()[0,:]
+                  wxgen.metric.Exp(np.zeros(V))).extract(self._database)[0,:]
          else:
             state_curr = initial_state
 
@@ -55,7 +56,7 @@ class Generator(object):
 
             segment_curr = self.get_random(state_curr, self._metric, climate_state)
             indices_curr = segment_curr.indices
-            # print state_curr, segment_curr.extract()[0,:] 
+            # print state_curr, segment_curr.extract(self._database)[0,:]
 
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
@@ -66,11 +67,11 @@ class Generator(object):
                print "Chosen segment: ", segment_curr
                print "Trajectory indices: ", Iout
                print "Segment indices: ", Iin
-            state_curr = segment_curr.extract()[-1,:]
+            state_curr = segment_curr.extract(self._database)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
 
-         trajectory = wxgen.trajectory.Trajectory(trajectory_indices, self._database)
+         trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
          if self._debug:
             print "Trajectory: ", trajectory
          trajectories.append(trajectory)

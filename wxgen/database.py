@@ -17,19 +17,19 @@ class Database(object):
    dimensions. A subclass must populate this field during initialization.
 
    Attributes:
-   variables      A list of wxgen.variable.Variable
-   length         Length of each trajectory (in number of days)
-   num            Number of trajectories
-   lats           2D grid of latitudes
-   lons           2D grid of longitudes
-   X              Number of X-axis points
-   Y              Number of Y-axis points
-   inittimes      numpy array with initialization time corresponding to each member
-   climate_states A numpy array of climate states (one for each ensemble member)
+      variables: A list of wxgen.variable.Variable
+      length (int): Length of each trajectory (in number of days)
+      num (int): Number of trajectories
+      lats (np.array): 2D grid of latitudes
+      lons (np.array): 2D grid of longitudes
+      X (int): Number of X-axis points
+      Y (int): Number of Y-axis points
+      inittimes (np.array): array with initialization time corresponding to each member
+      climate_states (np.array): array of climate states (one for each ensemble member)
 
    Internal:
-   _data          A 5D numpy array of data with dimensions (lead_time, lat, lon, variable, member*time)
-   _data_agg      A 3D numpy array of data with dimensions (lead_time, variable, member*time)
+      _data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
+      _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self):
       self._debug = False
@@ -49,7 +49,7 @@ class Database(object):
       indices[:,0] = i
       indices[:,1] = np.arange(0, self.length)
       assert(np.sum(np.isnan(indices)) == 0)
-      return wxgen.trajectory.Trajectory(indices, self)
+      return wxgen.trajectory.Trajectory(indices)
 
    def get_truth(self):
       """ Concatenate the initialization state of all trajectories """
@@ -68,7 +68,7 @@ class Database(object):
          else:
             print "Did not find an index for %d = %d. This is probably not a good thing..." % (time, wxgen.util.unixtime_to_date(time))
 
-      return wxgen.trajectory.Trajectory(indices, self)
+      return wxgen.trajectory.Trajectory(indices)
 
    @property
    def _data_agg(self):
