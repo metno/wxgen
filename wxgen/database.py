@@ -71,7 +71,15 @@ class Database(object):
       return wxgen.trajectory.Trajectory(indices)
 
    def extract(self, trajectory):
-      """ Returns the sequence as a 2D numpy array (T, V) """
+      """
+      Extract a trajectory of large-scale aggregated values from the database
+
+      Arguments:
+         trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+
+      Returns:
+         np.array: A 2D array (Time, variable) sequence of values
+      """
       T = trajectory.indices.shape[0]
       V = len(self.variables)
       values = np.nan*np.zeros([T, V], float)
@@ -81,7 +89,15 @@ class Database(object):
       return values
 
    def extract_grid(self, trajectory):
-      """ Returns the sequence as a 4D numpy array (T, X, Y, V) """
+      """
+      Extract a trajectory of large-scale values from the database
+
+      Arguments:
+         trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+
+      Returns:
+         np.array: A 4D array (Time, X, Y, variable) sequence of values
+      """
       T = trajectory.indices.shape[0]
       V = len(self.variables)
       X = self.X

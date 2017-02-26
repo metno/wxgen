@@ -6,8 +6,6 @@ class Trajectory(object):
    Represents a trajectory of states. This is represented as a sequence of indicies into some
    database: (Ensemble member index, day index).
 
-   The trajectory can be extracted either as an aggregated sequence or the full gridded sequence.
-
    Attributes:
       indices (np.array): Indices for database
       length (int): Length of trajectory

@@ -79,14 +79,16 @@ class Generator(object):
 
    def get_random(self, target_state, metric, climate_state=None):
       """
-      Returns a random segment from the database that is weighted
-      by the scores computed by metric.
-      target_state   A numpy array (length V)
-      metric         Of type wxgen.metric.Metric
-      climate_state      External state
+      Returns a pseudo-random segment from the database chosen based on weights computed by a metric
+
+      Arguments:
+         target_state (np.array): Try to matchin this state when finding the trajectory. One value
+            for each variable in the database.
+         metric (wxgen.metric): Metric to use when finding matches
+         climate_state (np.array): External state representing what state the climate is in
 
       Returns:
-      trajectory     Of type wxgen.trajectory.Trajectory
+         wxgen.trajectory: Random trajectory
       """
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
       Ivalid = np.where(np.isnan(weights) == 0)[0]
@@ -129,5 +131,4 @@ class Generator(object):
       Returns:
       data        A 4D array (T, X, Y, V)
       """
-      pass
-
+      raise NotImplementedError()
