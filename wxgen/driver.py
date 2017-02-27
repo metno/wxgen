@@ -77,7 +77,7 @@ def run(argv):
    else:
       metric = wxgen.metric.get(args.m)
 
-   generator = wxgen.generator.Generator(db, metric)
+   generator = wxgen.generator.LargeScale(db, metric)
    trajectories = generator.get(args.n, args.t, initial_state)
 
    # Create output
