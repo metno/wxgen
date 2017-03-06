@@ -102,14 +102,20 @@ class Database(object):
       V = len(self.variables)
       X = self.X
       Y = self.Y
-      values = np.zeros([T, X, Y, V], float)
-      # Loop over member, lead-time indices
-      for i in range(0, trajectory.indices.shape[0]):
-         m = trajectory.indices[i,0]
-         t = trajectory.indices[i,1]
-         assert(not np.isnan(m))
-         assert(not np.isnan(t))
-         values[i,:,:,:] = self._data[t, :, :, :, m]
+      if 0:
+         values = np.zeros([T, Y, X, V], float)
+         # Loop over member, lead-time indices
+         for i in range(0, trajectory.indices.shape[0]):
+            m = trajectory.indices[i,0]
+            t = trajectory.indices[i,1]
+            assert(not np.isnan(m))
+            assert(not np.isnan(t))
+            values[i,:,:,:] = self._data[t, :, :, :, m]
+      else:
+         # Slightly faster way (but not much faster)
+         I0 = trajectory.indices[:,0]
+         I1 = trajectory.indices[:,1]
+         values = self._data[I1, :, :, :, I0]
       return values
 
    @property
@@ -121,11 +127,11 @@ class Database(object):
 
    @property
    def X(self):
-      return self._data.shape[1]
+      return self._data.shape[2]
 
    @property
    def Y(self):
-      return self._data.shape[2]
+      return self._data.shape[1]
 
    def index2(self):
       pass
@@ -182,17 +188,20 @@ class Netcdf(Database):
       self._initname = "forecast_reference_time"
 
       # Set dimensions
-      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
+      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll"]]
       self.variables = list()
       for var_name in var_names:
          units = None
          label = None
-         if hasattr(self._file.variables[var_name], "units"):
-            units = self._file.variables[var_name].units
-         if hasattr(self._file.variables[var_name], "standard_name"):
-            label = self._file.variables[var_name].standard_name
-         var = wxgen.variable.Variable(var_name, units, label)
-         self.variables.append(var)
+         dims = self._file.variables[var_name].dimensions
+         if "time" in dims:
+            if hasattr(self._file.variables[var_name], "units"):
+               units = self._file.variables[var_name].units
+            if hasattr(self._file.variables[var_name], "standard_name"):
+               label = self._file.variables[var_name].standard_name
+            var = wxgen.variable.Variable(var_name, units, label)
+            self.variables.append(var)
+            print "Using variable '%s'" % var_name
       if V is not None:
          self.variables = self.variables[0:V]
 
@@ -213,12 +222,19 @@ class Netcdf(Database):
          Y = self._file.dimensions["lat"].size
          self.lats = self._copy(self._file.variables["lat"])
          self.lons = self._copy(self._file.variables["lon"])
+      elif "longitude" in self._file.dimensions:
+         is_spatial = True
+         X = self._file.dimensions["longitude"].size
+         Y = self._file.dimensions["latitude"].size
+         self.lats = self._copy(self._file.variables["latitude"])
+         self.lons = self._copy(self._file.variables["longitude"])
       else:
          is_spatial = False
          X = 1
          Y = 1
          self.lats = [0]
          self.lons = [0]
+
       self.num = M * D
       if self._debug:
          print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
