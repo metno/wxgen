@@ -82,7 +82,7 @@ class Timeseries(Output):
    """
    Draws all trajectories as lines. One variable per subplot.
    """
-   def plot(self, trajectories, database):
+   def plot(self, trajectories, database, scale=None):
       T = trajectories[0].length
       V = len(database.variables)
       variables = database.variables
@@ -104,6 +104,7 @@ class Timeseries(Output):
             I0 = range(i*365, min(obs0.shape[0], (i+1)*365))
             I = range(0, len(I0))
             obs[I,:,i] = obs0[I0,:]
+         # TODO: This doesn't work for trajectories with lengths other than 365
          mpl.plot(x, obs[:,Iv], 'r-', lw=2)
          for tr in trajectories:
             fcst = database.extract(tr)
@@ -136,13 +137,13 @@ class Timeseries(Output):
 class Variance(Output):
    def __init__(self):
       Output. __init__(self)
-      self._timescales = np.array([1, 7, 30, 365])
-      self._timescales =np.array([1,3,5,7,9,13,21,31,61,121,221,363,365])#np.arange(1, 365, 2)
+      self._timescales = np.array([1, 7, 30, 365, 730])
+      self._timescales =np.array([1,3,5,7,9,13,21,31,61,121,221,363,365,731,1001,1301])#np.arange(1, 365, 2)
       #self._timescales_names = ["day", "week", "month", "year"]
       self._sets_xticks = True
       self._sets_yticks = False
 
-   def plot(self, trajectories, database):
+   def plot(self, trajectories, database, scale=None):
       truth = database.get_truth()
       variables = database.variables
       V = len(variables)
@@ -239,7 +240,7 @@ class Text(Output):
    Writes the trajectories to a text file. One variable in each column and each day on a separate
    line. Trajectories are separated by a blank line.
    """
-   def plot(self, trajectories, database):
+   def plot(self, trajectories, database, scale=None):
       if self.filename is None:
          wxgen.util.error("Text output requires a filename")
 
@@ -262,7 +263,7 @@ class Netcdf(Output):
    """
    Writes the trajectories to a netcdf file.
    """
-   def plot(self, trajectories, database):
+   def plot(self, trajectories, database, scale=None):
       if self.filename is None:
          wxgen.util.error("Netcdf output requires a filename")
 
@@ -270,17 +271,17 @@ class Netcdf(Output):
 
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
-      file.createDimension("latitude", database.Y)
-      file.createDimension("longitude", database.X)
+      file.createDimension("y", database.Y)
+      file.createDimension("x", database.X)
 
       # Latitude
-      var_lat = file.createVariable("latitude", "f4", ("latitude"))
+      var_lat = file.createVariable("latitude", "f4", ("y", "x"))
       var_lat.units = "degrees_north"
       var_lat.standard_name = "latitude"
       var_lat[:] = database.lats
 
       # Longitude
-      var_lon = file.createVariable("longitude", "f4", ("longitude"))
+      var_lon = file.createVariable("longitude", "f4", ("y", "x"))
       var_lon.units = "degrees_east"
       var_lon.standard_name = "longitude"
       var_lon[:] = database.lons
@@ -289,7 +290,7 @@ class Netcdf(Output):
       variables = database.variables
       vars = dict()
       for var in variables:
-         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "latitude", "longitude"))
+         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
          vars[var.name].units = var.units
 
       # Write forecast variables
@@ -310,7 +311,7 @@ class Verification(Output):
    Plots verification data for the trajectories.
    """
    _pool = True
-   def plot(self, trajectories, database):
+   def plot(self, trajectories, database, scale=None):
       N = len(trajectories)
       T = trajectories[0].shape[0]
       V = trajectories[0].shape[1]

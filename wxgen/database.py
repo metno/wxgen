@@ -243,6 +243,12 @@ class Netcdf(Database):
          elif "latitude" in self._file.variables:
             self.lats = self._copy(self._file.variables["latitude"])
             self.lons = self._copy(self._file.variables["longitude"])
+         if len(self.lats.shape) == 1 or self.lats.shape[1] == 1:
+            print "Meshing latitudes and longitudes"
+            print self.lats.shape, self.lons.shape
+            # [self.lats, self.lons] = np.meshgrid(self.lats, self.lons)
+            [self.lons, self.lats] = np.meshgrid(self.lons, self.lats)
+            print self.lats.shape, self.lons.shape
 
       self.num = M * D
       if self._debug:
