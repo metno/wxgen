@@ -216,24 +216,33 @@ class Netcdf(Database):
       times = times[Itimes]
       D = len(times)
       T = self.length
+
+      # Read lat/lon dimensions
+      is_spatial = True
       if "lon" in self._file.dimensions:
-         is_spatial = True
          X = self._file.dimensions["lon"].size
          Y = self._file.dimensions["lat"].size
-         self.lats = self._copy(self._file.variables["lat"])
-         self.lons = self._copy(self._file.variables["lon"])
       elif "longitude" in self._file.dimensions:
-         is_spatial = True
          X = self._file.dimensions["longitude"].size
          Y = self._file.dimensions["latitude"].size
-         self.lats = self._copy(self._file.variables["latitude"])
-         self.lons = self._copy(self._file.variables["longitude"])
+      elif "x" in self._file.dimensions:
+         X = self._file.dimensions["x"].size
+         Y = self._file.dimensions["y"].size
       else:
          is_spatial = False
          X = 1
          Y = 1
          self.lats = [0]
          self.lons = [0]
+
+      # Read lat/lon variables
+      if is_spatial:
+         if "lat" in self._file.variables:
+            self.lats = self._copy(self._file.variables["lat"])
+            self.lons = self._copy(self._file.variables["lon"])
+         elif "latitude" in self._file.variables:
+            self.lats = self._copy(self._file.variables["latitude"])
+            self.lons = self._copy(self._file.variables["longitude"])
 
       self.num = M * D
       if self._debug:

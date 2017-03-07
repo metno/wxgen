@@ -270,17 +270,17 @@ class Netcdf(Output):
 
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
-      file.createDimension("lat", database.Y)
-      file.createDimension("lon", database.X)
+      file.createDimension("latitude", database.Y)
+      file.createDimension("longitude", database.X)
 
       # Latitude
-      var_lat = file.createVariable("lat", "f4", ("lat"))
+      var_lat = file.createVariable("latitude", "f4", ("latitude"))
       var_lat.units = "degrees_north"
       var_lat.standard_name = "latitude"
       var_lat[:] = database.lats
 
       # Longitude
-      var_lon = file.createVariable("lon", "f4", ("lon"))
+      var_lon = file.createVariable("longitude", "f4", ("longitude"))
       var_lon.units = "degrees_east"
       var_lon.standard_name = "longitude"
       var_lon[:] = database.lons
@@ -289,7 +289,7 @@ class Netcdf(Output):
       variables = database.variables
       vars = dict()
       for var in variables:
-         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "lat", "lon"))
+         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "latitude", "longitude"))
          vars[var.name].units = var.units
 
       # Write forecast variables
