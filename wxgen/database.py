@@ -32,7 +32,6 @@ class Database(object):
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self):
-      self._debug = False
       self.aggregator = wxgen.aggregator.Mean()
       self._data_agg_cache = None
       self._model = wxgen.climate_model.Bin(10)
@@ -65,8 +64,8 @@ class Database(object):
          if lt < self.length:
             indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
-         elif self._debug:
-            print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
+         else:
+            wxgen.util.debug("Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time)))
 
       return wxgen.trajectory.Trajectory(indices)
 
@@ -176,8 +175,7 @@ class Netcdf(Database):
    Internal
    _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
    """
-   _debug0 = True
-   def __init__(self, filename, V=None):
+   def __init__(self, filename, vars):
       """
       filename    Load data from this file
       V           Only use the first V variables in the database
@@ -189,8 +187,15 @@ class Netcdf(Database):
 
       # Set dimensions
       var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll"]]
+      if vars is None:
+         vars = range(len(var_names))
+
+      if vars is not None and max(vars) >= len(var_names):
+         wxgen.util.error("Index in --vars (%d) is >= number of variables (%d)" % (max(vars), len(var_names)))
+
       self.variables = list()
-      for var_name in var_names:
+      for i in vars:
+         var_name = var_names[i]
          units = None
          label = None
          dims = self._file.variables[var_name].dimensions
@@ -201,9 +206,7 @@ class Netcdf(Database):
                label = self._file.variables[var_name].standard_name
             var = wxgen.variable.Variable(var_name, units, label)
             self.variables.append(var)
-            print "Using variable '%s'" % var_name
-      if V is not None:
-         self.variables = self.variables[0:V]
+            wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
       self.length = self._file.dimensions["time"].size
@@ -244,15 +247,12 @@ class Netcdf(Database):
             self.lats = self._copy(self._file.variables["latitude"])
             self.lons = self._copy(self._file.variables["longitude"])
          if len(self.lats.shape) == 1 or self.lats.shape[1] == 1:
-            print "Meshing latitudes and longitudes"
-            print self.lats.shape, self.lons.shape
+            wxgen.util.debug("Meshing latitudes and longitudes")
             # [self.lats, self.lons] = np.meshgrid(self.lats, self.lons)
             [self.lons, self.lats] = np.meshgrid(self.lons, self.lats)
-            print self.lats.shape, self.lons.shape
 
       self.num = M * D
-      if self._debug:
-         print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
+      wxgen.util.debug("Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024))
       self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
       self._date = np.zeros(self.num, float)
 

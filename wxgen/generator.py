@@ -12,7 +12,6 @@ class LargeScale(object):
    def __init__(self, database, metric=wxgen.metric.Rmsd(), model=wxgen.climate_model.Bin(10)):
       self._database = database
       self._metric = metric
-      self._debug = False
       self._model = model
 
    def get(self, N, T, initial_state=None):
@@ -61,18 +60,16 @@ class LargeScale(object):
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
-            if self._debug:
-               print "Current state: ", state_curr
-               print "Chosen segment: ", segment_curr
-               print "Trajectory indices: ", Iout
-               print "Segment indices: ", Iin
+            wxgen.util.debug("Current state: %s" % state_curr)
+            wxgen.util.debug("Chosen segment: %s" % segment_curr)
+            wxgen.util.debug("Trajectory indices: %s" % Iout)
+            wxgen.util.debug("Segment indices: %s" % Iin)
             state_curr = self._database.extract(segment_curr)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
 
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
-         if self._debug:
-            print "Trajectory: ", trajectory
+         wxgen.util.debug("Trajectory: %s" % trajectory)
          trajectories.append(trajectory)
 
       return trajectories
@@ -115,11 +112,10 @@ class LargeScale(object):
       I = Ivalid[I_v]
 
       # Do a weighted random choice of the weights
-      if self._database._debug:
-         print "I: ", I
-         print "Data: ", self._database._data_agg[0,:,I]
-         print "Weight: ", weights_v[I_v]
-         print "Max weight: ", np.max(weights_v)
+      wxgen.util.debug("I: %s" % I)
+      wxgen.util.debug("Data: %s" % self._database._data_agg[0,:,I])
+      wxgen.util.debug("Weight: %s" % weights_v[I_v])
+      wxgen.util.debug("Max weight: %s" % np.max(weights_v))
       return self._database.get(I)
 
 

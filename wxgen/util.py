@@ -3,6 +3,10 @@ import calendar
 import datetime
 import sys
 
+
+DEBUG = False
+
+
 def random_weighted(weights):
    """
    Randomly selects an index into an array based on weights
@@ -28,8 +32,17 @@ def warning(message):
    print "\033[1;33mWarning: " + message + "\033[0m"
 
 
+def debug(message):
+   if DEBUG:
+      print "\033[1;32mDebug: " + message + "\033[0m"
+
+
 def parse_dates(dates):
-   return parse_numbers(dates, True)
+   return [int(date) for date in parse_numbers(dates, True)]
+
+
+def parse_ints(ints):
+   return [int(num) for num in parse_numbers(ints, True)]
 
 
 def parse_numbers(numbers, isDate=False):
