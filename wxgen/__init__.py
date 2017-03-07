@@ -4,7 +4,7 @@ import wxgen.driver_db
 
 
 def main():
-   wxgen.driver.run(sys.argv)
+   wxgen.driver.main(sys.argv)
 
 def main_db():
    wxgen.driver_db.run(sys.argv)

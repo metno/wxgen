@@ -28,6 +28,10 @@ def warning(message):
    print "\033[1;33mWarning: " + message + "\033[0m"
 
 
+def parse_dates(dates):
+   return parse_numbers(dates, True)
+
+
 def parse_numbers(numbers, isDate=False):
    """
    Convert a string into an array of numbers. allowable formats:
