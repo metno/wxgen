@@ -68,39 +68,66 @@ class Netcdf(Output):
    """
    Writes the trajectories to a netcdf file.
    """
-   def write(self, trajectories, database, scale):
+   def write(self, trajectories, database, scale, start_date=20170101):
       file = netCDF4.Dataset(self.filename, 'w')
 
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
-      file.createDimension("y", database.Y)
-      file.createDimension("x", database.X)
+      if scale != "agg":
+         file.createDimension("y", database.Y)
+         file.createDimension("x", database.X)
+
+      # Time
+      var_time = file.createVariable("time", "i4", ("time"))
+      start_unixtime = wxgen.util.date_to_unixtime(start_date)
+      end_unixtime = start_unixtime + 86400 * trajectories[0].length
+      var_time[:] = np.arange(start_unixtime, end_unixtime, 86400)
+      var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+      var_time.standard_name = "time"
+      var_time.long_name = "time"
+
+      # Forecast reference time
+      var_frt = file.createVariable("forecast_reference_time", "i4")
+      var_frt[:] = start_unixtime
+      var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
+      var_frt.standard_name = "forecast_reference_time"
+      var_frt.long_name = "forecast_reference_time"
 
       # Latitude
-      var_lat = file.createVariable("latitude", "f4", ("y", "x"))
-      var_lat.units = "degrees_north"
-      var_lat.standard_name = "latitude"
-      var_lat[:] = database.lats
+      if scale != "agg":
+         var_lat = file.createVariable("latitude", "f4", ("y", "x"))
+         var_lat.units = "degrees_north"
+         var_lat.standard_name = "latitude"
+         var_lat[:] = database.lats
 
-      # Longitude
-      var_lon = file.createVariable("longitude", "f4", ("y", "x"))
-      var_lon.units = "degrees_east"
-      var_lon.standard_name = "longitude"
-      var_lon[:] = database.lons
+         # Longitude
+         var_lon = file.createVariable("longitude", "f4", ("y", "x"))
+         var_lon.units = "degrees_east"
+         var_lon.standard_name = "longitude"
+         var_lon[:] = database.lons
 
       # Define forecast variables
       variables = database.variables
       vars = dict()
       for var in variables:
-         vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
+         if scale == "agg":
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member"))
+         else:
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
          vars[var.name].units = var.units
 
       # Write forecast variables
       for m in range(0, len(trajectories)):
-         values = database.extract_grid(trajectories[m])
-         values = np.expand_dims(values,1)
-         for v in range(0, len(variables)):
-            vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]
+         if scale == "agg":
+            values = database.extract(trajectories[m])
+            for v in range(0, len(variables)):
+               vars[variables[v].name][:,m] = values[:,v]
+         else:
+            values = database.extract_grid(trajectories[m])
+            # Insert a singleton dimension at dimension index 1
+            values = np.expand_dims(values,1)
+            for v in range(0, len(variables)):
+               vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]
 
       # Global attributes
       file.Conventions = "CF-1.0"

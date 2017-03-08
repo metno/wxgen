@@ -281,7 +281,10 @@ class Netcdf(Database):
                   else:
                      self._data[:,:,:,v,index] = temp[:, m, :, :]
                else:
-                  self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
+                  if has_frt:
+                     self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
+                  else:
+                     self._data[:,:,:,v,index] = np.reshape(temp[:, m], [T,Y,X])
                index = index + 1
 
       # If one or more values are missing for a member, set all values to nan
