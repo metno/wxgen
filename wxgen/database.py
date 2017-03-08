@@ -175,10 +175,11 @@ class Netcdf(Database):
    Internal
    _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
    """
-   def __init__(self, filename, vars):
+   def __init__(self, filename, vars=None):
       """
-      filename    Load data from this file
-      V           Only use the first V variables in the database
+      Arguments:
+         filename (str): Load data from this file
+         vars (list): List of indices for which variables to use
       """
       Database.__init__(self)
       self._file = netCDF4.Dataset(filename)
@@ -213,8 +214,16 @@ class Netcdf(Database):
       self._members = self._file.dimensions["ensemble_member"].size
       V = len(self.variables)
       M = self._members
-      D = self._file.dimensions["forecast_reference_time"].size
+      has_frt = True
+      if "forecast_reference_time" in self._file.dimensions:
+         D = self._file.dimensions["forecast_reference_time"].size
+      else:
+         D = 1
+         has_frt = False
       times = self._file.variables[self._initname][:]
+      if len(times.shape) == 0:
+         times = np.array([times])
+
       Itimes = np.where(np.isnan(times) == 0)[0]
       times = times[Itimes]
       D = len(times)
@@ -267,7 +276,10 @@ class Netcdf(Database):
          for d in range(0, D):
             for m in range(0, M):
                if is_spatial:
-                  self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
+                  if has_frt:
+                     self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
+                  else:
+                     self._data[:,:,:,v,index] = temp[:, m, :, :]
                else:
                   self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
                index = index + 1
