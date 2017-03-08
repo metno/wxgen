@@ -51,6 +51,7 @@ def main(argv):
    sp["truth"].add_argument('--db_type', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    sp["truth"].add_argument('--vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
    sp["truth"].add_argument('--debug', help="Display debug information", action="store_true")
+   sp["truth"].add_argument('--scale', type=str, default="agg", help="Output scale (agg, large, small)")
 
    """
    Verification driver
@@ -96,7 +97,7 @@ def main(argv):
       db = get_db(args)
       trajectory = db.get_truth()
       output = wxgen.output.Netcdf(args.filename)
-      output.write([trajectory], db, "agg")
+      output.write([trajectory], db, args.scale)
 
    elif args.command == "verif":
       plot = wxgen.plot.Variance()
