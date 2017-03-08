@@ -26,7 +26,7 @@ def main(argv):
    sp["sim"].add_argument('--vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
    sp["sim"].add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    sp["sim"].add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
-   sp["sim"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
+   sp["sim"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
    sp["sim"].add_argument('--scale', type=str, default="agg", help="Output scale (agg, large, small)")
    sp["sim"].add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
    sp["sim"].add_argument('--seed', type=int, default=None, help="Random number seed")
@@ -111,11 +111,12 @@ def get_db(args):
    # Set up database
    if args.command == "sim" and args.seed is not None:
       np.random.seed(args.seed)
+
    if args.db is None:
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
       if args.db_type is None or args.db_type == "random":
-         db = wxgen.database.Random(100, 10, args.v)
+         db = wxgen.database.Random(100, 10, 3)
       elif args.db_type == "lorenz63":
          db = wxgen.database.Lorenz63(10, 500)
       else:

@@ -157,9 +157,13 @@ class Random(Database):
       for v in range(0, self._V):
          self._data[:,0,0,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
-      self.variables = [wxgen.variable.Variable(str(i)) for i in range(0, self._V)]
+      self.variables = [wxgen.variable.Variable("var%d" % i) for i in range(0, self._V)]
       self.lats = [0]
       self.lons = [0]
+      self.climate_states = np.mod(np.arange(0, N), 12)
+      start = wxgen.util.date_to_unixtime(20150101)
+      num_inits = 30
+      self.inittimes = start + np.mod(np.arange(0,N), num_inits)*86400
 
 
 class Netcdf(Database):
