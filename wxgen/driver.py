@@ -8,6 +8,7 @@ import wxgen.generator
 import wxgen.metric
 import wxgen.verif
 import wxgen.output
+import wxgen.plot
 import wxgen.version
 
 def main(argv):
@@ -56,6 +57,7 @@ def main(argv):
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('-n', type=int, help="Number of trajectories")
+   sp["verif"].add_argument('files', help="Input files", nargs="+")
 
    if len(sys.argv) < 2:
       parser.print_help()
@@ -97,6 +99,10 @@ def main(argv):
       output.write([trajectory], db, "agg")
 
    elif args.command == "verif":
+      plot = wxgen.plot.Variance()
+      db = wxgen.database.Netcdf(args.files[0], None)
+      trajectories = [db.get(i) for i in range(db.num)]
+      plot.plot(trajectories, db)
       pass
 
 
