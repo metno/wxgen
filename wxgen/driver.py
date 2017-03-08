@@ -57,8 +57,11 @@ def main(argv):
    Verification driver
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
-   sp["verif"].add_argument('-n', type=int, help="Number of trajectories")
    sp["verif"].add_argument('files', help="Input files", nargs="+")
+   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
+   sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
+   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth", required=True)
+   sp["verif"].add_argument('--debug', help="Display debug information", action="store_true")
 
    if len(sys.argv) < 2:
       parser.print_help()
@@ -73,8 +76,8 @@ def main(argv):
    """
    Run commands
    """
+   wxgen.util.DEBUG = args.debug
    if args.command == "sim":
-      wxgen.util.DEBUG = args.debug
       db = get_db(args)
       V = len(db.variables)
       if args.initial is None:
@@ -100,11 +103,11 @@ def main(argv):
       output.write([trajectory], db, args.scale)
 
    elif args.command == "verif":
-      plot = wxgen.plot.Variance()
-      db = wxgen.database.Netcdf(args.files[0], None)
-      trajectories = [db.get(i) for i in range(db.num)]
-      plot.plot(trajectories, db)
-      pass
+      plot = wxgen.plot.get(args.metric)()
+      plot.filename = args.filename
+      sims = [wxgen.database.Netcdf(file, None) for file in args.files]
+      truth = wxgen.database.Netcdf(args.truth, None)
+      plot.plot(sims, truth)
 
 
 def get_db(args):
