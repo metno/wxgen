@@ -289,9 +289,10 @@ class Netcdf(Database):
 
       # If one or more values are missing for a member, set all values to nan
       for e in range(0, M*D):
-         if np.sum(np.isnan(self._data[:,:,:,:,e])) > 0:
+         NM = np.sum(np.isnan(self._data[:,:,:,:,e]))
+         if NM > 0:
             self._data[:,:,:,:,e] = np.nan
-            # print "Removing %d" % e
+            wxgen.util.debug("Removing member %d because of %d missing values" % (e, NM))
 
       self.inittimes = np.repeat(times, self._members)
 
