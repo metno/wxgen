@@ -60,7 +60,7 @@ def main(argv):
    sp["verif"].add_argument('files', help="Input files", nargs="+")
    sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
-   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth", required=True)
+   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('--debug', help="Display debug information", action="store_true")
 
    if len(sys.argv) < 2:
@@ -105,8 +105,12 @@ def main(argv):
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
       plot.filename = args.filename
-      sims = [wxgen.database.Netcdf(file, None) for file in args.files]
-      truth = wxgen.database.Netcdf(args.truth, None)
+      truth = None
+      sims = None
+      if args.truth is not None:
+         truth = wxgen.database.Netcdf(args.truth, None)
+      if args.files is not None:
+         sims = [wxgen.database.Netcdf(file, None) for file in args.files]
       plot.plot(sims, truth)
 
 

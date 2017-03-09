@@ -6,7 +6,7 @@ import sys
 import wxgen.util
 import matplotlib.dates
 import scipy.ndimage
-# import astropy.convolution
+import astropy.convolution
 import datetime
 
 
@@ -84,8 +84,6 @@ class Plot(object):
 
 class Timeseries(Plot):
    def plot(self, sims, truth):
-      traj = truth.get(0)
-      values = truth.extract(traj)
       sim = sims[0]
       for m in range(sim.num):
          traj = sim.get(m)
@@ -94,21 +92,95 @@ class Timeseries(Plot):
             mpl.subplot(values.shape[1], 1,i+1)
             mpl.plot(values[:,i])
             mpl.ylabel(sim.variables[i].name)
-      mpl.show()
+
+      traj = truth.get(0)
+      values = truth.extract(traj)
+      for i in range(values.shape[1]):
+         mpl.plot(values[:,i], lw=5, color="red")
+         mpl.subplot(values.shape[1], 1,i+1)
       self._finish_plot()
 
 
 class Variance(Plot):
    def plot(self, sims, truth):
-      traj = truth.get(0)
-      values = truth.extract(traj)
-      sim = sims[0]
-      for m in range(sim.num):
-         traj = sim.get(m)
-         values = sim.extract(traj)
-         for i in range(values.shape[1]):
-            mpl.subplot(values.shape[1], 1,i+1)
-            mpl.plot(values[:,i])
-            mpl.ylabel(sim.variables[i].name)
-      mpl.show()
+      Ivar = 0
+      scales = [1,3,7,11,31,61, 181, 365]
+      if truth is not None:
+         traj = truth.get(0)
+         values = truth.extract(traj)[:,Ivar]
+         truth_var = self.compute_truth_variance(values, scales)
+         mpl.plot(scales, truth_var, 'o-')
+         mpl.title(truth.variables[Ivar].name)
+         mpl.ylabel("Variance (%s)" % truth.variables[Ivar].units)
+
+      if sims is not None:
+         sim = sims[0]
+         sim_values = np.zeros([sim.length, sim.num])
+         for m in range(sim.num):
+            traj = sim.get(m)
+            q = sim.extract(traj)
+            sim_values[:,m] = q[:,Ivar]
+         sim_var = self.compute_sim_variance(sim_values, scales)
+         mpl.plot(scales, sim_var, 'o-')
+      mpl.xlabel("Time scale (days)")
+      mpl.grid()
       self._finish_plot()
+
+   def compute_truth_variance(self, array, scales):
+      """
+         array: 1D array
+      """
+      # Create 1-year long segments
+      N = int(np.ceil(len(array)/365))
+      truth = np.zeros([365, N])
+      for i in range(0, N):
+         I = range(i*365, (i+1)*365)
+         truth[:,i] = array[I]
+
+      # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+      # otherwise the fcst variance is higher because obs gets the advantage of using its own
+      # climatology.
+      clim = np.nanmean(truth, axis=1)
+      for i in range(0, N):
+         truth[:,i] = truth[:,i] - clim
+
+      # Compute variance
+      variance = np.zeros(len(scales))
+      for i in range(0, len(scales)):
+         s = scales[i]
+         c = [1.0/s]* s
+         truth_c = np.zeros([truth.shape[0], N], float)
+         for e in range(0, N):
+            truth_c[:,e] = astropy.convolution.convolve(truth[:,e], 1.0/s*np.ones(s))
+         variance[i] = np.nanvar(truth_c)
+      return variance
+
+   def compute_sim_variance(self, array, scales):
+      """
+      Arguments:
+         array (np.array): 2D array (time, member)
+         scales (list): List of time lengths
+
+      Returns:
+         list: Variance for different time lengths
+      """
+      # Create 1-year long segments
+      N = array.shape[1]
+
+      # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+      # otherwise the fcst variance is higher because obs gets the advantage of using its own
+      # climatology.
+      clim = np.nanmean(array, axis=1)
+      for i in range(0, N):
+         array[:,i] = array[:,i] - clim
+
+      # Compute variance
+      variance = np.zeros(len(scales))
+      for i in range(0, len(scales)):
+         s = scales[i]
+         c = [1.0/s]* s
+         sim_c = np.zeros([array.shape[0], N], float)
+         for e in range(0, N):
+            sim_c[:,e] = astropy.convolution.convolve(array[:,e], 1.0/s*np.ones(s))
+         variance[i] = np.nanvar(sim_c)
+      return variance
