@@ -42,7 +42,8 @@ class Plot(object):
       self.yticklabels = None
       self._sets_xticks = None
       self._sets_yticks = None
-      self.which_vars = None
+      self.vars = None
+      self.thresholds = None
 
    def plot(self, sims, truth):
       """
@@ -59,7 +60,7 @@ class Plot(object):
          if self.ylim is not None:
             ax.set_ylim(self.ylim)
          if self.xlog:
-            # Keep tany set ticks and labels
+            # Keep any set ticks and labels
             if self._sets_xticks:
                xticks = ax.get_xticks()
                xticklabels = ax.get_xticklabels()
@@ -92,38 +93,63 @@ class Timeseries(Plot):
             mpl.subplot(values.shape[1], 1,i+1)
             mpl.plot(values[:,i])
             mpl.ylabel(sim.variables[i].name)
+            print sim.variables[i].name
 
       traj = truth.get(0)
       values = truth.extract(traj)
       for i in range(values.shape[1]):
-         mpl.plot(values[:,i], lw=5, color="red")
          mpl.subplot(values.shape[1], 1,i+1)
+         mpl.plot(values[:,i], lw=5, color="red")
+
       self._finish_plot()
 
 
 class Variance(Plot):
-   def plot(self, sims, truth):
-      Ivar = 0
-      scales = [1,3,7,11,31,61, 181, 365]
-      if truth is not None:
-         traj = truth.get(0)
-         values = truth.extract(traj)[:,Ivar]
-         truth_var = self.compute_truth_variance(values, scales)
-         mpl.plot(scales, truth_var, 'o-')
-         mpl.title(truth.variables[Ivar].name)
-         mpl.ylabel("Variance (%s)" % truth.variables[Ivar].units)
+   def __init__(self):
+      Plot. __init__(self)
+      self._sets_xticks = True
 
-      if sims is not None:
-         sim = sims[0]
-         sim_values = np.zeros([sim.length, sim.num])
-         for m in range(sim.num):
-            traj = sim.get(m)
-            q = sim.extract(traj)
-            sim_values[:,m] = q[:,Ivar]
-         sim_var = self.compute_sim_variance(sim_values, scales)
-         mpl.plot(scales, sim_var, 'o-')
-      mpl.xlabel("Time scale (days)")
-      mpl.grid()
+   def plot(self, sims, truth):
+      if self.thresholds is None:
+         scales = [1,3,7,11,31,61, 181, 365]
+      else:
+         scales = self.thresholds
+
+      if self.vars is None:
+         Ivars = range(len(truth.variables))
+      else:
+         Ivars = self.vars
+      for Ivar in Ivars:
+         mpl.subplot(len(Ivars), 1, Ivar+1)
+         if truth is not None:
+            traj = truth.get(0)
+            values = truth.extract(traj)[:,Ivar]
+            truth_var = self.compute_truth_variance(values, scales)
+            mpl.plot(scales, truth_var, 'o-', label="Truth")
+            mpl.title(truth.variables[Ivar].name)
+            mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
+
+         if sims is not None:
+            for sim in sims:
+               sim_values = np.zeros([sim.length, sim.num])
+               for m in range(sim.num):
+                  traj = sim.get(m)
+                  q = sim.extract(traj)
+                  sim_values[:,m] = q[:,Ivar]
+               sim_var = self.compute_sim_variance(sim_values, scales)
+               mpl.plot(scales, sim_var, 'o-', label=sim.name)
+         ticks = np.array([1,7,30,365])
+         labels = ["day", "week", "month", "year"]
+         I = np.where(ticks < mpl.xlim()[1])[0]
+         # Include the first one above the limits
+         if len(I) < len(ticks):
+           I = np.append(I, I[-1]+1)
+
+         mpl.gca().set_xticks(ticks[I])
+         mpl.gca().set_xticklabels(labels)
+         mpl.xlabel("Time scale (days)")
+         mpl.grid()
+      mpl.legend()
       self._finish_plot()
 
    def compute_truth_variance(self, array, scales):

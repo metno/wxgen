@@ -23,7 +23,7 @@ def main(argv):
    sp["sim"] = subparsers.add_parser('sim', help='Create simulated scenarios')
    sp["sim"].add_argument('-n', type=int, help="Number of trajectories", required=True)
    sp["sim"].add_argument('-t', type=int, help="Length of trajectory", required=True)
-   sp["sim"].add_argument('--vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
+   sp["sim"].add_argument('-vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
    sp["sim"].add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
    sp["sim"].add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    sp["sim"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
@@ -62,6 +62,10 @@ def main(argv):
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('--debug', help="Display debug information", action="store_true")
+   sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
+   sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
+   sp["verif"].add_argument('-vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
+   sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
 
    if len(sys.argv) < 2:
       parser.print_help()
@@ -105,6 +109,10 @@ def main(argv):
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
       plot.filename = args.filename
+      plot.xlog = args.xlog
+      plot.ylog = args.ylog
+      plot.vars = args.vars
+      plot.thresholds = args.thresholds
       truth = None
       sims = None
       if args.truth is not None:
@@ -140,8 +148,8 @@ def get_db(args):
 def get_metric(args):
    if args.weights is not None:
       weights = np.array(wxgen.util.parse_numbers(args.weights))
-      if len(weights) != len(db.variables):
-         wxgen.util.error("Weights must match the number of variables (%d)" % (V))
+      # if len(weights) != len(db.variables):
+      #    wxgen.util.error("Weights must match the number of variables (%d)" % (V))
 
       if args.m == "rmsd":
          metric = wxgen.metric.Rmsd(weights)

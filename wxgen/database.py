@@ -26,6 +26,7 @@ class Database(object):
       Y (int): Number of Y-axis points
       inittimes (np.array): array with initialization time corresponding to each member
       climate_states (np.array): array of climate states (one for each ensemble member)
+      name: Name of this database (e.g. filename)
 
    Internal:
       _data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
@@ -41,6 +42,13 @@ class Database(object):
       print "  Length of segments: %d" % self.length
       print "  Number of segments: %d" % self.num
       print "  Number of variables: %d" % len(self.variables)
+
+   @property
+   def name(self):
+      """ Default to setting the name to the filename without the path """
+      I = self.fullname.rfind('/')
+      name = self.fullname[I + 1:]
+      return name
 
    def get(self, i):
       """ Get the i'th trajectory in the database """
@@ -150,6 +158,7 @@ class Random(Database):
       self._V = V
       self._variance = variance
       self._data = np.zeros([T, 1, 1, V, N], float)
+      self.fullname = "Random(%d,%d,%d)" % (N, T, V)
 
       # Ensure that the signal has a constant variance over time
       scale = 1./np.sqrt(np.linspace(1, T, T))
@@ -186,6 +195,7 @@ class Netcdf(Database):
          vars (list): List of indices for which variables to use
       """
       Database.__init__(self)
+      self.fullname = filename
       self._file = netCDF4.Dataset(filename)
 
       self._initname = "forecast_reference_time"
@@ -361,3 +371,4 @@ class Lorenz63(Database):
          self._data[t,0,0,2,:] = z0
 
       self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
+      self.fullname = "Lorenz(%d,%d,%f,%f,%f)" % (N, T, R, S, B)
