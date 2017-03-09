@@ -8,6 +8,7 @@ import matplotlib.dates
 import scipy.ndimage
 import astropy.convolution
 import datetime
+import copy
 
 
 def get_all():
@@ -85,21 +86,27 @@ class Plot(object):
 
 class Timeseries(Plot):
    def plot(self, sims, truth):
+      if self.vars is None:
+         Ivars = range(len(truth.variables))
+      else:
+         Ivars = self.vars
+
       sim = sims[0]
       for m in range(sim.num):
          traj = sim.get(m)
          values = sim.extract(traj)
-         for i in range(values.shape[1]):
-            mpl.subplot(values.shape[1], 1,i+1)
-            mpl.plot(values[:,i])
-            mpl.ylabel(sim.variables[i].name)
-            print sim.variables[i].name
+         for i in range(len(Ivars)):
+            Ivar = Ivars[i]
+            mpl.subplot(len(Ivars), 1,i+1)
+            mpl.plot(values[:,Ivar])
+            mpl.ylabel(sim.variables[Ivar].name)
 
       traj = truth.get(0)
       values = truth.extract(traj)
-      for i in range(values.shape[1]):
-         mpl.subplot(values.shape[1], 1,i+1)
-         mpl.plot(values[:,i], lw=5, color="red")
+      for i in range(len(Ivars)):
+         Ivar = Ivars[i]
+         mpl.subplot(len(Ivars), 1,i+1)
+         mpl.plot(values[:,Ivar], lw=5, color="red")
 
       self._finish_plot()
 
@@ -108,6 +115,7 @@ class Variance(Plot):
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
+      self._normalize = False
 
    def plot(self, sims, truth):
       if self.thresholds is None:
@@ -127,7 +135,10 @@ class Variance(Plot):
             truth_var = self.compute_truth_variance(values, scales)
             mpl.plot(scales, truth_var, 'o-', label="Truth")
             mpl.title(truth.variables[Ivar].name)
-            mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
+            if self._normalize:
+               mpl.ylabel("Normalized variance")
+            else:
+               mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
 
          if sims is not None:
             for sim in sims:
@@ -167,8 +178,12 @@ class Variance(Plot):
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
       # climatology.
       clim = np.nanmean(truth, axis=1)
+      std = 1
+      if self._normalize:
+         std = np.nanstd(truth, axis=1)
+
       for i in range(0, N):
-         truth[:,i] = truth[:,i] - clim
+         truth[:,i] = (truth[:,i] - clim)/std
 
       # Compute variance
       variance = np.zeros(len(scales))
@@ -197,16 +212,21 @@ class Variance(Plot):
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
       # climatology.
       clim = np.nanmean(array, axis=1)
+      std = 1
+      if self._normalize:
+         std = np.nanstd(array, axis=1)
+      values = copy.deepcopy(array)
       for i in range(0, N):
-         array[:,i] = array[:,i] - clim
+         values[:,i] = (values[:,i] - clim)/std
 
       # Compute variance
-      variance = np.zeros(len(scales))
+      variance = np.nan*np.zeros(len(scales))
       for i in range(0, len(scales)):
          s = scales[i]
-         c = [1.0/s]* s
-         sim_c = np.zeros([array.shape[0], N], float)
-         for e in range(0, N):
-            sim_c[:,e] = astropy.convolution.convolve(array[:,e], 1.0/s*np.ones(s))
-         variance[i] = np.nanvar(sim_c)
+         if array.shape[0] > s:
+            c = [1.0/s]* s
+            sim_c = np.zeros([values.shape[0], N], float)
+            for e in range(0, N):
+               sim_c[:,e] = astropy.convolution.convolve(values[:,e], 1.0/s*np.ones(s))
+            variance[i] = np.nanvar(sim_c)
       return variance
