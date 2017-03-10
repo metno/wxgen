@@ -87,26 +87,37 @@ class Plot(object):
 class Timeseries(Plot):
    def plot(self, sims, truth):
       if self.vars is None:
-         Ivars = range(len(truth.variables))
+         if truth is not None:
+            Ivars = range(len(truth.variables))
+         else:
+            Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
 
-      sim = sims[0]
-      for m in range(sim.num):
-         traj = sim.get(m)
-         values = sim.extract(traj)
-         for i in range(len(Ivars)):
-            Ivar = Ivars[i]
-            mpl.subplot(len(Ivars), 1,i+1)
-            mpl.plot(values[:,Ivar])
-            mpl.ylabel(sim.variables[Ivar].name)
+      X = (truth is not None) + len(sims)
+      Y = len(Ivars)
+      for s in range(len(sims)):
+         sim = sims[s]
+         for m in range(sim.num):
+            traj = sim.get(m)
+            values = sim.extract(traj)
+            for i in range(len(Ivars)):
+               index = s*Y+i+1
+               mpl.subplot(X,Y,index)
+               Ivar = Ivars[i]
+               mpl.plot(values[:,Ivar], 'o-')
+               mpl.ylabel(sim.variables[Ivar].name)
+               mpl.title(index)
 
-      traj = truth.get(0)
-      values = truth.extract(traj)
-      for i in range(len(Ivars)):
-         Ivar = Ivars[i]
-         mpl.subplot(len(Ivars), 1,i+1)
-         mpl.plot(values[:,Ivar], lw=5, color="red")
+      if truth is not None:
+         traj = truth.get(0)
+         values = truth.extract(traj)
+         for i in range(len(Ivars)):
+            index = (X-1)*Y+i+1
+            mpl.subplot(X,Y,index)
+            Ivar = Ivars[i]
+            mpl.plot(values[:,Ivar], lw=5, color="red")
+            mpl.ylabel(truth.variables[Ivar].name)
 
       self._finish_plot()
 
@@ -124,14 +135,20 @@ class Variance(Plot):
          scales = self.thresholds
 
       if self.vars is None:
-         Ivars = range(len(truth.variables))
+         if truth is not None:
+            Ivars = range(len(truth.variables))
+         else:
+            Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
-      for Ivar in Ivars:
-         mpl.subplot(len(Ivars), 1, Ivar+1)
+      for i in range(len(Ivars)):
+         Ivar = Ivars[i]
+         mpl.subplot(1, len(Ivars), i+1)
          if truth is not None:
             traj = truth.get(0)
             values = truth.extract(traj)[:,Ivar]
+            # I = np.where(np.isnan(values) == 0)[0]
+            # values = values[I]
             truth_var = self.compute_truth_variance(values, scales)
             mpl.plot(scales, truth_var, 'o-', label="Truth")
             mpl.title(truth.variables[Ivar].name)
