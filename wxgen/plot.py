@@ -45,6 +45,11 @@ class Plot(object):
       self._sets_yticks = None
       self.vars = None
       self.thresholds = None
+      self.line_colors = None
+      self.line_styles = None
+      self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
+      self.default_lines = ['-', '-', '-', '--']
+      self.default_markers = ['o', '', '.', '']
 
    def plot(self, sims, truth):
       """
@@ -82,6 +87,99 @@ class Plot(object):
       else:
          mpl.gcf().set_size_inches(self.fig_size[0],self.fig_size[1])
          mpl.savefig(self.filename, bbox_inches='tight', dpi=self.dpi)
+
+   def _get_color(self, i, total):
+      """ Returns a color specification (e.g. 0.3,0.3,1) that can be used in
+      mpl to specify line color. Determined by looping through a database
+      (self.line_colors). Returns the color for the i'th line in a plot of
+      'total' number of lines.
+
+      _get_color together with _get_style can be used to specify unique
+      color/style combinations for many lines. Color is cycled first, then
+      style. I.e. the following order is default:
+      r-o, b-o, g-o, ..., r-, b-, g-, ...
+
+      Arguments:
+         i (int): Which line is this?
+         total (int): Total number of lines in plot
+      """
+      if self.line_colors is not None:
+         firstList = self.line_colors.split(",")
+         numList = []
+         finalList = []
+
+         for string in firstList:
+            if "[" in string:   # for rgba args
+               if not numList:
+                  string = string.replace("[", "")
+                  numList.append(float(string))
+               else:
+                  verif.util.error("Invalid rgba arg \"{}\"".format(string))
+
+            elif "]" in string:
+               if numList:
+                  string = string.replace("]", "")
+                  numList.append(float(string))
+                  finalList.append(numList)
+                  numList = []
+               else:
+                  verif.util.error("Invalid rgba arg \"{}\"".format(string))
+
+            # append to rgba lists if present, otherwise grayscale intensity
+            elif verif.util.is_number(string):
+               if numList:
+                  numList.append(float(string))
+               else:
+                  finalList.append(string)
+
+            else:
+               if not numList:  # string args and hexcodes
+                  finalList.append(string)
+               else:
+                  verif.util.error("Cannot read color args.")
+         self.colors = finalList
+         return self.colors[i % len(self.colors)]
+
+      # use default colours if no colour input given
+      else:
+         self.colors = self.default_colors
+         return self.colors[i % len(self.default_colors)]
+
+   def _get_style(self, i, total, connectingLine=True, lineOnly=False):
+      """ Returns a string (e.g. -o) that can be used in mpl to specify line
+      style. Determined by looping through a database (self.line_styles).
+      Returns the style for the i'th line in a plot of 'total' number of lines.
+
+      Arguments:
+         i (int): Which line is this?
+         total (int): Total number of lines in plot
+         connectingLine: If True, add a connecting line (e.g. -o) between the
+            markers.  Otherwise only a marker will be used (e.g. o)
+         lineOnly: If True, don't include the marker (e.g. -)
+      """
+      if self.line_styles is not None:
+         listStyles = self.line_styles.split(",")
+         # loop through input linestyles (independent of colors)
+         I = i % len(listStyles)
+         return listStyles[I]
+
+      else:  # default linestyles
+         I = (i / len(self.colors)) % len(self.default_lines)
+         line = self.default_lines[I]
+         marker = self.default_markers[I]
+         if lineOnly:
+            return line
+         if connectingLine:
+            return line + marker
+         return marker
+
+   def _plot_truth(self, x, y, isCont=True, zorder=0, label="Truth"):
+      if isCont:
+         mpl.plot(x, y, ".-", color="gray", lw=5, label=label, zorder=zorder)
+      else:
+         mpl.plot(x, y, "o", color="gray", ms=self.ms, label=label,
+               zorder=zorder)
+
 
 
 class Timeseries(Plot):
@@ -153,7 +251,8 @@ class Variance(Plot):
             # I = np.where(np.isnan(values) == 0)[0]
             # values = values[I]
             truth_var = self.compute_truth_variance(values, scales)
-            mpl.plot(scales, truth_var, 'o-', label="Truth")
+            self._plot_truth(scales, truth_var, label="Truth")
+            # mpl.plot(scales, truth_var, 'o-', label="Truth")
             mpl.title(truth.variables[Ivar].name)
             if self._normalize:
                mpl.ylabel("Normalized variance")
@@ -161,14 +260,16 @@ class Variance(Plot):
                mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
 
          if sims is not None:
-            for sim in sims:
+            for s in range(len(sims)):
+               sim = sims[s]
                sim_values = np.zeros([sim.length, sim.num])
+               col = self._get_color(s, len(sims))
                for m in range(sim.num):
                   traj = sim.get(m)
                   q = sim.extract(traj)
                   sim_values[:,m] = q[:,Ivar]
                sim_var = self.compute_sim_variance(sim_values, scales)
-               mpl.plot(scales, sim_var, 'o-', label=sim.name)
+               mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
          ticks = np.array([1,7,30,365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
