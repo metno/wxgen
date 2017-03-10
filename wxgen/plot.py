@@ -94,20 +94,23 @@ class Timeseries(Plot):
       else:
          Ivars = self.vars
 
-      X = (truth is not None) + len(sims)
+      X = (truth is not None)
+      if sims is not None:
+         X += len(sims)
       Y = len(Ivars)
-      for s in range(len(sims)):
-         sim = sims[s]
-         for m in range(sim.num):
-            traj = sim.get(m)
-            values = sim.extract(traj)
-            for i in range(len(Ivars)):
-               index = s*Y+i+1
-               mpl.subplot(X,Y,index)
-               Ivar = Ivars[i]
-               mpl.plot(values[:,Ivar], 'o-')
-               mpl.ylabel(sim.variables[Ivar].name)
-               mpl.title(index)
+      if sims is not None:
+         for s in range(len(sims)):
+            sim = sims[s]
+            for m in range(sim.num):
+               traj = sim.get(m)
+               values = sim.extract(traj)
+               for i in range(len(Ivars)):
+                  index = s*Y+i+1
+                  mpl.subplot(X,Y,index)
+                  Ivar = Ivars[i]
+                  mpl.plot(values[:,Ivar], 'o-')
+                  mpl.ylabel(sim.variables[Ivar].name)
+                  mpl.title(index)
 
       if truth is not None:
          traj = truth.get(0)
