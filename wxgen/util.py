@@ -3,6 +3,10 @@ import calendar
 import datetime
 import sys
 
+
+DEBUG = False
+
+
 def random_weighted(weights):
    """
    Randomly selects an index into an array based on weights
@@ -26,6 +30,19 @@ def error(message):
 
 def warning(message):
    print "\033[1;33mWarning: " + message + "\033[0m"
+
+
+def debug(message):
+   if DEBUG:
+      print "\033[1;32mDebug: " + message + "\033[0m"
+
+
+def parse_dates(dates):
+   return [int(date) for date in parse_numbers(dates, True)]
+
+
+def parse_ints(ints):
+   return [int(num) for num in parse_numbers(ints, True)]
 
 
 def parse_numbers(numbers, isDate=False):
@@ -64,7 +81,7 @@ def parse_numbers(numbers, isDate=False):
             curr = list()
             while date <= max(start, end):
                curr.append(date)
-               date = getDate(date, step)
+               date = get_date(date, step)
             values = values + list(curr)
          else:
             if int(start) == start and int(end) == end and int(step) == step:
@@ -117,5 +134,22 @@ def unixtime_to_date(unixtime):
    dt = datetime.datetime.utcfromtimestamp(int(unixtime))
    date = dt.year * 10000 + dt.month * 100 + dt.day
    return date
+
+
+def get_date(date, diff):
+   """ Date calculation: Adds 'diff' to 'date'
+
+   Arguments:
+      date (int): An integer of the form YYYYMMDD
+      diff (int): Number of days to add to date
+
+   Returns:
+      int: A new date in the form YYYYMMDD
+   """
+   year = int(date / 10000)
+   month = int(date / 100 % 100)
+   day = int(date % 100)
+   date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
+   return int(date2.strftime('%Y%m%d'))
 
 

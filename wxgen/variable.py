@@ -1,5 +1,5 @@
 class Variable(object):
-   def __init__(self, name, units=None, label=None):
+   def __init__(self, name, units="", label=None):
       self.name = name
       self.units = units
       if label is None:

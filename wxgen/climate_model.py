@@ -7,31 +7,46 @@ def get(name):
       return Bin(30)
 
 def day_of_year(unixtimes):
-   return np.array([int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes])
+   ar = np.zeros([len(unixtimes), 1], int)
+   ar[:,0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
+   return ar
 
 class ClimateModel(object):
    def get(self, unixtimes):
       """ Returns a representation of the state for a given date
       
       Arguments:
-      unixtimes       A numpy array of unix times
+         unixtimes (np.array): An array of unix times
+
+      Returns:
+         np.array: A 2D array representing the state. The first dimension equals the length of
+            unixtimes, the second the number of variables in the state. Must be 2D even if the
+            second second dimension is only 1.
       """
-      raise NotImplemented
+      raise NotImplementedError()
 
 
 class Bin(ClimateModel):
+   """
+   State is determined by which bin the day of the year falls in. For a bin size of 10, then Jan
+   1-10 are in bin 0, Jan 11-20 are in bin 1, and so forth.
+   """
    def __init__(self, num_days):
+      """
+      Arguments;
+         num_days (int): Number of days in each bin
+      """
       self._num_days = num_days
 
-
    def get(self, unixtimes):
-      #day_of_year = np.array([datetime.datetime.utcfromtimestamp(int(unixtime)).timetuple().tm_yday for
-      #      unixtime in unixtimes])
-      day = day_of_year(unixtimes)
+      day = day_of_year(unixtimes)-1
       return day / self._num_days
 
 
 class Index(ClimateModel):
+   """
+   Use the index in 
+   """
    def __init__(self, filename, num_days=365):
       self._filename = filename
       self._num_days = num_days
@@ -66,3 +81,17 @@ class Index(ClimateModel):
             print "Missing: %d" % unixtime
       print index
       return day + index * 100
+
+class Combo(ClimateModel):
+   """
+   Combines several climate models. A matching state is one that matches the states from all models
+   """
+   def __init__(self, models):
+      self.models = models
+
+   def get(self, unixtimes):
+      states = self.models[0].get(unixtimes)
+      for m in range(1, len(self.models)):
+         states = np.append(states, self.models[m].get(unixtimes), axis=1)
+
+      return states

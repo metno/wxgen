@@ -17,22 +17,22 @@ class Database(object):
    dimensions. A subclass must populate this field during initialization.
 
    Attributes:
-   variables      A list of wxgen.variable.Variable
-   length         Length of each trajectory (in number of days)
-   num            Number of trajectories
-   lats           2D grid of latitudes
-   lons           2D grid of longitudes
-   X              Number of X-axis points
-   Y              Number of Y-axis points
-   inittimes      numpy array with initialization time corresponding to each member
-   climate_states A numpy array of climate states (one for each ensemble member)
+      variables: A list of wxgen.variable.Variable
+      length (int): Length of each trajectory (in number of days)
+      num (int): Number of trajectories
+      lats (np.array): 2D grid of latitudes
+      lons (np.array): 2D grid of longitudes
+      X (int): Number of X-axis points
+      Y (int): Number of Y-axis points
+      inittimes (np.array): array with initialization time corresponding to each member
+      climate_states (np.array): array of climate states (one for each ensemble member)
+      name: Name of this database (e.g. filename)
 
    Internal:
-   _data          A 5D numpy array of data with dimensions (lead_time, lat, lon, variable, member*time)
-   _data_agg      A 3D numpy array of data with dimensions (lead_time, variable, member*time)
+      _data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
+      _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self):
-      self._debug = False
       self.aggregator = wxgen.aggregator.Mean()
       self._data_agg_cache = None
       self._model = wxgen.climate_model.Bin(10)
@@ -43,85 +43,89 @@ class Database(object):
       print "  Number of segments: %d" % self.num
       print "  Number of variables: %d" % len(self.variables)
 
+   @property
+   def name(self):
+      """ Default to setting the name to the filename without the path """
+      I = self.fullname.rfind('/')
+      name = self.fullname[I + 1:]
+      return name
+
    def get(self, i):
       """ Get the i'th trajectory in the database """
       indices = np.zeros([self.length, 2], int)
       indices[:,0] = i
       indices[:,1] = np.arange(0, self.length)
       assert(np.sum(np.isnan(indices)) == 0)
-      return wxgen.trajectory.Trajectory(indices, self)
+      return wxgen.trajectory.Trajectory(indices)
 
-   def get_truth(self):
+   def get_truth(self, start_date=None, end_date=None):
       """ Concatenate the initialization state of all trajectories """
-      times = np.arange(np.min(self.inittimes), np.max(self.inittimes), 86400)
-      indices = np.nan*np.zeros([len(times), 2], int)
+      start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
+      end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
+      times = np.arange(start, end, 86400)
+      indices = -1*np.ones([len(times), 2], int)
       for i in range(0, len(times)):
          time = times[i]
          I = np.where(time >= self.inittimes)[0]
          if len(I) == 0:
-            wxgen.error("Internal error")
+            wxgen.util.error("Internal error")
          inittime = np.max(self.inittimes[I])
-         lt = (time - inittime)/86400
+         lt = int((time - inittime)/86400)
          if lt < self.length:
             indices[i,0] = np.where(self.inittimes == inittime)[0][0]
             indices[i,1] = lt
          else:
-            print "Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time))
-      return wxgen.trajectory.Trajectory(indices, self)
+            wxgen.util.debug("Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time)))
 
-   def get_random(self, target_state, metric, climate_state=None):
+      return wxgen.trajectory.Trajectory(indices)
+
+   def extract(self, trajectory):
       """
-      Returns a random segment from the database that is weighted
-      by the scores computed by metric.
-      target_state   A numpy array (length V)
-      metric         Of type wxgen.metric.Metric
-      climate_state      External state
+      Extract a trajectory of large-scale aggregated values from the database
 
-      Returns:
-      trajectory     Of type wxgen.trajectory.Trajectory
-      """
-      weights = metric.compute(target_state, self._data_agg[0,:,:])
-      Ivalid = np.where(np.isnan(weights) == 0)[0]
-      if climate_state is not None:
-         Iclimate_state = np.where(self.climate_states[Ivalid] == climate_state)[0]
-         if len(Iclimate_state) == 0:
-            print np.unique(self.climate_states[Ivalid])
-            wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
-         Ivalid = Ivalid[Iclimate_state]
-
-      weights_v = weights[Ivalid]
-
-      # Flip the metric if it is negative oriented
-      if metric._orientation == -1:
-         I0 = np.where(weights_v < 1e-3)[0]
-         I1 = np.where(weights_v >= 1e-3)[0]
-         # Ensure we do not get too high weights
-         weights_v[I1] = 1.0/weights_v[I1]
-         weights_v[I0] = 1e3
-
-      # max_weight = np.max(weights_v)
-      # weights_v[np.where(weights_v < max_weight / 4)[0]] = 0
-      I_v = wxgen.util.random_weighted(weights_v)
-      I = Ivalid[I_v]
-
-      # Do a weighted random choice of the weights
-      if self._debug:
-         print "I: ", I
-         print "Data: ", self._data_agg[0,:,I]
-         print "Weight: ", weights_v[I_v]
-         print "Max weight: ", np.max(weights_v)
-      return self.get(I)
-
-   def get_sequence(self, indices):
-      """ Returns a gridded sequence of states
-      
       Arguments:
-      indices     A numpy array of integers
+         trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
 
       Returns:
-      data        A 4D array (T, X, Y, V)
+         np.array: A 2D array (Time, variable) sequence of values
       """
-      pass
+      T = trajectory.indices.shape[0]
+      V = len(self.variables)
+      values = np.nan*np.zeros([T, V], float)
+      for i in range(0, trajectory.indices.shape[0]):
+         if trajectory.indices[i,1] >= 0:
+            values[i,:] = self._data_agg[trajectory.indices[i,1],:,trajectory.indices[i,0]]
+      return values
+
+   def extract_grid(self, trajectory):
+      """
+      Extract a trajectory of large-scale values from the database
+
+      Arguments:
+         trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+
+      Returns:
+         np.array: A 4D array (Time, X, Y, variable) sequence of values
+      """
+      T = trajectory.indices.shape[0]
+      V = len(self.variables)
+      X = self.X
+      Y = self.Y
+      if 0:
+         values = np.zeros([T, Y, X, V], float)
+         # Loop over member, lead-time indices
+         for i in range(0, trajectory.indices.shape[0]):
+            m = trajectory.indices[i,0]
+            t = trajectory.indices[i,1]
+            assert(not np.isnan(m))
+            assert(not np.isnan(t))
+            values[i,:,:,:] = self._data[t, :, :, :, m]
+      else:
+         # Slightly faster way (but not much faster)
+         I0 = trajectory.indices[:,0]
+         I1 = trajectory.indices[:,1]
+         values = self._data[I1, :, :, :, I0]
+      return values
 
    @property
    def _data_agg(self):
@@ -132,11 +136,11 @@ class Database(object):
 
    @property
    def X(self):
-      return self._data.shape[1]
+      return self._data.shape[2]
 
    @property
    def Y(self):
-      return self._data.shape[2]
+      return self._data.shape[1]
 
    def index2(self):
       pass
@@ -156,6 +160,7 @@ class Random(Database):
       self._V = V
       self._variance = variance
       self._data = np.zeros([T, 1, 1, V, N], float)
+      self.fullname = "Random(%d,%d,%d)" % (N, T, V)
 
       # Ensure that the signal has a constant variance over time
       scale = 1./np.sqrt(np.linspace(1, T, T))
@@ -163,9 +168,13 @@ class Random(Database):
       for v in range(0, self._V):
          self._data[:,0,0,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
 
-      self.variables = [wxgen.variable.Variable(str(i)) for i in range(0, self._V)]
+      self.variables = [wxgen.variable.Variable("var%d" % i) for i in range(0, self._V)]
       self.lats = [0]
       self.lons = [0]
+      self.climate_states = np.mod(np.arange(0, N), 12)
+      start = wxgen.util.date_to_unixtime(20150101)
+      num_inits = 30
+      self.inittimes = start + np.mod(np.arange(0,N), num_inits)*86400
 
 
 class Netcdf(Database):
@@ -181,57 +190,94 @@ class Netcdf(Database):
    Internal
    _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
    """
-   _debug0 = True
-   def __init__(self, filename, V=None):
+   def __init__(self, filename, vars=None):
       """
-      filename    Load data from this file
-      V           Only use the first V variables in the database
+      Arguments:
+         filename (str): Load data from this file
+         vars (list): List of indices for which variables to use
       """
       Database.__init__(self)
+      self.fullname = filename
       self._file = netCDF4.Dataset(filename)
 
       self._initname = "forecast_reference_time"
 
       # Set dimensions
-      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time"]]
+      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll"]]
+      if vars is None:
+         vars = range(len(var_names))
+
+      if vars is not None and max(vars) >= len(var_names):
+         wxgen.util.error("Index in --vars (%d) is >= number of variables (%d)" % (max(vars), len(var_names)))
+
       self.variables = list()
-      for var_name in var_names:
+      for i in vars:
+         var_name = var_names[i]
          units = None
          label = None
-         if hasattr(self._file.variables[var_name], "units"):
-            units = self._file.variables[var_name].units
-         if hasattr(self._file.variables[var_name], "standard_name"):
-            label = self._file.variables[var_name].standard_name
-         var = wxgen.variable.Variable(var_name, units, label)
-         self.variables.append(var)
-      if V is not None:
-         self.variables = self.variables[0:V]
+         dims = self._file.variables[var_name].dimensions
+         if "time" in dims:
+            if hasattr(self._file.variables[var_name], "units"):
+               units = self._file.variables[var_name].units
+            if hasattr(self._file.variables[var_name], "standard_name"):
+               label = self._file.variables[var_name].standard_name
+            var = wxgen.variable.Variable(var_name, units, label)
+            self.variables.append(var)
+            wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
       self.length = self._file.dimensions["time"].size
       self._members = self._file.dimensions["ensemble_member"].size
       V = len(self.variables)
       M = self._members
-      D = self._file.dimensions["forecast_reference_time"].size
+      has_frt = True
+      if "forecast_reference_time" in self._file.dimensions:
+         D = self._file.dimensions["forecast_reference_time"].size
+      else:
+         D = 1
+         has_frt = False
       times = self._file.variables[self._initname][:]
+      if len(times.shape) == 0:
+         times = np.array([times])
+
       Itimes = np.where(np.isnan(times) == 0)[0]
       times = times[Itimes]
       D = len(times)
       T = self.length
+
+      # Read lat/lon dimensions
+      is_spatial = True
       if "lon" in self._file.dimensions:
-         is_spatial = True
          X = self._file.dimensions["lon"].size
          Y = self._file.dimensions["lat"].size
-         self.lats = self._copy(self._file.variables["lat"])
-         self.lons = self._copy(self._file.variables["lon"])
+      elif "longitude" in self._file.dimensions:
+         X = self._file.dimensions["longitude"].size
+         Y = self._file.dimensions["latitude"].size
+      elif "x" in self._file.dimensions:
+         X = self._file.dimensions["x"].size
+         Y = self._file.dimensions["y"].size
       else:
          is_spatial = False
          X = 1
          Y = 1
          self.lats = [0]
          self.lons = [0]
+
+      # Read lat/lon variables
+      if is_spatial:
+         if "lat" in self._file.variables:
+            self.lats = self._copy(self._file.variables["lat"])
+            self.lons = self._copy(self._file.variables["lon"])
+         elif "latitude" in self._file.variables:
+            self.lats = self._copy(self._file.variables["latitude"])
+            self.lons = self._copy(self._file.variables["longitude"])
+         if len(self.lats.shape) == 1 or self.lats.shape[1] == 1:
+            wxgen.util.debug("Meshing latitudes and longitudes")
+            # [self.lats, self.lons] = np.meshgrid(self.lats, self.lons)
+            [self.lons, self.lats] = np.meshgrid(self.lons, self.lats)
+
       self.num = M * D
-      print "Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024)
+      wxgen.util.debug("Allocating %.2f GB" % (T*Y*X*V*M*D*4.0/1024/1024/1024))
       self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
       self._date = np.zeros(self.num, float)
 
@@ -246,16 +292,23 @@ class Netcdf(Database):
          for d in range(0, D):
             for m in range(0, M):
                if is_spatial:
-                  self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
+                  if has_frt:
+                     self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
+                  else:
+                     self._data[:,:,:,v,index] = temp[:, m, :, :]
                else:
-                  self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
+                  if has_frt:
+                     self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
+                  else:
+                     self._data[:,:,:,v,index] = np.reshape(temp[:, m], [T,Y,X])
                index = index + 1
 
       # If one or more values are missing for a member, set all values to nan
       for e in range(0, M*D):
-         if np.sum(np.isnan(self._data[:,:,:,:,e])) > 0:
+         NM = np.sum(np.isnan(self._data[:,:,:,:,e]))
+         if NM > 0:
             self._data[:,:,:,:,e] = np.nan
-            # print "Removing %d" % e
+            wxgen.util.debug("Removing member %d because of %d missing values" % (e, NM))
 
       self.inittimes = np.repeat(times, self._members)
 
@@ -320,3 +373,4 @@ class Lorenz63(Database):
          self._data[t,0,0,2,:] = z0
 
       self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
+      self.fullname = "Lorenz(%d,%d,%f,%f,%f)" % (N, T, R, S, B)
