@@ -87,12 +87,12 @@ class LargeScale(object):
       Returns:
          wxgen.trajectory: Random trajectory
       """
+      assert(np.sum(np.isnan(target_state)) == 0)
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
       Ivalid = np.where(np.isnan(weights) == 0)[0]
       if climate_state is not None:
          Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
          if len(Iclimate_state) == 0:
-            print np.unique(self._database.climate_states[Ivalid])
             wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
          Ivalid = Ivalid[Iclimate_state]
 
