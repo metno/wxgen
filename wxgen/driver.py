@@ -46,7 +46,8 @@ def main(argv):
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
    sp["truth"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-   sp["truth"].add_argument('-d', type=wxgen.util.parse_dates, help="Limit trajectory to these dates (e.g. 20010101:20031231)", dest="dates")
+   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="End date of trajectory", dest="end_date")
+   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Start date of trajectory", dest="start_date")
    sp["truth"].add_argument('--db', metavar="FILENAME", help="Filename of NetCDF database")
    sp["truth"].add_argument('--db_type', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    sp["truth"].add_argument('--vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
@@ -102,7 +103,7 @@ def main(argv):
 
    elif args.command == "truth":
       db = get_db(args)
-      trajectory = db.get_truth()
+      trajectory = db.get_truth(args.start_date, args.end_date)
       output = wxgen.output.Netcdf(args.filename)
       output.write([trajectory], db, args.scale)
 

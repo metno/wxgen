@@ -58,15 +58,17 @@ class Database(object):
       assert(np.sum(np.isnan(indices)) == 0)
       return wxgen.trajectory.Trajectory(indices)
 
-   def get_truth(self):
+   def get_truth(self, start_date=None, end_date=None):
       """ Concatenate the initialization state of all trajectories """
-      times = np.arange(np.min(self.inittimes), np.max(self.inittimes), 86400)
+      start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
+      end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
+      times = np.arange(start, end, 86400)
       indices = -1*np.ones([len(times), 2], int)
       for i in range(0, len(times)):
          time = times[i]
          I = np.where(time >= self.inittimes)[0]
          if len(I) == 0:
-            wxgen.error("Internal error")
+            wxgen.util.error("Internal error")
          inittime = np.max(self.inittimes[I])
          lt = int((time - inittime)/86400)
          if lt < self.length:

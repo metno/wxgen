@@ -81,7 +81,7 @@ def parse_numbers(numbers, isDate=False):
             curr = list()
             while date <= max(start, end):
                curr.append(date)
-               date = getDate(date, step)
+               date = get_date(date, step)
             values = values + list(curr)
          else:
             if int(start) == start and int(end) == end and int(step) == step:
@@ -134,5 +134,22 @@ def unixtime_to_date(unixtime):
    dt = datetime.datetime.utcfromtimestamp(int(unixtime))
    date = dt.year * 10000 + dt.month * 100 + dt.day
    return date
+
+
+def get_date(date, diff):
+   """ Date calculation: Adds 'diff' to 'date'
+
+   Arguments:
+      date (int): An integer of the form YYYYMMDD
+      diff (int): Number of days to add to date
+
+   Returns:
+      int: A new date in the form YYYYMMDD
+   """
+   year = int(date / 10000)
+   month = int(date / 100 % 100)
+   day = int(date % 100)
+   date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
+   return int(date2.strftime('%Y%m%d'))
 
 
