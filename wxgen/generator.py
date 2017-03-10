@@ -13,10 +13,11 @@ class LargeScale(object):
       self._database = database
       self._metric = metric
       self._model = model
+      self.prejoin = None
 
    def get(self, N, T, initial_state=None):
       """
-      Returns a list of N trajectories, where each trahectry has a length of T.
+      Returns a list of N trajectories, where each trajectory has a length of T.
 
       If initial_state is provided then the trajectory will start with a state similar to this. If
       no initial state is provided, start with a random segment from the database.
@@ -49,11 +50,18 @@ class LargeScale(object):
          # segment is 10 days long, we are only using 9 days of the segment.
          start = 0  # Starting index into output trajectory where we are inserting a segment
          time = wxgen.util.date_to_unixtime(20170101)
+         join = 0
          while start < T:
+            # print "Join: %d" % join
             # TODO
             climate_state = self._model.get([time])[0]
 
-            segment_curr = self.get_random(state_curr, self._metric, climate_state)
+            search_times = None
+            if join > 0:
+               print 1
+               end_times = self._database.inittimes[segment_curr.indices[-1,0]]
+               search_times = [end_times - 5*86400, end_times + 5*86400]
+            segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
             indices_curr = segment_curr.indices
 
             end = min(start + Tsegment-1, T)  # Ending index
@@ -67,6 +75,8 @@ class LargeScale(object):
             state_curr = self._database.extract(segment_curr)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
+            if self.prejoin > 0:
+               join = (join + 1) % self.prejoin
 
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
          wxgen.util.debug("Trajectory: %s" % trajectory)
@@ -74,7 +84,7 @@ class LargeScale(object):
 
       return trajectories
 
-   def get_random(self, target_state, metric, climate_state=None):
+   def get_random(self, target_state, metric, climate_state=None, time_range=None):
       """
       Returns a pseudo-random segment from the database chosen based on weights computed by a metric
 
@@ -83,14 +93,21 @@ class LargeScale(object):
             for each variable in the database.
          metric (wxgen.metric): Metric to use when finding matches
          climate_state (np.array): External state representing what state the climate is in
+         time_range (list): Start and end unixtimes for the search
 
       Returns:
          wxgen.trajectory: Random trajectory
       """
       assert(np.sum(np.isnan(target_state)) == 0)
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
-      Ivalid = np.where(np.isnan(weights) == 0)[0]
-      if climate_state is not None:
+      if time_range is None:
+         Ivalid = np.where(np.isnan(weights) == 0)[0]
+      else:
+         Ivalid = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) &
+               (self._database.inittimes < time_range[1]))[0]
+         # print Ivalid
+         # print "Restricting time range"
+      if climate_state is not None and time_range is None:
          Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
          if len(Iclimate_state) == 0:
             wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
