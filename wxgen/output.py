@@ -114,7 +114,8 @@ class Netcdf(Output):
             vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member"))
          else:
             vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
-         vars[var.name].units = var.units
+         if var.units is not None:
+            vars[var.name].units = var.units
 
       # Write forecast variables
       for m in range(0, len(trajectories)):
