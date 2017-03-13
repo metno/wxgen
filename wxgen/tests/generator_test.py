@@ -4,8 +4,8 @@ import wxgen.database
 import numpy as np
 
 
-class MyTest(unittest.TestCase):
-   def test_getOffsets(self):
+class GeneratorTest(unittest.TestCase):
+   def test_get(self):
       V = 3
       N = 4
       T = 20
@@ -13,8 +13,8 @@ class MyTest(unittest.TestCase):
       generator = wxgen.generator.LargeScale(db)
       traj = generator.get(N, T)
       self.assertEqual(N, len(traj))
-      self.assertEqual(T, traj[0].shape[0])
-      self.assertEqual(V, traj[0].shape[1])
+      self.assertEqual(T, traj[0].length)
+      self.assertEqual(2, traj[0].indices.shape[1])
 
 
 if __name__ == '__main__':
