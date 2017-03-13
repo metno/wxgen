@@ -44,30 +44,38 @@ class LargeScale(object):
          else:
             state_curr = initial_state
 
-         # Assemble a trajectory by concatenating appropriate segments. Start by finding a segment
-         # that has a starting state that is similar to the requested initial state. When
-         # repeating, overwrite the end state of the previous segment. This means that if the
-         # segment is 10 days long, we are only using 9 days of the segment.
+         """
+         Assemble a trajectory by concatenating appropriate segments. Start by finding a segment
+         that has a starting state that is similar to the requested initial state. When repeating,
+         overwrite the end state of the previous segment. This means that if the segment is 10 days
+         long, we are only using 9 days of the segment.
+         """
          start = 0  # Starting index into output trajectory where we are inserting a segment
          time = wxgen.util.date_to_unixtime(20170101)
          join = 0
          while start < T:
-            # print "Join: %d" % join
-            # TODO
             climate_state = self._model.get([time])[0]
 
+            """
+            Prejoin multiple segments that are nearby in time. This is done by passing
+            'search_times' to get_random.
+            """
             search_times = None
             if join > 0:
-               print 1
-               end_times = self._database.inittimes[segment_curr.indices[-1,0]]
+               end_times = self._database.inittimes[segment_curr.indices[-1,0]] + segment_curr.indices[-1,1]*86400
                search_times = [end_times - 5*86400, end_times + 5*86400]
             segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
             indices_curr = segment_curr.indices
 
+            """
+            Account for the fact that the desired trajectory length is not a whole multiple of the
+            segment length: Only take the first part of the segment if needed.
+            """
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
+
             wxgen.util.debug("Current state: %s" % state_curr)
             wxgen.util.debug("Chosen segment: %s" % segment_curr)
             wxgen.util.debug("Trajectory indices: %s" % Iout)
@@ -89,24 +97,31 @@ class LargeScale(object):
       Returns a pseudo-random segment from the database chosen based on weights computed by a metric
 
       Arguments:
-         target_state (np.array): Try to matchin this state when finding the trajectory. One value
+         target_state (np.array): Try to match this state when finding the trajectory. One value
             for each variable in the database.
          metric (wxgen.metric): Metric to use when finding matches
          climate_state (np.array): External state representing what state the climate is in
-         time_range (list): Start and end unixtimes for the search
+         time_range (list): Start and end unixtimes for the search. If None, then do not restrict.
 
       Returns:
          wxgen.trajectory: Random trajectory
       """
       assert(np.sum(np.isnan(target_state)) == 0)
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
+
+      # Find valid segments
       if time_range is None:
          Ivalid = np.where(np.isnan(weights) == 0)[0]
       else:
          Ivalid = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) &
                (self._database.inittimes < time_range[1]))[0]
-         # print Ivalid
-         # print "Restricting time range"
+         if len(Ivalid) == 0:
+            wxgen.util.warning("Skipping this prejoin: No valid segment that start in date range [%d %d]" %
+                  (time_range[0], time_range[1]))
+            Ivalid = np.where(np.isnan(weights) == 0)[0]
+            time_range = None
+
+      # Segment the database based on climate state
       if climate_state is not None and time_range is None:
          Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
          if len(Iclimate_state) == 0:
