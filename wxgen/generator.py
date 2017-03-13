@@ -13,10 +13,11 @@ class LargeScale(object):
       self._database = database
       self._metric = metric
       self._model = model
+      self.prejoin = None
 
    def get(self, N, T, initial_state=None):
       """
-      Returns a list of N trajectories, where each trahectry has a length of T.
+      Returns a list of N trajectories, where each trajectory has a length of T.
 
       If initial_state is provided then the trajectory will start with a state similar to this. If
       no initial state is provided, start with a random segment from the database.
@@ -43,23 +44,38 @@ class LargeScale(object):
          else:
             state_curr = initial_state
 
-         # Assemble a trajectory by concatenating appropriate segments. Start by finding a segment
-         # that has a starting state that is similar to the requested initial state. When
-         # repeating, overwrite the end state of the previous segment. This means that if the
-         # segment is 10 days long, we are only using 9 days of the segment.
+         """
+         Assemble a trajectory by concatenating appropriate segments. Start by finding a segment
+         that has a starting state that is similar to the requested initial state. When repeating,
+         overwrite the end state of the previous segment. This means that if the segment is 10 days
+         long, we are only using 9 days of the segment.
+         """
          start = 0  # Starting index into output trajectory where we are inserting a segment
          time = wxgen.util.date_to_unixtime(20170101)
+         join = 0
          while start < T:
-            # TODO
             climate_state = self._model.get([time])[0]
 
-            segment_curr = self.get_random(state_curr, self._metric, climate_state)
+            """
+            Prejoin multiple segments that are nearby in time. This is done by passing
+            'search_times' to get_random.
+            """
+            search_times = None
+            if join > 0:
+               end_times = self._database.inittimes[segment_curr.indices[-1,0]] + segment_curr.indices[-1,1]*86400
+               search_times = [end_times - 5*86400, end_times + 5*86400]
+            segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
             indices_curr = segment_curr.indices
 
+            """
+            Account for the fact that the desired trajectory length is not a whole multiple of the
+            segment length: Only take the first part of the segment if needed.
+            """
             end = min(start + Tsegment-1, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
+
             wxgen.util.debug("Current state: %s" % state_curr)
             wxgen.util.debug("Chosen segment: %s" % segment_curr)
             wxgen.util.debug("Trajectory indices: %s" % Iout)
@@ -67,6 +83,8 @@ class LargeScale(object):
             state_curr = self._database.extract(segment_curr)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
+            if self.prejoin > 0:
+               join = (join + 1) % self.prejoin
 
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
          wxgen.util.debug("Trajectory: %s" % trajectory)
@@ -74,29 +92,48 @@ class LargeScale(object):
 
       return trajectories
 
-   def get_random(self, target_state, metric, climate_state=None):
+   def get_random(self, target_state, metric, climate_state=None, time_range=None):
       """
       Returns a pseudo-random segment from the database chosen based on weights computed by a metric
 
       Arguments:
-         target_state (np.array): Try to matchin this state when finding the trajectory. One value
+         target_state (np.array): Try to match this state when finding the trajectory. One value
             for each variable in the database.
          metric (wxgen.metric): Metric to use when finding matches
          climate_state (np.array): External state representing what state the climate is in
+         time_range (list): Start and end unixtimes for the search. If None, then do not restrict.
 
       Returns:
          wxgen.trajectory: Random trajectory
       """
       assert(np.sum(np.isnan(target_state)) == 0)
+
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
-      Ivalid = np.where(np.isnan(weights) == 0)[0]
-      if climate_state is not None:
-         Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
+      use_climate_state = climate_state is not None
+
+      # Find valid segments
+      do_prejoin = False
+      if time_range is None:
+         Itime = np.where(np.isnan(weights) == 0)[0]
+      else:
+         do_prejoin = True
+         Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) & (self._database.inittimes < time_range[1]))[0]
+         if len(Itime) == 0:
+            date_range = [wxgen.util.unixtime_to_date(t) for t in time_range]
+            wxgen.util.warning("Skipping this prejoin: No valid segment that start in date range [%d, %d]" %
+                  (date_range[0], date_range[1]))
+            Itime = np.where(np.isnan(weights) == 0)[0]
+            # Without any prejoin segments, revert to the original plan of just finding a random segment
+            do_prejoin = False
+
+      # Segment the database based on climate state
+      if climate_state is not None and not do_prejoin:
+         Iclimate_state = np.where(self._database.climate_states[Itime] == climate_state)[0]
          if len(Iclimate_state) == 0:
             wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
-         Ivalid = Ivalid[Iclimate_state]
+         Itime = Itime[Iclimate_state]
 
-      weights_v = weights[Ivalid]
+      weights_v = weights[Itime]
 
       # Flip the metric if it is negative oriented
       if metric._orientation == -1:
@@ -106,10 +143,8 @@ class LargeScale(object):
          weights_v[I1] = 1.0/weights_v[I1]
          weights_v[I0] = 1e3
 
-      # max_weight = np.max(weights_v)
-      # weights_v[np.where(weights_v < max_weight / 4)[0]] = 0
       I_v = wxgen.util.random_weighted(weights_v)
-      I = Ivalid[I_v]
+      I = Itime[I_v]
 
       # Do a weighted random choice of the weights
       wxgen.util.debug("I: %s" % I)

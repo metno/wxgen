@@ -28,11 +28,12 @@ def main(argv):
    sp["sim"].add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
    sp["sim"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
    sp["sim"].add_argument('--scale', type=str, default="agg", help="Output scale (agg, large, small)")
-   sp["sim"].add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)")
+   sp["sim"].add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
    sp["sim"].add_argument('--seed', type=int, default=None, help="Random number seed")
    sp["sim"].add_argument('--debug', help="Display debug information", action="store_true")
    sp["sim"].add_argument('--weights', type=str)
    sp["sim"].add_argument('--initial', type=str, default=None, help="Initial state")
+   sp["sim"].add_argument('-j', type=int, metavar="NUM", default=None, help="How many times should segments be prejoined?", dest="prejoin")
 
    # p_sim.add_argument('--type', type=str, default="timeseries", help="Output type (text, netcdf, or plot)")
    # p_sim.add_argument('-fs', type=str, default=None, help="Figure size: width,height")
@@ -58,7 +59,7 @@ def main(argv):
    Verification driver
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
-   sp["verif"].add_argument('files', help="Input files", nargs="+")
+   sp["verif"].add_argument('files', help="Input files", nargs="*")
    sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
@@ -95,6 +96,7 @@ def main(argv):
       # Generate trajectories
       metric = get_metric(args)
       generator = wxgen.generator.LargeScale(db, metric)
+      generator.prejoin = args.prejoin
       trajectories = generator.get(args.n, args.t, initial_state)
 
       # Create output
@@ -152,12 +154,12 @@ def get_metric(args):
       # if len(weights) != len(db.variables):
       #    wxgen.util.error("Weights must match the number of variables (%d)" % (V))
 
-      if args.m == "rmsd":
+      if args.metric == "rmsd":
          metric = wxgen.metric.Rmsd(weights)
-      elif args.m == "exp":
+      elif args.metric == "exp":
          metric = wxgen.metric.Exp(weights)
    else:
-      metric = wxgen.metric.get(args.m)
+      metric = wxgen.metric.get(args.metric)
 
 
    return metric

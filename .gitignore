@@ -7,3 +7,5 @@
 *.egg-info
 *.prof
 *.lprof
+data
+devel
