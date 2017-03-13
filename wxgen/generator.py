@@ -107,28 +107,33 @@ class LargeScale(object):
          wxgen.trajectory: Random trajectory
       """
       assert(np.sum(np.isnan(target_state)) == 0)
+
       weights = metric.compute(target_state, self._database._data_agg[0,:,:])
+      use_climate_state = climate_state is not None
 
       # Find valid segments
+      do_prejoin = False
       if time_range is None:
-         Ivalid = np.where(np.isnan(weights) == 0)[0]
+         Itime = np.where(np.isnan(weights) == 0)[0]
       else:
-         Ivalid = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) &
-               (self._database.inittimes < time_range[1]))[0]
-         if len(Ivalid) == 0:
-            wxgen.util.warning("Skipping this prejoin: No valid segment that start in date range [%d %d]" %
-                  (time_range[0], time_range[1]))
-            Ivalid = np.where(np.isnan(weights) == 0)[0]
-            time_range = None
+         do_prejoin = True
+         Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) & (self._database.inittimes < time_range[1]))[0]
+         if len(Itime) == 0:
+            date_range = [wxgen.util.unixtime_to_date(t) for t in time_range]
+            wxgen.util.warning("Skipping this prejoin: No valid segment that start in date range [%d, %d]" %
+                  (date_range[0], date_range[1]))
+            Itime = np.where(np.isnan(weights) == 0)[0]
+            # Without any prejoin segments, revert to the original plan of just finding a random segment
+            do_prejoin = False
 
       # Segment the database based on climate state
-      if climate_state is not None and time_range is None:
-         Iclimate_state = np.where(self._database.climate_states[Ivalid] == climate_state)[0]
+      if climate_state is not None and not do_prejoin:
+         Iclimate_state = np.where(self._database.climate_states[Itime] == climate_state)[0]
          if len(Iclimate_state) == 0:
             wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
-         Ivalid = Ivalid[Iclimate_state]
+         Itime = Itime[Iclimate_state]
 
-      weights_v = weights[Ivalid]
+      weights_v = weights[Itime]
 
       # Flip the metric if it is negative oriented
       if metric._orientation == -1:
@@ -138,10 +143,8 @@ class LargeScale(object):
          weights_v[I1] = 1.0/weights_v[I1]
          weights_v[I0] = 1e3
 
-      # max_weight = np.max(weights_v)
-      # weights_v[np.where(weights_v < max_weight / 4)[0]] = 0
       I_v = wxgen.util.random_weighted(weights_v)
-      I = Ivalid[I_v]
+      I = Itime[I_v]
 
       # Do a weighted random choice of the weights
       wxgen.util.debug("I: %s" % I)
