@@ -29,13 +29,16 @@ class Database(object):
       name: Name of this database (e.g. filename)
 
    Internal:
-      _data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
+      1data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
-   def __init__(self):
+   def __init__(self, model=None):
       self.aggregator = wxgen.aggregator.Mean()
       self._data_agg_cache = None
-      self._model = wxgen.climate_model.Bin(10)
+      if model is None:
+         self.model = wxgen.climate_model.Bin(10)
+      else:
+         self.model = model
 
    def info(self):
       print "Database information:"
@@ -151,8 +154,8 @@ class Random(Database):
    Trajectories are random Gaussian walks, with constant variance over time. There is no covariance
    between different forecast variables.
    """
-   def __init__(self, N, T, V, variance=1):
-      Database.__init__(self)
+   def __init__(self, N, T, V, variance=1, model=None):
+      Database.__init__(self, model)
       self.num = N
       self.length = T
       if V == None:
@@ -190,13 +193,13 @@ class Netcdf(Database):
    Internal
    _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
    """
-   def __init__(self, filename, vars=None):
+   def __init__(self, filename, vars=None, model=None):
       """
       Arguments:
          filename (str): Load data from this file
          vars (list): List of indices for which variables to use
       """
-      Database.__init__(self)
+      Database.__init__(self, model)
       self.fullname = filename
       self._file = netCDF4.Dataset(filename)
 
@@ -312,7 +315,7 @@ class Netcdf(Database):
 
       self.inittimes = np.repeat(times, self._members)
 
-      self.climate_states = self._model.get(self.inittimes)
+      self.climate_states = self.model.get(self.inittimes)
       self._file.close()
 
    def _copy(self, data):
@@ -329,8 +332,8 @@ class Lorenz63(Database):
    """
    Trajectories based on the Lorenz 63 model.
    """
-   def __init__(self, N, T, R=28, S=10, B=2.6667, dt=0.0001):
-      Database.__init__(self)
+   def __init__(self, N, T, R=28, S=10, B=2.6667, dt=0.0001, model=None):
+      Database.__init__(self, model)
       self.num = N
       self.length = T
       self._R = R

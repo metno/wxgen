@@ -2,6 +2,7 @@ import sys
 import argparse
 import numpy as np
 import matplotlib.pylab as mpl
+import wxgen.climate_model
 import wxgen.database
 import wxgen.trajectory
 import wxgen.generator
@@ -34,6 +35,7 @@ def main(argv):
    sp["sim"].add_argument('--weights', type=str)
    sp["sim"].add_argument('--initial', type=str, default=None, help="Initial state")
    sp["sim"].add_argument('-j', type=int, metavar="NUM", default=None, help="How many times should segments be prejoined?", dest="prejoin")
+   sp["sim"].add_argument('-b', type=int, metavar="DAYS", default=None, help="Length of database bins", dest="bin_width")
 
    # p_sim.add_argument('--type', type=str, default="timeseries", help="Output type (text, netcdf, or plot)")
    # p_sim.add_argument('-fs', type=str, default=None, help="Figure size: width,height")
@@ -95,7 +97,8 @@ def main(argv):
 
       # Generate trajectories
       metric = get_metric(args)
-      generator = wxgen.generator.LargeScale(db, metric)
+      model = get_climate_model(args)
+      generator = wxgen.generator.LargeScale(db, metric, model=model)
       generator.prejoin = args.prejoin
       trajectories = generator.get(args.n, args.t, initial_state)
 
@@ -130,17 +133,19 @@ def get_db(args):
    if args.command == "sim" and args.seed is not None:
       np.random.seed(args.seed)
 
+   model = get_climate_model(args)
+
    if args.db is None:
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
       if args.db_type is None or args.db_type == "random":
-         db = wxgen.database.Random(100, 10, 3)
+         db = wxgen.database.Random(100, 10, 3, model=model)
       elif args.db_type == "lorenz63":
-         db = wxgen.database.Lorenz63(10, 500)
+         db = wxgen.database.Lorenz63(10, 500, model=model)
       else:
          wxgen.util.error("Cannot understand --db_type %s" % args.db_type)
    else:
-      db = wxgen.database.Netcdf(args.db, args.vars)
+      db = wxgen.database.Netcdf(args.db, args.vars, model=model)
 
    if args.debug:
       db.info()
@@ -163,6 +168,14 @@ def get_metric(args):
 
 
    return metric
+
+
+def get_climate_model(args):
+   if args.bin_width is not None:
+      model = wxgen.climate_model.Bin(args.bin_width)
+   else:
+      model = None
+   return model
 
 
 if __name__ == '__main__':

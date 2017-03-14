@@ -25,6 +25,13 @@ class ClimateModel(object):
       """
       raise NotImplementedError()
 
+class Zero(ClimateModel):
+   def __init__(self):
+      pass
+
+   def get(self, unixtime):
+      return 0
+
 
 class Bin(ClimateModel):
    """

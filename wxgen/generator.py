@@ -9,10 +9,13 @@ class LargeScale(object):
    This class generates long trajectories from segments in a database
    """
 
-   def __init__(self, database, metric=wxgen.metric.Rmsd(), model=wxgen.climate_model.Bin(10)):
+   def __init__(self, database, metric=wxgen.metric.Rmsd(), model=None):
       self._database = database
       self._metric = metric
-      self._model = model
+      if model is None:
+         self.model = wxgen.climate_model.Bin(10)
+      else:
+         self.model = model
       self.prejoin = None
 
    def get(self, N, T, initial_state=None):
@@ -54,7 +57,7 @@ class LargeScale(object):
          time = wxgen.util.date_to_unixtime(20170101)
          join = 0
          while start < T:
-            climate_state = self._model.get([time])[0]
+            climate_state = self.model.get([time])[0]
 
             """
             Prejoin multiple segments that are nearby in time. This is done by passing
