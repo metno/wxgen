@@ -31,7 +31,7 @@ def get(name):
 class Plot(object):
    def __init__(self):
       self.filename = None
-      self.dpi = 300
+      self.dpi = 100
       self.fig_size = [10,5]
       self.xlim = None
       self.ylim = None
@@ -206,9 +206,10 @@ class Timeseries(Plot):
                   index = s*Y+i+1
                   mpl.subplot(X,Y,index)
                   Ivar = Ivars[i]
-                  mpl.plot(values[:,Ivar], 'o-')
+                  mpl.plot(values[:,Ivar], '-')
                   mpl.ylabel(sim.variables[Ivar].name)
-                  mpl.title(index)
+                  mpl.title(sim.name)
+                  mpl.xlabel("Time (days)")
 
       if truth is not None:
          traj = truth.get(0)
@@ -219,6 +220,7 @@ class Timeseries(Plot):
             Ivar = Ivars[i]
             mpl.plot(values[:,Ivar], lw=5, color="red")
             mpl.ylabel(truth.variables[Ivar].name)
+      mpl.grid()
 
       self._finish_plot()
 
