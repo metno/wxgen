@@ -167,10 +167,13 @@ def get_metric(args):
 
 
 def get_climate_model(args):
-   if args.bin_width is not None:
-      model = wxgen.climate_model.Bin(args.bin_width)
-   else:
-      model = None
+   model = None
+   try:
+      # args might not have bin_width
+      if args.bin_width is not None:
+         model = wxgen.climate_model.Bin(args.bin_width)
+   except:
+      pass
    return model
 
 
