@@ -11,7 +11,7 @@ import wxgen.plot
 import wxgen.version
 
 def main(argv):
-   parser = argparse.ArgumentParser(description="Hybrid weather generator, combining stochastic and physical modelling")
+   parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
    subparsers = parser.add_subparsers(title="Choose one of these commands", dest="command")
 
@@ -64,14 +64,14 @@ def main(argv):
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
 
-   if len(sys.argv) < 2:
+   if len(argv) < 2:
       parser.print_help()
-      sys.exit(0)
-   elif len(sys.argv) == 2 and sys.argv[1] in sp.keys():
-      sp[sys.argv[1]].print_help()
-      sys.exit(0)
+      return
+   elif len(argv) == 2 and argv[1] in sp.keys():
+      sp[argv[1]].print_help()
+      return
 
-   args = parser.parse_args()
+   args = parser.parse_args(argv[1:])
 
 
    """
