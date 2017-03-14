@@ -33,19 +33,19 @@ Then install ``wxgen`` by executing the following inside the extracted folder:
 
 .. code-block:: bash
 
-  sudo pip install -r requirements.txt
-  sudo python setup.py install
+  sudo pip install .
 
-This will create the executable ``/usr/local/bin/wxgen``.  Add this to your PATH environment
-variable if necessary (i.e add ``export PATH=/usr/local/bin/:$PATH`` to ``~/.bashrc``). If you do
-not have sudo privileges do:
+This will create the executable ``/usr/local/bin/wxgen``. If ``/user/local/bin`` is not in your PATH
+environment variable, then add it (i.e add ``export PATH=/usr/local/bin/:$PATH`` to ``~/.bashrc``).
+If you do not have sudo privileges do:
+
 
 .. code-block:: bash
 
-  sudo python setup.py install --user
+  pip install .
 
 This will create the executable ``~/.local/bin/wxgen``. Add the folder to your PATH environment
-variable.
+variable (if necessary).
 
 Example use
 -----------
