@@ -1,13 +1,11 @@
 import sys
 import argparse
 import numpy as np
-import matplotlib.pylab as mpl
 import wxgen.climate_model
 import wxgen.database
 import wxgen.trajectory
 import wxgen.generator
 import wxgen.metric
-import wxgen.verif
 import wxgen.output
 import wxgen.plot
 import wxgen.version
@@ -69,10 +67,10 @@ def main(argv):
 
    if len(sys.argv) < 2:
       parser.print_help()
-      sys.exit(1)
+      sys.exit(0)
    elif len(sys.argv) == 2 and sys.argv[1] in sp.keys():
       sp[sys.argv[1]].print_help()
-      sys.exit(1)
+      sys.exit(0)
 
    args = parser.parse_args()
 

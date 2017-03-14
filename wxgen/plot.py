@@ -1,6 +1,6 @@
 import inspect
 import netCDF4
-import matplotlib.pylab as mpl
+import matplotlib.pyplot as mpl
 import numpy as np
 import sys
 import wxgen.util
@@ -114,7 +114,7 @@ class Plot(object):
                   string = string.replace("[", "")
                   numList.append(float(string))
                else:
-                  verif.util.error("Invalid rgba arg \"{}\"".format(string))
+                  wxgen.util.error("Invalid rgba arg \"{}\"".format(string))
 
             elif "]" in string:
                if numList:
@@ -123,10 +123,10 @@ class Plot(object):
                   finalList.append(numList)
                   numList = []
                else:
-                  verif.util.error("Invalid rgba arg \"{}\"".format(string))
+                  wxgen.util.error("Invalid rgba arg \"{}\"".format(string))
 
             # append to rgba lists if present, otherwise grayscale intensity
-            elif verif.util.is_number(string):
+            elif wxgen.util.is_number(string):
                if numList:
                   numList.append(float(string))
                else:
@@ -136,7 +136,7 @@ class Plot(object):
                if not numList:  # string args and hexcodes
                   finalList.append(string)
                else:
-                  verif.util.error("Cannot read color args.")
+                  wxgen.util.error("Cannot read color args.")
          self.colors = finalList
          return self.colors[i % len(self.colors)]
 

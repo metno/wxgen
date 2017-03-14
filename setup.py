@@ -43,8 +43,9 @@ setup(
         'Development Status :: 3 - Alpha',
 
         # Indicate who your project is intended for
-        'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Atmospheric Science',
+        'Topic :: Scientific/Engineering :: Information Analysis',
 
         # Pick your license as you wish (should match "license" above)
         'License :: OSI Approved :: BSD License',
@@ -54,10 +55,6 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
     ],
 
     # What does your project relate to?
@@ -71,7 +68,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy>=1.7', 'matplotlib<2', 'scipy', 'netCDF4'],
+    install_requires=['numpy>=1.7', 'matplotlib<2', 'scipy', 'netCDF4', 'astropy'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -79,11 +76,11 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
     #    'dev': ['check-manifest'],
-        'test': ['coverage'],
+        'test': ['coverage', 'pep8'],
     #    'test': ['pytest'],
     },
 
-    test_suite="tests",
+    test_suite="wxgen.tests",
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
@@ -104,7 +101,6 @@ setup(
     entry_points={
         'console_scripts': [
             'wxgen=wxgen:main',
-            'wxgen_db=wxgen:main_db',
         ],
     },
 )
