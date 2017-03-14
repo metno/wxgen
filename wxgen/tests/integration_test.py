@@ -90,7 +90,7 @@ class IntegrationTest(unittest.TestCase):
       file = netCDF4.Dataset(truth_filename, 'r')
       self.assertTrue("time" in file.dimensions)
       self.assertTrue("ensemble_member" in file.dimensions)
-      self.assertEqual(364, file.dimensions["time"].size)
+      self.assertEqual(729, file.dimensions["time"].size)
       self.assertEqual(1, file.dimensions["ensemble_member"].size)
       file.close()
 

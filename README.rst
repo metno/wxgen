@@ -54,7 +54,7 @@ Wxgen has three commands. The first simulates sequences of weather as follows:
 
 .. code-block:: bash
 
-   wxgen sim -db database.nc -n 10 -t 100 -o output.nc
+   wxgen sim -db examples/database.nc -n 10 -t 1000 -o output.nc
 
 This command uses a NetCDF database file and creates 10 trajectories that are 100 days long. Results
 are stored in output.nc. In order to evaluate the performance of the generated data, a "truth" file
@@ -62,7 +62,7 @@ can be created using the following command:
 
 .. code-block:: bash
 
-   wxgen truth -db database.nc -o truth.nc
+   wxgen truth -db examples/database.nc -o truth.nc
 
 This command uses the day 1 forecasts from the database as the truth, and joins these together into
 a sequence that spans the dates in the dataset.
