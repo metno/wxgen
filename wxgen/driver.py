@@ -20,50 +20,49 @@ def main(argv):
    """
    sp = dict()
    sp["sim"] = subparsers.add_parser('sim', help='Create simulated scenarios')
-   sp["sim"].add_argument('-n', type=int, help="Number of trajectories", required=True)
-   sp["sim"].add_argument('-t', type=int, help="Length of trajectory", required=True)
-   sp["sim"].add_argument('-vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
-   sp["sim"].add_argument('--db', type=str, default=None, help="Filename of NetCDF database")
-   sp["sim"].add_argument('--db_type', type=str, default=None, help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
-   sp["sim"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-   sp["sim"].add_argument('--scale', type=str, default="agg", help="Output scale (agg, large, small)")
-   sp["sim"].add_argument('-m', type=str, default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
-   sp["sim"].add_argument('--seed', type=int, default=None, help="Random number seed")
-   sp["sim"].add_argument('--debug', help="Display debug information", action="store_true")
-   sp["sim"].add_argument('--weights', type=str)
-   sp["sim"].add_argument('--initial', type=str, default=None, help="Initial state")
-   sp["sim"].add_argument('-j', type=int, metavar="NUM", default=None, help="How many times should segments be prejoined?", dest="prejoin")
-   sp["sim"].add_argument('-b', type=int, metavar="DAYS", default=None, help="Length of database bins", dest="bin_width")
+   sp["sim"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories", required=True)
+   sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
+   sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
+   sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
+   sp["sim"].add_argument('-w', help="Weights for each variable when joining (comma-separated)", dest="weights")
+   sp["sim"].add_argument('-i', help="Initial state", dest="initial")
+   sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
+   sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
 
    """
    Truth trajetory driver
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
-   sp["truth"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
    sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="End date of trajectory", dest="end_date")
    sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Start date of trajectory", dest="start_date")
-   sp["truth"].add_argument('--db', metavar="FILENAME", help="Filename of NetCDF database")
-   sp["truth"].add_argument('--db_type', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
-   sp["truth"].add_argument('--vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
-   sp["truth"].add_argument('--debug', help="Display debug information", action="store_true")
-   sp["truth"].add_argument('--scale', type=str, default="agg", help="Output scale (agg, large, small)")
+
+   for driver in ["sim", "truth"]:
+      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
+      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
+      sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
 
    """
    Verification driver
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
-   sp["verif"].add_argument('-fs', type=str, default=None, help="Figure size: width,height")
+   sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, help="Figure size: width,height")
    sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
-   sp["verif"].add_argument('--debug', help="Display debug information", action="store_true")
-   sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, default=None, help="x-axis limits: lower,upper")
+   sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
    sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
-   sp["verif"].add_argument('-ylim', type=str, default=None, help="y-axis limits: lower,upper")
+   sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
-   sp["verif"].add_argument('-vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
+
+   """
+   Common options
+   """
+   for driver in sp.keys():
+      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
+      sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
 
    if len(sys.argv) < 2:
       parser.print_help()
