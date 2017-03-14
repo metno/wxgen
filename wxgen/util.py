@@ -5,6 +5,7 @@ import sys
 
 
 DEBUG = False
+COLORS = {"red": 31, "yellow": 33, "green": 32}
 
 
 def random_weighted(weights):
@@ -32,9 +33,10 @@ def warning(message):
    print "\033[1;33mWarning: " + message + "\033[0m"
 
 
-def debug(message):
+def debug(message, color="green"):
+   col = COLORS[color]
    if DEBUG:
-      print "\033[1;32mDebug: " + message + "\033[0m"
+      print "\033[1;%imDebug: " % (col) + message + "\033[0m"
 
 
 def parse_dates(dates):

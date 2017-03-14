@@ -38,9 +38,11 @@ class LargeScale(object):
       Y = self._database.Y
 
       for n in range(0, N):
+         wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
          trajectory_indices = np.zeros([T, 2], int)
 
          if initial_state is None:
+            wxgen.util.debug("Finding random starting state", color="yellow")
             I = np.random.randint(self._database.num)
             tr = self.get_random(np.zeros(V), wxgen.metric.Exp(np.zeros(V)))
             state_curr = self._database.extract(tr)[0,:]
@@ -67,6 +69,7 @@ class LargeScale(object):
             if join > 0:
                end_times = self._database.inittimes[segment_curr.indices[-1,0]] + segment_curr.indices[-1,1]*86400
                search_times = [end_times - 5*86400, end_times + 5*86400]
+            wxgen.util.debug("Found random segment", color="yellow")
             segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
             indices_curr = segment_curr.indices
 
@@ -79,10 +82,10 @@ class LargeScale(object):
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
 
-            wxgen.util.debug("Current state: %s" % state_curr)
-            wxgen.util.debug("Chosen segment: %s" % segment_curr)
-            wxgen.util.debug("Trajectory indices: %s" % Iout)
-            wxgen.util.debug("Segment indices: %s" % Iin)
+            # wxgen.util.debug("Current state: %s" % state_curr)
+            # wxgen.util.debug("Chosen segment: %s" % segment_curr)
+            # wxgen.util.debug("Trajectory indices: %s" % Iout)
+            # wxgen.util.debug("Segment indices: %s" % Iin)
             state_curr = self._database.extract(segment_curr)[-1,:]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
@@ -150,10 +153,10 @@ class LargeScale(object):
       I = Itime[I_v]
 
       # Do a weighted random choice of the weights
-      wxgen.util.debug("I: %s" % I)
-      wxgen.util.debug("Data: %s" % self._database._data_agg[0,:,I])
-      wxgen.util.debug("Weight: %s" % weights_v[I_v])
-      wxgen.util.debug("Max weight: %s" % np.max(weights_v))
+      wxgen.util.debug("Date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
+      wxgen.util.debug("Climate: %s" % (climate_state))
+      wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
+      wxgen.util.debug("Data: %s" % ' '.join(["%0.2f" % x for x in self._database._data_agg[0,:,I]]))
       return self._database.get(I)
 
 
