@@ -37,13 +37,6 @@ def main(argv):
    sp["sim"].add_argument('-j', type=int, metavar="NUM", default=None, help="How many times should segments be prejoined?", dest="prejoin")
    sp["sim"].add_argument('-b', type=int, metavar="DAYS", default=None, help="Length of database bins", dest="bin_width")
 
-   # p_sim.add_argument('--type', type=str, default="timeseries", help="Output type (text, netcdf, or plot)")
-   # p_sim.add_argument('-fs', type=str, default=None, help="Figure size: width,height")
-   # p_sim.add_argument('--xlog', help="x-axis limits: lower,upper", action="store_true")
-   # p_sim.add_argument('--ylog', help="y-axis limits: lower,upper", action="store_true")
-   # p_sim.add_argument('--xlim', type=str, default=None, help="x-axis limits: lower,upper")
-   # p_sim.add_argument('--ylim', type=str, default=None, help="y-axis limits: lower,upper")
-
    """
    Truth trajetory driver
    """
@@ -62,11 +55,14 @@ def main(argv):
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
+   sp["verif"].add_argument('-fs', type=str, default=None, help="Figure size: width,height")
    sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('--debug', help="Display debug information", action="store_true")
+   sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, default=None, help="x-axis limits: lower,upper")
    sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
+   sp["verif"].add_argument('-ylim', type=str, default=None, help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-vars', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints)
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
@@ -115,10 +111,13 @@ def main(argv):
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
       plot.filename = args.filename
+      plot.xlim = args.xlim
       plot.xlog = args.xlog
+      plot.ylim = args.ylim
       plot.ylog = args.ylog
       plot.vars = args.vars
       plot.thresholds = args.thresholds
+      plot.fig_size = args.fs
       truth = None
       sims = None
       if args.truth is not None:
