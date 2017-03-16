@@ -13,9 +13,10 @@ def get_all():
 def get(name):
    """
    Returns an instance of an object with the given class name
-   
-   name     The name of the class. Use a number between 0 and 1 to get the
-            corresponding quantile aggregator. 
+
+   Arguments:
+      name (str): The name of the class. Use a number between 0 and 1 to get the corresponding
+         quantile aggregator.
    """
    aggregators = get_all()
    a = None
@@ -49,6 +50,7 @@ class Aggregator(object):
    @classmethod
    def name(cls):
       return cls.__name__.lower()
+
 
 class Mean(Aggregator):
    def __call__(self, array):

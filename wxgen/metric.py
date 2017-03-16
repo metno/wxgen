@@ -3,6 +3,7 @@ import numpy as np
 import sys
 import wxgen.util
 
+
 def get_all():
    """ Returns a list of all metric classes """
    temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
@@ -73,13 +74,15 @@ class Rmsd(Metric):
       total = np.sum(weights*abs(state1 - state2)**2, axis=0)
       return np.sqrt(total)
 
+
 class Exp(Metric):
    """ Exponential score based on exp(-sum(|factor * diff|))
-      
+
    Arguments:
       factors (np.array): array of variable-weights
    """
    _orientation = 1
+
    def __init__(self, factors=None):
       self._factors = factors
       if factors is None:
@@ -89,4 +92,3 @@ class Exp(Metric):
       factors = wxgen.util.resize(self._factors, state2.shape)
       total = np.exp(-np.sum(factors*abs(state1 - state2), axis=0))
       return total
-

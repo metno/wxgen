@@ -2,19 +2,22 @@ import numpy as np
 import datetime
 import wxgen.util
 
+
 def get(name):
    if name == "30":
       return Bin(30)
 
+
 def day_of_year(unixtimes):
    ar = np.zeros([len(unixtimes), 1], int)
-   ar[:,0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
+   ar[:, 0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
    return ar
+
 
 class ClimateModel(object):
    def get(self, unixtimes):
       """ Returns a representation of the state for a given date
-      
+
       Arguments:
          unixtimes (np.array): An array of unix times
 
@@ -24,6 +27,7 @@ class ClimateModel(object):
             second second dimension is only 1.
       """
       raise NotImplementedError()
+
 
 class Zero(ClimateModel):
    def __init__(self):
@@ -52,12 +56,12 @@ class Bin(ClimateModel):
 
 class Index(ClimateModel):
    """
-   Use the index in 
+   Use a climate index from a file
    """
    def __init__(self, filename, num_days=365):
       self._filename = filename
       self._num_days = num_days
-      self._edges = np.array([-100,-1, 1, 100])
+      self._edges = np.array([-100, -1, 1, 100])
       fid = open(self._filename, 'r')
       self._index = dict()
       prev = 0
@@ -88,6 +92,7 @@ class Index(ClimateModel):
             print "Missing: %d" % unixtime
       print index
       return day + index * 100
+
 
 class Combo(ClimateModel):
    """

@@ -56,8 +56,8 @@ class Database(object):
    def get(self, i):
       """ Get the i'th trajectory in the database """
       indices = np.zeros([self.length, 2], int)
-      indices[:,0] = i
-      indices[:,1] = np.arange(0, self.length)
+      indices[:, 0] = i
+      indices[:, 1] = np.arange(0, self.length)
       assert(np.sum(np.isnan(indices)) == 0)
       return wxgen.trajectory.Trajectory(indices)
 
@@ -75,8 +75,8 @@ class Database(object):
          inittime = np.max(self.inittimes[I])
          lt = int((time - inittime)/86400)
          if lt < self.length:
-            indices[i,0] = np.where(self.inittimes == inittime)[0][0]
-            indices[i,1] = lt
+            indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
+            indices[i, 1] = lt
          else:
             wxgen.util.debug("Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time)))
 
@@ -96,8 +96,8 @@ class Database(object):
       V = len(self.variables)
       values = np.nan*np.zeros([T, V], float)
       for i in range(0, trajectory.indices.shape[0]):
-         if trajectory.indices[i,1] >= 0:
-            values[i,:] = self._data_agg[trajectory.indices[i,1],:,trajectory.indices[i,0]]
+         if trajectory.indices[i, 1] >= 0:
+            values[i, :] = self._data_agg[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
       return values
 
    def extract_grid(self, trajectory):
@@ -118,15 +118,15 @@ class Database(object):
          values = np.zeros([T, Y, X, V], float)
          # Loop over member, lead-time indices
          for i in range(0, trajectory.indices.shape[0]):
-            m = trajectory.indices[i,0]
-            t = trajectory.indices[i,1]
+            m = trajectory.indices[i, 0]
+            t = trajectory.indices[i, 1]
             assert(not np.isnan(m))
             assert(not np.isnan(t))
-            values[i,:,:,:] = self._data[t, :, :, :, m]
+            values[i, :, :, :] = self._data[t, :, :, :, m]
       else:
          # Slightly faster way (but not much faster)
-         I0 = trajectory.indices[:,0]
-         I1 = trajectory.indices[:,1]
+         I0 = trajectory.indices[:, 0]
+         I1 = trajectory.indices[:, 1]
          values = self._data[I1, :, :, :, I0]
       return values
 
@@ -158,7 +158,7 @@ class Random(Database):
       Database.__init__(self, model)
       self.num = N
       self.length = T
-      if V == None:
+      if V is None:
          V = 1
       self._V = V
       self._variance = variance
@@ -169,7 +169,7 @@ class Random(Database):
       scale = 1./np.sqrt(np.linspace(1, T, T))
 
       for v in range(0, self._V):
-         self._data[:,0,0,v,:]  = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N)*np.sqrt(self._variance), axis=0)
+         self._data[:, 0, 0, v, :] = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N) * np.sqrt(self._variance), axis=0)
 
       self.variables = [wxgen.variable.Variable("var%d" % i) for i in range(0, self._V)]
       self.lats = [0]
@@ -177,7 +177,7 @@ class Random(Database):
       self.climate_states = np.mod(np.arange(0, N), 12)
       start = wxgen.util.date_to_unixtime(20150101)
       num_inits = 30
-      self.inittimes = start + np.mod(np.arange(0,N), num_inits)*86400
+      self.inittimes = start + np.mod(np.arange(0, N), num_inits) * 86400
 
 
 class Netcdf(Database):
@@ -286,31 +286,31 @@ class Netcdf(Database):
 
       for v in range(0, V):
          var = self.variables[v]
-         temp = self._copy(self._file.variables[var.name]) # dims: D, T, M, X, Y)
+         temp = self._copy(self._file.variables[var.name])  # dims: D, T, M, X, Y
 
          # Quality control
          if var.name == "precipitation_amount":
-            temp[temp < 0] = 0#np.nan
+            temp[temp < 0] = 0
          index = 0
          for d in range(0, D):
             for m in range(0, M):
                if is_spatial:
                   if has_frt:
-                     self._data[:,:,:,v,index] = temp[Itimes[d], :, m, :, :]
+                     self._data[:, :, :, v, index] = temp[Itimes[d], :, m, :, :]
                   else:
-                     self._data[:,:,:,v,index] = temp[:, m, :, :]
+                     self._data[:, :, :, v, index] = temp[:, m, :, :]
                else:
                   if has_frt:
-                     self._data[:,:,:,v,index] = np.reshape(temp[Itimes[d], :, m], [T,Y,X])
+                     self._data[:, :, :, v, index] = np.reshape(temp[Itimes[d], :, m], [T, Y, X])
                   else:
-                     self._data[:,:,:,v,index] = np.reshape(temp[:, m], [T,Y,X])
+                     self._data[:, :, :, v, index] = np.reshape(temp[:, m], [T, Y, X])
                index = index + 1
 
       # If one or more values are missing for a member, set all values to nan
       for e in range(0, M*D):
-         NM = np.sum(np.isnan(self._data[:,:,:,:,e]))
+         NM = np.sum(np.isnan(self._data[:, :, :, :, e]))
          if NM > 0:
-            self._data[:,:,:,:,e] = np.nan
+            self._data[:, :, :, :, e] = np.nan
             wxgen.util.debug("Removing member %d because of %d missing values" % (e, NM))
 
       self.inittimes = np.repeat(times, self._members)
@@ -349,21 +349,21 @@ class Lorenz63(Database):
 
       # Initialize
       for v in range(0, self._V):
-         self._data[0,0,0,v,:] = self._initial_state[v] + np.random.randn(N) * self._std_initial_state
+         self._data[0, 0, 0, v, :] = self._initial_state[v] + np.random.randn(N) * self._std_initial_state
 
       TT = int(1 / self._dt)/10
       # Iterate
       for t in range(1, T):
-         x0 = copy.deepcopy(self._data[t-1,0,0,0,:])
-         y0 = copy.deepcopy(self._data[t-1,0,0,1,:])
-         z0 = copy.deepcopy(self._data[t-1,0,0,2,:])
+         x0 = copy.deepcopy(self._data[t-1, 0, 0, 0, :])
+         y0 = copy.deepcopy(self._data[t-1, 0, 0, 1, :])
+         z0 = copy.deepcopy(self._data[t-1, 0, 0, 2, :])
          # Iterate from t-1 to t
          for tt in range(0, TT):
             x1 = x0 + self._dt * self._S * (y0 - x0)
             y1 = y0 + self._dt * (self._R * x0 - y0 - (x0 * z0))
             z1 = z0 + self._dt * (x0*y0 - self._B*z0)
 
-            x2 = x1 + self._dt * self._S * (y1-x1)
+            x2 = x1 + self._dt * self._S * (y1 - x1)
             y2 = y1 + self._dt * (self._R * x1 - y1 - x1*z1)
             z2 = z1 + self._dt * (x1*y1 - self._B*z1)
 
@@ -371,9 +371,9 @@ class Lorenz63(Database):
             y0 = 0.5 * (y2 + y0)
             z0 = 0.5 * (z2 + z0)
 
-         self._data[t,0,0,0,:] = x0
-         self._data[t,0,0,1,:] = y0
-         self._data[t,0,0,2,:] = z0
+         self._data[t, 0, 0, 0, :] = x0
+         self._data[t, 0, 0, 1, :] = y0
+         self._data[t, 0, 0, 2, :] = z0
 
       self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
       self.fullname = "Lorenz(%d,%d,%f,%f,%f)" % (N, T, R, S, B)

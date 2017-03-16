@@ -28,11 +28,12 @@ def get(name):
       wxgen.util.error("Cannot find output called '%s'" % name)
    return m
 
+
 class Plot(object):
    def __init__(self):
       self.filename = None
       self.dpi = 100
-      self.fig_size = [10,5]
+      self.fig_size = [10, 5]
       self.xlim = None
       self.ylim = None
       self.xlog = False
@@ -85,7 +86,7 @@ class Plot(object):
       if self.filename is None:
          mpl.show()
       else:
-         mpl.gcf().set_size_inches(self.fig_size[0],self.fig_size[1])
+         mpl.gcf().set_size_inches(self.fig_size[0], self.fig_size[1])
          mpl.savefig(self.filename, bbox_inches='tight', dpi=self.dpi)
 
    def _get_color(self, i, total):
@@ -181,7 +182,6 @@ class Plot(object):
                zorder=zorder)
 
 
-
 class Timeseries(Plot):
    def plot(self, sims, truth):
       if self.vars is None:
@@ -204,9 +204,9 @@ class Timeseries(Plot):
                values = sim.extract(traj)
                for i in range(len(Ivars)):
                   index = s*Y+i+1
-                  mpl.subplot(X,Y,index)
+                  mpl.subplot(X, Y, index)
                   Ivar = Ivars[i]
-                  mpl.plot(values[:,Ivar], '-')
+                  mpl.plot(values[:, Ivar], '-')
                   mpl.ylabel(sim.variables[Ivar].name)
                   mpl.title(sim.name)
                   mpl.xlabel("Time (days)")
@@ -216,9 +216,9 @@ class Timeseries(Plot):
          values = truth.extract(traj)
          for i in range(len(Ivars)):
             index = (X-1)*Y+i+1
-            mpl.subplot(X,Y,index)
+            mpl.subplot(X, Y, index)
             Ivar = Ivars[i]
-            mpl.plot(values[:,Ivar], lw=5, color="red")
+            mpl.plot(values[:, Ivar], lw=5, color="red")
             mpl.ylabel(truth.variables[Ivar].name)
       mpl.grid()
 
@@ -240,14 +240,14 @@ class Timevariance(Plot):
       if sims is not None:
          for i in range(len(Ivars)):
             index = i+1
-            mpl.subplot(X,Y,index)
+            mpl.subplot(X, Y, index)
             for s in range(len(sims)):
                sim = sims[s]
                values = np.zeros([sim.get(0).length, sim.num], float)
                Ivar = Ivars[i]
                for m in range(sim.num):
                   traj = sim.get(m)
-                  values[:,m] = sim.extract(traj)[:,Ivar]
+                  values[:, m] = sim.extract(traj)[:, Ivar]
 
                var = np.nanvar(values, axis=1)
                col = self._get_color(s, len(sims))
@@ -269,7 +269,7 @@ class Variance(Plot):
 
    def plot(self, sims, truth):
       if self.thresholds is None:
-         scales = [1,3,7,11,31,61, 181, 365]
+         scales = [1, 3, 7, 11, 31, 61, 181, 365]
       else:
          scales = self.thresholds
 
@@ -285,7 +285,7 @@ class Variance(Plot):
          mpl.subplot(1, len(Ivars), i+1)
          if truth is not None:
             traj = truth.get(0)
-            values = truth.extract(traj)[:,Ivar]
+            values = truth.extract(traj)[:, Ivar]
             # I = np.where(np.isnan(values) == 0)[0]
             # values = values[I]
             truth_var = self.compute_truth_variance(values, scales)
@@ -305,10 +305,10 @@ class Variance(Plot):
                for m in range(sim.num):
                   traj = sim.get(m)
                   q = sim.extract(traj)
-                  sim_values[:,m] = q[:,Ivar]
+                  sim_values[:, m] = q[:, Ivar]
                sim_var = self.compute_sim_variance(sim_values, scales)
                mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
-         ticks = np.array([1,7,30,365])
+         ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
          # Include the first one above the limits
@@ -331,7 +331,7 @@ class Variance(Plot):
       truth = np.zeros([365, N])
       for i in range(0, N):
          I = range(i*365, (i+1)*365)
-         truth[:,i] = array[I]
+         truth[:, i] = array[I]
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
@@ -342,16 +342,16 @@ class Variance(Plot):
          std = np.nanstd(truth, axis=1)
 
       for i in range(0, N):
-         truth[:,i] = (truth[:,i] - clim)/std
+         truth[:, i] = (truth[:, i] - clim)/std
 
       # Compute variance
       variance = np.zeros(len(scales))
       for i in range(0, len(scales)):
          s = scales[i]
-         c = [1.0/s]* s
+         c = [1.0/s] * s
          truth_c = np.zeros([truth.shape[0], N], float)
          for e in range(0, N):
-            truth_c[:,e] = astropy.convolution.convolve(truth[:,e], 1.0/s*np.ones(s))
+            truth_c[:, e] = astropy.convolution.convolve(truth[:, e], 1.0/s*np.ones(s))
          variance[i] = np.nanvar(truth_c)
       return variance
 
@@ -376,16 +376,16 @@ class Variance(Plot):
          std = np.nanstd(array, axis=1)
       values = copy.deepcopy(array)
       for i in range(0, N):
-         values[:,i] = (values[:,i] - clim)/std
+         values[:, i] = (values[:, i] - clim)/std
 
       # Compute variance
       variance = np.nan*np.zeros(len(scales))
       for i in range(0, len(scales)):
          s = scales[i]
          if array.shape[0] > s:
-            c = [1.0/s]* s
+            c = [1.0/s] * s
             sim_c = np.zeros([values.shape[0], N], float)
             for e in range(0, N):
-               sim_c[:,e] = astropy.convolution.convolve(values[:,e], 1.0/s*np.ones(s))
+               sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
             variance[i] = np.nanvar(sim_c)
       return variance

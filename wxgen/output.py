@@ -57,7 +57,7 @@ class Text(Output):
          values = database.extract(trajectories[n])
          for t in range(0, T):
             for v in range(0, V):
-               fid.write("%f " % values[t,v])
+               fid.write("%f " % values[t, v])
             fid.write("\n")
          if n < N-1:
             fid.write("\n")
@@ -122,13 +122,13 @@ class Netcdf(Output):
          if scale == "agg":
             values = database.extract(trajectories[m])
             for v in range(0, len(variables)):
-               vars[variables[v].name][:,m] = values[:,v]
+               vars[variables[v].name][:, m] = values[:, v]
          else:
             values = database.extract_grid(trajectories[m])
             # Insert a singleton dimension at dimension index 1
-            values = np.expand_dims(values,1)
+            values = np.expand_dims(values, 1)
             for v in range(0, len(variables)):
-               vars[variables[v].name][:,m,:,:] = values[:,:,:,:,v]
+               vars[variables[v].name][:, m, :, :] = values[:, :, :, :, v]
 
       # Global attributes
       file.Conventions = "CF-1.0"

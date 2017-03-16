@@ -10,6 +10,7 @@ import wxgen.output
 import wxgen.plot
 import wxgen.version
 
+
 def main(argv):
    parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
@@ -47,7 +48,7 @@ def main(argv):
    """
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
-   sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10,5], help="Figure size: width,height")
+   sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
    sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
@@ -72,7 +73,6 @@ def main(argv):
       return
 
    args = parser.parse_args(argv[1:])
-
 
    """
    Run commands
@@ -161,7 +161,6 @@ def get_metric(args):
          metric = wxgen.metric.Exp(weights)
    else:
       metric = wxgen.metric.get(args.metric)
-
 
    return metric
 

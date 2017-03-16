@@ -11,7 +11,7 @@ COLORS = {"red": 31, "yellow": 33, "green": 32}
 def random_weighted(weights):
    """
    Randomly selects an index into an array based on weights
-   
+
    weights     A numpy array of weights
    """
    acc = np.cumsum(weights) / np.sum(weights)
@@ -92,7 +92,7 @@ def parse_numbers(numbers, isDate=False):
             else:
                # arange does not include the end point:
                stepSign = step / abs(step)
-               values = values + list(np.arange(start, end+ stepSign*0.0001, step))
+               values = values + list(np.arange(start, end + stepSign*0.0001, step))
       else:
          error("Could not translate '" + numbers + "' into numbers")
       if(isDate):
@@ -153,5 +153,3 @@ def get_date(date, diff):
    day = int(date % 100)
    date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
    return int(date2.strftime('%Y%m%d'))
-
-

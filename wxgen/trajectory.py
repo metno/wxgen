@@ -27,5 +27,5 @@ class Trajectory(object):
    def __str__(self):
       str = ""
       for i in range(0, self.indices.shape[0]):
-         str = "%s[%d,%d]," % (str, self.indices[i,0], self.indices[i,1])
+         str = "%s[%d,%d]," % (str, self.indices[i, 0], self.indices[i, 1])
       return str

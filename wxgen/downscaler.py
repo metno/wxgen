@@ -1,6 +1,3 @@
-
-
-
 class Downscaler(object):
    """
    Downscale large-scale trajectories
