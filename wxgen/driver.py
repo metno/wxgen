@@ -40,7 +40,7 @@ def main(argv):
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
-      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --db_type is automatically set to 'netcdf'. If neither --db nor --db_type is set, then --db_type is automatically set to 'random'.")
+      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
 
    """
@@ -134,12 +134,12 @@ def get_db(args):
    if args.db is None:
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
-      if args.db_type is None or args.db_type == "random":
+      if args.dbtype is None or args.dbtype == "random":
          db = wxgen.database.Random(100, 10, 3, model=model)
-      elif args.db_type == "lorenz63":
+      elif args.dbtype == "lorenz63":
          db = wxgen.database.Lorenz63(10, 500, model=model)
       else:
-         wxgen.util.error("Cannot understand --db_type %s" % args.db_type)
+         wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
    else:
       db = wxgen.database.Netcdf(args.db, args.vars, model=model)
 
