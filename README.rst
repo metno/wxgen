@@ -1,5 +1,5 @@
-Hybrid weather generator
-========================
+Weather generator software
+==========================
 
 .. image:: https://travis-ci.org/tnipen/wxgen.svg?branch=master
   :target: https://travis-ci.org/tnipen/wxgen
@@ -80,3 +80,8 @@ The -m switch selects the verification metric, in this case a timeseries.
     :alt: Example plot
     :width: 400
     :align: center
+
+Copyright and license
+---------------------
+Copyright (C) 2017 MET Norway. Wxgen is licensed under `LGPL version 3
+<https://github.com/tnipen/wxgen/blob/master/LICENSE>`_ or (at your option) any later version.
