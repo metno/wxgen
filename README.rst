@@ -1,10 +1,10 @@
 Weather generator software
 ==========================
 
-.. image:: https://travis-ci.org/tnipen/wxgen.svg?branch=master
-  :target: https://travis-ci.org/tnipen/wxgen
-.. image:: https://coveralls.io/repos/tnipen/wxgen/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/tnipen/wxgen?branch=master
+.. image:: https://travis-ci.org/metno/wxgen.svg?branch=master
+  :target: https://travis-ci.org/metno/wxgen
+.. image:: https://coveralls.io/repos/metno/wxgen/badge.svg?branch=master&service=github
+  :target: https://coveralls.io/github/metno/wxgen?branch=master
 
 ``wxgen`` is a command-line tool that generates arbitrarily long trajectories (time-series) of
 weather sequences. It is a hybrid approach as it uses data from weather models and combines
@@ -84,4 +84,4 @@ The -m switch selects the verification metric, in this case a timeseries.
 Copyright and license
 ---------------------
 Copyright (C) 2017 MET Norway. Wxgen is licensed under `LGPL version 3
-<https://github.com/tnipen/wxgen/blob/master/LICENSE>`_ or (at your option) any later version.
+<https://github.com/metno/wxgen/blob/master/LICENSE>`_ or (at your option) any later version.

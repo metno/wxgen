@@ -25,7 +25,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/tnipen/wxgen',
+    url='https://github.com/metno/wxgen',
 
     # Author details
     author='Thomas Nipen',
