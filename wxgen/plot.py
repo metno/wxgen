@@ -30,6 +30,9 @@ def get(name):
 
 
 class Plot(object):
+   """
+   Class for representing a verification plot of trajectory information
+   """
    def __init__(self):
       self.filename = None
       self.dpi = 100
@@ -90,19 +93,21 @@ class Plot(object):
          mpl.savefig(self.filename, bbox_inches='tight', dpi=self.dpi)
 
    def _get_color(self, i, total):
-      """ Returns a color specification (e.g. 0.3,0.3,1) that can be used in
-      mpl to specify line color. Determined by looping through a database
-      (self.line_colors). Returns the color for the i'th line in a plot of
-      'total' number of lines.
+      """
+      Returns a color specification (e.g. 0.3,0.3,1) that can be used in mpl to specify line color.
+      Determined by looping through a database (self.line_colors). Returns the color for the i'th
+      line in a plot of 'total' number of lines.
 
-      _get_color together with _get_style can be used to specify unique
-      color/style combinations for many lines. Color is cycled first, then
-      style. I.e. the following order is default:
+      _get_color together with _get_style can be used to specify unique color/style combinations for
+      many lines. Color is cycled first, then style. I.e. the following order is default:
       r-o, b-o, g-o, ..., r-, b-, g-, ...
 
       Arguments:
          i (int): Which line is this?
          total (int): Total number of lines in plot
+
+      Returns:
+         list: A list of RGB values
       """
       if self.line_colors is not None:
          firstList = self.line_colors.split(",")

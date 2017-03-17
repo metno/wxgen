@@ -3,18 +3,11 @@ import datetime
 import wxgen.util
 
 
-def get(name):
-   if name == "30":
-      return Bin(30)
-
-
-def day_of_year(unixtimes):
-   ar = np.zeros([len(unixtimes), 1], int)
-   ar[:, 0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
-   return ar
-
-
 class ClimateModel(object):
+   """
+   Base class for representing a climate state that can be used as external forcing for the weather
+   generator.
+   """
    def get(self, unixtimes):
       """ Returns a representation of the state for a given date
 
@@ -30,6 +23,7 @@ class ClimateModel(object):
 
 
 class Zero(ClimateModel):
+   """ No climate forcing """
    def __init__(self):
       pass
 
@@ -50,7 +44,7 @@ class Bin(ClimateModel):
       self._num_days = num_days
 
    def get(self, unixtimes):
-      day = day_of_year(unixtimes)-1
+      day = wxgen.util.day_of_year(unixtimes)-1
       return day / self._num_days
 
 
@@ -82,7 +76,7 @@ class Index(ClimateModel):
          self._index[unixtime] = I[-1]
 
    def get(self, unixtimes):
-      day = day_of_year(unixtimes)/self._num_days
+      day = wxgen.util.day_of_year(unixtimes)/self._num_days
       index = np.nan*np.zeros(len(unixtimes))
       for i in range(0, len(unixtimes)):
          unixtime = unixtimes[i]

@@ -29,7 +29,7 @@ class Database(object):
       name: Name of this database (e.g. filename)
 
    Internal:
-      1data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
+      data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self, model=None):
@@ -182,16 +182,20 @@ class Random(Database):
 
 class Netcdf(Database):
    """
-   Segments stored in a netcdf database
+   Segments stored in a netcdf database. This can either be an aggregated or a gridded database.
 
-   Should have the following format:
-      dims: date, leadtime, member
-      vars: date(date), leadtime(leadtime)
-            variable_name(date, leadtime, member)
-   where variable_name is one or more names of weather variables
+   Aggregated database has the following format:
+      dims: forecast_reference_time, time, ensemble_member
+      vars: forecast_reference_time(forecast_reference_time), time(time)
+            variable_name(forecast_reference_time, time, ensemble_member)
 
-   Internal
-   _data0         A 6D numpy array of data with dimensions (time, lead_time, ensemble_member, lat, lon, variable)
+   Gridded database has the following format:
+      dims: forecast_reference_time, lat(itude), lon(gitude), time, ensemble_member
+      vars: forecast_reference_time(forecast_reference_time), time(time)
+            variable_name(forecast_reference_time, time, member, latitude, longitude)
+
+   where variable_name is one or more names of weather variables. Forecast_reference_time is
+   optional, i.e. both the variable and dimension could be missing.
    """
    def __init__(self, filename, vars=None, model=None):
       """

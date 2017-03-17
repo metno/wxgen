@@ -153,3 +153,16 @@ def get_date(date, diff):
    day = int(date % 100)
    date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
    return int(date2.strftime('%Y%m%d'))
+
+
+def day_of_year(unixtimes):
+   """
+   Arguments:
+      unixtime (int): Number of seconds since 1970-01-01
+
+   Returns:
+      int: Day of year
+   """
+   ar = np.zeros([len(unixtimes), 1], int)
+   ar[:, 0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
+   return ar

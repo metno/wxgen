@@ -26,7 +26,7 @@ def get(name):
 
 class Output(object):
    """
-   A class for outputing trajectory information
+   A class for outputing trajectory information to file
    """
    def __init__(self, filename):
       self.filename = filename

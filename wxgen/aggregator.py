@@ -37,8 +37,6 @@ class Aggregator(object):
    Usage:
    mean = wxgen.aggregator.Mean()
    mean(np.array([1,2,3]))
-
-   name:    A string representing the name of the aggregator
    """
    def __hash__(self):
       # TODO
@@ -49,7 +47,12 @@ class Aggregator(object):
 
    @classmethod
    def name(cls):
+      """ Returns a string representing the name of the aggregator """
       return cls.__name__.lower()
+
+   def __call__(self, array):
+      """ Implement this function to return the scalar value """
+      raise NotImplementedError()
 
 
 class Mean(Aggregator):
@@ -113,6 +116,7 @@ class Absmean(Aggregator):
 
 
 class Quantile(Aggregator):
+   """ Returns a specified quantile from an array """
    def __init__(self, quantile):
       self.quantile = quantile
       if self.quantile < 0 or self.quantile > 1:
