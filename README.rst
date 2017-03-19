@@ -6,14 +6,15 @@ Weather generator software
 .. image:: https://coveralls.io/repos/metno/wxgen/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/metno/wxgen?branch=master
 
-``wxgen`` is a command-line tool that generates arbitrarily long trajectories (time-series) of
-weather sequences. It is a hybrid approach as it uses data from weather models and combines
-sequences in a stochastic way. Weather model data is stored in a database of short weather sequences
-(e.g. 15 days). Longer trajectories are created by concatenating the shorter trajectories from the
-database. This is done by matching the end state of one trajectory with the beginning state of
-another. The matching is done using a specified metric, such as the sum of the square differences
-between states (with some kind of normalization strategy as each atmospheric variable has different
-variances).
+``wxgen`` is a command-line tool for generating arbitrarily long weather time-series. The generator
+produces **gridded** output for **multiple variables** (e.g. temperature, precipitation) and aims to
+have realistic covariances in space, time, and across variables.
+
+The generator uses a database of past weather model simulations (e.g 15 day forecasts) and combines the segments 
+stochastically. Longer trajectories are created by concatenating the shorter trajectories from the database.
+This is done by matching the end state of one trajectory with the beginning state of another. The
+matching is done using a specified metric, such as the sum of the square differences between states
+(with some kind of normalization strategy as each atmospheric variable has different variances).
 
 Installation
 ------------
@@ -46,6 +47,13 @@ If you do not have sudo privileges do:
 
 This will create the executable ``~/.local/bin/wxgen``. Add the folder to your PATH environment
 variable (if necessary).
+
+If you are working on the code, the -e flag ensures that you do not need to rerun pip install every
+time you make changes to the code:
+
+.. code-block:: bash
+
+  sudo pip install -e .
 
 Example use
 -----------
