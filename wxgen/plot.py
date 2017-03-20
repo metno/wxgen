@@ -63,6 +63,16 @@ class Plot(object):
       """
       raise NotImplementedError()
 
+   def create_yearly_series(self, array):
+      # Create 1-year long segments
+      N = int(np.ceil(len(array)/365))
+      array2 = np.zeros([365, N])
+      for i in range(0, N):
+         I = range(i*365, (i+1)*365)
+         array2[:, i] = array[I]
+      return array2
+
+
    def _finish_plot(self):
       for ax in mpl.gcf().get_axes():
          if self.xlim is not None:
@@ -278,6 +288,17 @@ class Timemean(Plot):
 
       X = 1
       Y = len(Ivars)
+      if truth is not None:
+         for i in range(len(Ivars)):
+            index = i+1
+            mpl.subplot(X, Y, index)
+            for s in range(len(sims)):
+               Ivar = Ivars[i]
+               traj = truth.get(0)
+               values = truth.extract(traj)[:, Ivar]
+               values = np.mean(self.create_yearly_series(values), axis=1)
+               self._plot_truth(range(0, len(values)), values, label="Truth")
+
       if sims is not None:
          for i in range(len(Ivars)):
             index = i+1
@@ -368,11 +389,7 @@ class Variance(Plot):
          array: 1D array
       """
       # Create 1-year long segments
-      N = int(np.ceil(len(array)/365))
-      truth = np.zeros([365, N])
-      for i in range(0, N):
-         I = range(i*365, (i+1)*365)
-         truth[:, i] = array[I]
+      truth = self.create_yearly_series(array)
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
       # otherwise the fcst variance is higher because obs gets the advantage of using its own
@@ -405,7 +422,6 @@ class Variance(Plot):
       Returns:
          list: Variance for different time lengths
       """
-      # Create 1-year long segments
       N = array.shape[1]
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
