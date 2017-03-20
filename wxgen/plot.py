@@ -4,6 +4,8 @@ import matplotlib.pyplot as mpl
 import numpy as np
 import sys
 import wxgen.util
+import wxgen.transformation
+import wxgen.aggregator
 import matplotlib.dates
 import scipy.ndimage
 import astropy.convolution
@@ -54,6 +56,7 @@ class Plot(object):
       self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
       self.default_lines = ['-', '-', '-', '--']
       self.default_markers = ['o', '', '.', '']
+      self.transformation = wxgen.transformation.Nothing()
 
    def plot(self, sims, truth):
       """
@@ -319,6 +322,76 @@ class Timemean(Plot):
             mpl.grid()
             mpl.xlabel("Time step")
             mpl.ylabel("Mean ($%s$)" % sims[0].variables[Ivar].units)
+
+      self._finish_plot()
+
+
+class Histogram(Plot):
+   """ Plot histogram for annual values for a given statistic """
+   def plot(self, sims, truth):
+
+      if self.vars is None:
+         if truth is not None:
+            Ivars = range(len(truth.variables))
+         else:
+            Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      X = (truth is not None)
+      if sims is not None:
+         X += len(sims)
+      Y = len(Ivars)
+
+      aggregator = wxgen.aggregator.Mean()
+      for i in range(len(Ivars)):
+         Ivar = Ivars[i]
+         xlim = None
+         if sims is not None:
+            for s in range(len(sims)):
+               index = s*Y+i+1
+               mpl.subplot(X, Y, index)
+               sim = sims[s]
+               agg = np.zeros(0)
+               for m in range(sim.num):
+                  traj = sim.get(m)
+                  values = sim.extract(traj)[:, Ivar]
+                  values = self.transformation.transform(values)
+                  values = self.create_yearly_series(values)
+                  curr_agg = np.zeros(values.shape[1])
+                  for k in range(values.shape[1]):
+                     curr_agg[k] = aggregator(values[:,k])
+                  agg = np.append(agg, curr_agg)
+
+               if self.thresholds is not None:
+                  mpl.hist(agg, self.thresholds, normed=1)
+               else:
+                  mpl.hist(agg, normed=1)
+               mpl.ylabel("Density")
+               mpl.xlabel(sim.variables[Ivar].name)
+               mpl.title(sim.name)
+               if self.thresholds is not None:
+                  mpl.ylim([0, len(self.thresholds)-1])
+
+         if truth is not None:
+            index = (X-1)*Y+i+1
+            mpl.subplot(X, Y, index)
+            traj = truth.get(0)
+            values = truth.extract(traj)[:, Ivar]
+            values = self.transformation.transform(values)   # 5 years
+            values = self.create_yearly_series(values)  # 5 x 1 year
+            agg = np.zeros(values.shape[1])
+            for k in range(values.shape[1]):
+               agg[k] = aggregator(values[:,k])
+            if self.thresholds is not None:
+               mpl.hist(agg, self.thresholds, normed=1)
+            else:
+               mpl.hist(agg, normed=1)
+            mpl.ylabel("Density")
+            mpl.xlabel(truth.variables[Ivar].name)
+            mpl.title(truth.name)
+            if self.thresholds is not None:
+               mpl.ylim([0, len(self.thresholds)-1])
 
       self._finish_plot()
 

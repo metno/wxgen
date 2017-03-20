@@ -57,6 +57,7 @@ def main(argv):
    sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
+   sp["verif"].add_argument('-tr', dest="transformation", help="Transformation for use in plots")
 
    """
    Common options
@@ -115,6 +116,8 @@ def main(argv):
       plot.vars = args.vars
       plot.thresholds = args.thresholds
       plot.fig_size = args.fs
+      transformation = get_transformation(args)
+      plot.transformation = transformation
       truth = None
       sims = None
       if args.truth is not None:
@@ -174,6 +177,13 @@ def get_climate_model(args):
    except:
       pass
    return model
+
+
+def get_transformation(args):
+   transformation = wxgen.transformation.Nothing()
+   if args.transformation is not None:
+      transformation = wxgen.transformation.get(args.transformation)
+   return transformation
 
 
 if __name__ == '__main__':
