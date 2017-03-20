@@ -58,6 +58,7 @@ def main(argv):
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transformation", help="Transformation for use in plots")
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots")
 
    """
    Common options
@@ -116,8 +117,8 @@ def main(argv):
       plot.vars = args.vars
       plot.thresholds = args.thresholds
       plot.fig_size = args.fs
-      transformation = get_transformation(args)
-      plot.transformation = transformation
+      plot.transformation = get_transformation(args)
+      plot.aggregator = get_aggregator(args)
       truth = None
       sims = None
       if args.truth is not None:
@@ -184,6 +185,13 @@ def get_transformation(args):
    if args.transformation is not None:
       transformation = wxgen.transformation.get(args.transformation)
    return transformation
+
+
+def get_aggregator(args):
+   aggregator = wxgen.aggregator.Mean()
+   if args.aggregator is not None:
+      aggregator = wxgen.aggregator.get(args.aggregator)
+   return aggregator
 
 
 if __name__ == '__main__':

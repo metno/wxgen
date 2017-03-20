@@ -57,6 +57,7 @@ class Plot(object):
       self.default_lines = ['-', '-', '-', '--']
       self.default_markers = ['o', '', '.', '']
       self.transformation = wxgen.transformation.Nothing()
+      self.aggregator = wxgen.aggregator.Mean()
 
    def plot(self, sims, truth):
       """
@@ -343,7 +344,6 @@ class Histogram(Plot):
          X += len(sims)
       Y = len(Ivars)
 
-      aggregator = wxgen.aggregator.Mean()
       for i in range(len(Ivars)):
          Ivar = Ivars[i]
          xlim = None
@@ -360,7 +360,7 @@ class Histogram(Plot):
                   values = self.create_yearly_series(values)
                   curr_agg = np.zeros(values.shape[1])
                   for k in range(values.shape[1]):
-                     curr_agg[k] = aggregator(values[:,k])
+                     curr_agg[k] = self.aggregator(values[:,k])
                   agg = np.append(agg, curr_agg)
 
                if self.thresholds is not None:
@@ -371,7 +371,8 @@ class Histogram(Plot):
                mpl.xlabel(sim.variables[Ivar].name)
                mpl.title(sim.name)
                if self.thresholds is not None:
-                  mpl.ylim([0, len(self.thresholds)-1])
+                  dx = self.thresholds[1]-self.thresholds[0]
+                  mpl.ylim([0, 1.0/dx])
 
          if truth is not None:
             index = (X-1)*Y+i+1
@@ -382,7 +383,7 @@ class Histogram(Plot):
             values = self.create_yearly_series(values)  # 5 x 1 year
             agg = np.zeros(values.shape[1])
             for k in range(values.shape[1]):
-               agg[k] = aggregator(values[:,k])
+               agg[k] = self.aggregator(values[:,k])
             if self.thresholds is not None:
                mpl.hist(agg, self.thresholds, normed=1)
             else:
@@ -391,7 +392,8 @@ class Histogram(Plot):
             mpl.xlabel(truth.variables[Ivar].name)
             mpl.title(truth.name)
             if self.thresholds is not None:
-               mpl.ylim([0, len(self.thresholds)-1])
+               dx = self.thresholds[1]-self.thresholds[0]
+               mpl.ylim([0, 1.0/dx])
 
       self._finish_plot()
 

@@ -115,6 +115,23 @@ class Absmean(Aggregator):
       return np.abs(np.mean(array))
 
 
+class Consecutive(Aggregator):
+   def __init__(self):
+      self.threshold = 0
+
+   def __call__(self, array):
+      acc = np.cumsum(array == self.threshold)
+      last_acc = 0
+      for i in range(1, len(acc)):
+         if array[i] != self.threshold:
+            last_acc = acc[i]
+            acc[i] = 0
+         else:
+            acc[i] = acc[i] - last_acc
+
+      return np.max(acc)
+
+
 class Quantile(Aggregator):
    """ Returns a specified quantile from an array """
    def __init__(self, quantile):
