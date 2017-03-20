@@ -76,7 +76,6 @@ class Plot(object):
          array2[:, i] = array[I]
       return array2
 
-
    def _finish_plot(self):
       for ax in mpl.gcf().get_axes():
          if self.xlim is not None:
@@ -360,7 +359,7 @@ class Histogram(Plot):
                   values = self.create_yearly_series(values)
                   curr_agg = np.zeros(values.shape[1])
                   for k in range(values.shape[1]):
-                     curr_agg[k] = self.aggregator(values[:,k])
+                     curr_agg[k] = self.aggregator(values[:, k])
                   agg = np.append(agg, curr_agg)
 
                if self.thresholds is not None:
@@ -383,7 +382,7 @@ class Histogram(Plot):
             values = self.create_yearly_series(values)  # 5 x 1 year
             agg = np.zeros(values.shape[1])
             for k in range(values.shape[1]):
-               agg[k] = self.aggregator(values[:,k])
+               agg[k] = self.aggregator(values[:, k])
             if self.thresholds is not None:
                mpl.hist(agg, self.thresholds, normed=1)
             else:
