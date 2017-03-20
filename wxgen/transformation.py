@@ -55,3 +55,10 @@ class SummerDay(Transformation):
 
    def transform(self, array):
       return array > self.threshold
+
+class DryDay(Transformation):
+   """ 1 if precip is less than 1 """
+   threshold = 1
+
+   def transform(self, array):
+      return array < self.threshold
