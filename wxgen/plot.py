@@ -355,7 +355,9 @@ class Histogram(Plot):
                for m in range(sim.num):
                   traj = sim.get(m)
                   values = sim.extract(traj)[:, Ivar]
-                  values = self.transformation.transform(values)
+                  values = self.transformation(values)
+                  if len(values) <= 365:
+                     wxgen.util.error("Simulations must be longer than 365 days long")
                   values = self.create_yearly_series(values)
                   curr_agg = np.zeros(values.shape[1])
                   for k in range(values.shape[1]):
@@ -378,7 +380,7 @@ class Histogram(Plot):
             mpl.subplot(X, Y, index)
             traj = truth.get(0)
             values = truth.extract(traj)[:, Ivar]
-            values = self.transformation.transform(values)   # 5 years
+            values = self.transformation(values)   # 5 years
             values = self.create_yearly_series(values)  # 5 x 1 year
             agg = np.zeros(values.shape[1])
             for k in range(values.shape[1]):

@@ -23,7 +23,7 @@ def get(name):
 
 
 class Transformation(object):
-   def transform(self, array):
+   def __call__(self, array):
       """ Transforms values in an array
 
       Arguments:
@@ -37,7 +37,7 @@ class Transformation(object):
 
 class Nothing(Transformation):
    """ No transformation """
-   def transform(self, array):
+   def __call__(self, array):
       return array
 
 
@@ -45,7 +45,7 @@ class FrostDay(Transformation):
    """ 1 if temperature is freezing """
    threshold = 273.15
 
-   def transform(self, array):
+   def __call__(self, array):
       return array < self.threshold
 
 
@@ -53,7 +53,7 @@ class SummerDay(Transformation):
    """ 1 if temperature is above 10 C """
    threshold = 273.15 + 10
 
-   def transform(self, array):
+   def __call__(self, array):
       return array > self.threshold
 
 
@@ -61,5 +61,5 @@ class DryDay(Transformation):
    """ 1 if precip is less than 1 """
    threshold = 1
 
-   def transform(self, array):
+   def __call__(self, array):
       return array < self.threshold

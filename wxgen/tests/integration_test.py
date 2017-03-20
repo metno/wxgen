@@ -77,6 +77,14 @@ class IntegrationTest(unittest.TestCase):
       self.run_command("wxgen truth")
       self.run_command("wxgen verif")
 
+   def test_verif_transformation(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m histogram -tr dryday" % sim_filename)
+
+   def test_verif_aggregator(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m histogram -a mean" % sim_filename)
+
    def test_README(self):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 10 -t 100")
       file = netCDF4.Dataset(sim_filename, 'r')
