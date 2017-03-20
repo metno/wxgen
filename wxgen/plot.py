@@ -472,6 +472,7 @@ class Variance(Plot):
       if self._normalize:
          std = np.nanstd(truth, axis=1)
 
+      N = truth.shape[1]
       for i in range(0, N):
          truth[:, i] = (truth[:, i] - clim)/std
 
