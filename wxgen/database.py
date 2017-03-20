@@ -1,7 +1,6 @@
 import numpy as np
 import wxgen.util
 import datetime
-import wxgen.aggregator
 import wxgen.variable
 import wxgen.climate_model
 import copy
@@ -33,7 +32,6 @@ class Database(object):
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self, model=None):
-      self.aggregator = wxgen.aggregator.Mean()
       self._data_agg_cache = None
       if model is None:
          self.model = wxgen.climate_model.Bin(10)
@@ -134,7 +132,7 @@ class Database(object):
    def _data_agg(self):
       if self._data_agg_cache is None:
          self._data_agg_cache = np.zeros([self.length, len(self.variables), self.num], float)
-         self._data_agg_cache = self.aggregator(self._data)
+         self._data_agg_cache = np.mean(np.mean(self._data, axis=2), axis=1)
       return self._data_agg_cache
 
    @property
