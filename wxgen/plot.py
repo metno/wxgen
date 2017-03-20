@@ -266,6 +266,42 @@ class Timevariance(Plot):
       self._finish_plot()
 
 
+class Timemean(Plot):
+   def plot(self, sims, truth):
+      if self.vars is None:
+         if truth is not None:
+            Ivars = range(len(truth.variables))
+         else:
+            Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      X = 1
+      Y = len(Ivars)
+      if sims is not None:
+         for i in range(len(Ivars)):
+            index = i+1
+            mpl.subplot(X, Y, index)
+            for s in range(len(sims)):
+               sim = sims[s]
+               values = np.zeros([sim.get(0).length, sim.num], float)
+               Ivar = Ivars[i]
+               for m in range(sim.num):
+                  traj = sim.get(m)
+                  values[:, m] = sim.extract(traj)[:, Ivar]
+
+               mean = np.nanmean(values, axis=1)
+               col = self._get_color(s, len(sims))
+               mpl.plot(mean, 'o-', label=sim.name, color=col)
+            mpl.title(sim.variables[Ivar].name)
+            mpl.legend()
+            mpl.grid()
+            mpl.xlabel("Time step")
+            mpl.ylabel("Mean ($%s$)" % sims[0].variables[Ivar].units)
+
+      self._finish_plot()
+
+
 class Variance(Plot):
    def __init__(self):
       Plot. __init__(self)
