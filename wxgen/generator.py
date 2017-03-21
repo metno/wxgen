@@ -41,10 +41,12 @@ class LargeScale(object):
          wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
          trajectory_indices = np.zeros([T, 2], int)
 
+         time = wxgen.util.date_to_unixtime(20170101)
+         climate_state = self.model.get([time])[0]
          if initial_state is None:
             wxgen.util.debug("Finding random starting state", color="yellow")
             I = np.random.randint(self._database.num)
-            tr = self.get_random(np.zeros(V), wxgen.metric.Exp(np.zeros(V)))
+            tr = self.get_random(np.zeros(V), wxgen.metric.Exp(np.zeros(V)), climate_state)
             state_curr = self._database.extract(tr)[0, :]
          else:
             state_curr = initial_state
@@ -56,7 +58,6 @@ class LargeScale(object):
          long, we are only using 9 days of the segment.
          """
          start = 0  # Starting index into output trajectory where we are inserting a segment
-         time = wxgen.util.date_to_unixtime(20170101)
          join = 0
          while start < T:
             climate_state = self.model.get([time])[0]
