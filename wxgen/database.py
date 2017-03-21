@@ -1,10 +1,12 @@
 import numpy as np
 import wxgen.util
+import pywt
 import datetime
 import wxgen.variable
 import wxgen.climate_model
 import copy
 import netCDF4
+import time as timing
 
 
 class Database(object):
@@ -30,9 +32,12 @@ class Database(object):
    Internal:
       data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
+      _data_matching (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self, model=None):
       self._data_agg_cache = None
+      self._data_matching_cache = None
+      self.wavelet_levels = 0
       if model is None:
          self.model = wxgen.climate_model.Bin(10)
       else:
@@ -128,12 +133,62 @@ class Database(object):
          values = self._data[I1, :, :, :, I0]
       return values
 
+   def extract_matching(self, trajectory):
+      """
+      Extract a trajectory of values used to match states from the database
+
+      Arguments:
+         trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+
+      Returns:
+         np.array: A 2D array (Time, variable) sequence of values
+      """
+      T = trajectory.indices.shape[0]
+      values = np.nan*np.zeros([T, self._data_matching.shape[1]], float)
+      for i in range(0, trajectory.indices.shape[0]):
+         if trajectory.indices[i, 1] >= 0:
+            values[i, :] = self._data_matching[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
+      return values
+
    @property
    def _data_agg(self):
       if self._data_agg_cache is None:
-         self._data_agg_cache = np.zeros([self.length, len(self.variables), self.num], float)
          self._data_agg_cache = np.mean(np.mean(self._data, axis=2), axis=1)
       return self._data_agg_cache
+
+   @property
+   def _data_matching(self):
+      if self._data_matching_cache is None:
+         print "Loading from cache"
+         if self.wavelet_levels == 0:
+            self._data_matching_cache = self._data_agg
+         else:
+            # Decompose the grid
+            s = timing.time()
+            LT = self._data.shape[0]
+            V = self._data.shape[3]
+            M = self._data.shape[4]
+            Nlat = self._data.shape[1]
+            Nlon = self._data.shape[2]
+            # data: lead_time, lat, lon, variable, member
+            NX = np.ceil(float(Nlat)/2**self.wavelet_levels)
+            NY = np.ceil(float(Nlon)/2**self.wavelet_levels)
+            N = int(NX*NY)
+            # print "Number of coefficients: %d" % N
+            self._data_matching_cache = np.zeros([LT, V*N, M])
+            for lt in range(self._data.shape[0]):
+               for v in range(self._data.shape[3]):
+                  for m in range(self._data.shape[4]):
+                     # print "Computing wavelet for leadtime %d variable %d member %d" % (lt, v, m)
+                     dec = pywt.wavedec2(self._data[lt, :, :, v, m], 'haar', level=self.wavelet_levels)[0]
+                     dec = dec.flatten()/2**self.wavelet_levels
+                     I = range(v*N, (v+1)*N)
+                     self._data_matching_cache[lt, I, m] = dec
+            e = timing.time()
+            wxgen.util.debug("Wavelet time: %f" % (e - s))
+
+            # print "Size of matching cache:", self._data_matching_cache.shape
+      return self._data_matching_cache
 
    @property
    def X(self):

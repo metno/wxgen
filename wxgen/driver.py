@@ -42,6 +42,7 @@ def main(argv):
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
       sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
+      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
 
    """
    Verification driver
@@ -146,6 +147,8 @@ def get_db(args):
          wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
    else:
       db = wxgen.database.Netcdf(args.db, args.vars, model=model)
+
+   db.wavelet_levels = args.wavelet_levels
 
    if args.debug:
       db.info()
