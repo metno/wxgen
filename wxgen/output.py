@@ -93,6 +93,12 @@ class Netcdf(Output):
       var_frt.standard_name = "forecast_reference_time"
       var_frt.long_name = "forecast_reference_time"
 
+      # Projection
+      var_proj = file.createVariable("projection_regular_ll", "i4")
+      var_proj.grid_mapping_name = "latitude_longitude"
+      var_proj.earth_radius = 6367470
+      var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
+
       # Latitude
       if scale != "agg":
          var_lat = file.createVariable("latitude", "f4", ("y", "x"))
@@ -116,6 +122,7 @@ class Netcdf(Output):
             vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
          if var.units is not None:
             vars[var.name].units = var.units
+         vars[var.name].grid_mapping = "projection_regular_ll"
 
       # Write forecast variables
       for m in range(0, len(trajectories)):
