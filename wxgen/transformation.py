@@ -63,3 +63,11 @@ class DryDay(Transformation):
 
    def __call__(self, array):
       return array < self.threshold
+
+
+class WetDay(Transformation):
+   """ 1 if precip is greater than 1 """
+   threshold = 1
+
+   def __call__(self, array):
+      return array >= self.threshold
