@@ -70,11 +70,14 @@ class Database(object):
       end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
       times = np.arange(start, end, 86400)
       indices = -1*np.ones([len(times), 2], int)
+      wxgen.util.debug("Start: %d End: %d" % (start, end))
       for i in range(0, len(times)):
          time = times[i]
          I = np.where(time >= self.inittimes)[0]
          if len(I) == 0:
-            wxgen.util.error("Internal error")
+            wxgen.util.error("There are no inittimes available before %d. The earliest is %d." %
+                  (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(
+                     np.min(self.inittimes))))
          inittime = np.max(self.inittimes[I])
          lt = int((time - inittime)/86400)
          if lt < self.length:
@@ -117,15 +120,16 @@ class Database(object):
       V = len(self.variables)
       X = self.X
       Y = self.Y
-      if 0:
-         values = np.zeros([T, Y, X, V], float)
+      if 1:
+         values = np.nan*np.zeros([T, Y, X, V], float)
          # Loop over member, lead-time indices
          for i in range(0, trajectory.indices.shape[0]):
             m = trajectory.indices[i, 0]
             t = trajectory.indices[i, 1]
             assert(not np.isnan(m))
             assert(not np.isnan(t))
-            values[i, :, :, :] = self._data[t, :, :, :, m]
+            if t >= 0:
+               values[i, :, :, :] = self._data[t, :, :, :, m]
       else:
          # Slightly faster way (but not much faster)
          I0 = trajectory.indices[:, 0]
