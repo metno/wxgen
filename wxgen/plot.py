@@ -523,3 +523,59 @@ class Variance(Plot):
                sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
             variance[i] = np.nanvar(sim_c)
       return variance
+
+
+class Map(Plot):
+   def plot(self, sims, truth):
+      if truth is not None:
+         sims += [truth]
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      X = len(sims)
+      Y = len(Ivars)
+      clim = [0, 5]
+      import mpl_toolkits.basemap
+      for v in range(len(Ivars)):
+         Ivar = Ivars[v]
+         for s in range(len(sims)):
+            count = 0
+            index = s*Y+v+1
+            mpl.subplot(X, Y, index)
+            sim = sims[s]
+            sim_values = np.zeros([sim.Y, sim.X])
+            col = self._get_color(s, len(sims))
+            lats = sim.lats
+            lons = sim.lons
+            dlat = 1.0
+            dlon = 1.0
+            llcrnrlat = max(-90, np.min(lats) - dlat / 10)
+            urcrnrlat = min(90, np.max(lats) + dlat / 10)
+            llcrnrlon = np.min(lons) - dlon / 10
+            urcrnrlon = np.max(lons) + dlon / 10
+            res = "l"
+            map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
+                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
+                  resolution=res)
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract_grid(traj)
+               sim_values += self.aggregator(self.transformation(q[:, :, :, Ivar]), axis=0)
+               count += 1
+            [x, y] = map(lons, lats)
+            map.contourf(x, y, sim_values/count, np.linspace(clim[0], clim[1], 11), label=sim.name, color=col)
+            mpl.clim(clim)
+            cb = map.colorbar()
+            cb.set_clim(clim)
+            map.drawcoastlines(linewidth=1)
+            map.drawcountries(linewidth=2)
+            map.drawmapboundary()
+            dy = 1
+            dx = 1
+            map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
+            map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
+            map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+            mpl.title(sim.name)
+      self._finish_plot()
