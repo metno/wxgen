@@ -84,7 +84,10 @@ class Database(object):
             indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
             indices[i, 1] = lt
          else:
-            wxgen.util.debug("Did not find an index for %d = %d" % (time, wxgen.util.unixtime_to_date(time)))
+            wxgen.util.warning("Did not find an index for %d = %d. Using the previous state." % (time, wxgen.util.unixtime_to_date(time)))
+            assert(i > 0)
+            indices[i, 0] = indices[i-1, 0]
+            indices[i, 1] = indices[i-1, 1]
 
       return wxgen.trajectory.Trajectory(indices)
 
