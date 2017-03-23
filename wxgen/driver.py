@@ -60,6 +60,8 @@ def main(argv):
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transformation", help="Transformation for use in plots")
    sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots")
+   sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
+   sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
 
    """
    Common options
@@ -120,6 +122,8 @@ def main(argv):
       plot.fig_size = args.fs
       plot.transformation = get_transformation(args)
       plot.aggregator = get_aggregator(args)
+      plot.clim = args.clim
+      plot.cmap = args.cmap
       truth = None
       sims = None
       if args.truth is not None:

@@ -58,6 +58,8 @@ class Plot(object):
       self.default_markers = ['o', '', '.', '']
       self.transformation = wxgen.transformation.Nothing()
       self.aggregator = wxgen.aggregator.Mean()
+      self.clim = None
+      self.cmap = None
 
    def plot(self, sims, truth):
       """
@@ -536,7 +538,6 @@ class Map(Plot):
 
       X = len(sims)
       Y = len(Ivars)
-      clim = [0, 5]
       import mpl_toolkits.basemap
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
@@ -546,7 +547,6 @@ class Map(Plot):
             mpl.subplot(X, Y, index)
             sim = sims[s]
             sim_values = np.zeros([sim.Y, sim.X])
-            col = self._get_color(s, len(sims))
             lats = sim.lats
             lons = sim.lons
             dlat = 1.0
@@ -565,10 +565,14 @@ class Map(Plot):
                sim_values += self.aggregator(self.transformation(q[:, :, :, Ivar]), axis=0)
                count += 1
             [x, y] = map(lons, lats)
-            map.contourf(x, y, sim_values/count, np.linspace(clim[0], clim[1], 11), label=sim.name, color=col)
-            mpl.clim(clim)
+            if self.clim is not None:
+               map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
+            else:
+               map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap)
             cb = map.colorbar()
-            cb.set_clim(clim)
+            if self.clim is not None:
+               mpl.clim(self.clim)
+               cb.set_clim(self.clim)
             map.drawcoastlines(linewidth=1)
             map.drawcountries(linewidth=2)
             map.drawmapboundary()
