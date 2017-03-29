@@ -11,14 +11,14 @@ class BinTest(unittest.TestCase):
          wxgen.util.date_to_unixtime(20150111)])
       states = model.get(unixtimes)
 
-      self.assertTrue(np.array_equal([0, 0, 1], states))
+      self.assertTrue(np.array_equal([[0], [0], [1]], states))
 
    def test_single(self):
       model = wxgen.climate_model.Bin(10)
       unixtimes = np.array([wxgen.util.date_to_unixtime(20150111)])
       states = model.get(unixtimes)
 
-      self.assertTrue(np.array_equal([1], states))
+      self.assertTrue(np.array_equal([[1]], states))
 
 
 class ComboTest(unittest.TestCase):
