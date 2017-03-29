@@ -144,7 +144,7 @@ def get_db(args):
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
       if args.dbtype is None or args.dbtype == "random":
-         db = wxgen.database.Random(100, 10, 3, model=model)
+         db = wxgen.database.Random(1000, 10, 3, model=model)
       elif args.dbtype == "lorenz63":
          db = wxgen.database.Lorenz63(10, 500, model=model)
       else:

@@ -235,6 +235,8 @@ class Random(Database):
       self.lats = [0]
       self.lons = [0]
       self.climate_states = np.mod(np.arange(0, N), 12)
+      for i in range(N):
+          self._data[:, :, :, :, i] += np.cos(self.climate_states[i] / 12.0 * 2 * 3.14159265) * -3
       start = wxgen.util.date_to_unixtime(20150101)
       num_inits = 30
       self.inittimes = start + np.mod(np.arange(0, N), num_inits) * 86400
