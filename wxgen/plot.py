@@ -88,7 +88,7 @@ class Plot(object):
             # Keep any set ticks and labels
             if self._sets_xticks:
                xticks = ax.get_xticks()
-               xticklabels = ax.get_xticklabels()
+               xticklabels = [t.get_text() for t in ax.get_xticklabels()]
             ax.set_xscale("log")
             if self._sets_xticks:
                ax.set_xticks(xticks)
@@ -96,7 +96,7 @@ class Plot(object):
          if self.ylog:
             if self._sets_yticks:
                yticks = ax.get_yticks()
-               yticklabels = ax.get_yticklabels()
+               yticklabels = [t.get_text() for t in ax.get_yticklabels()]
             ax.set_yscale("log")
             if self._sets_yticks:
                ax.set_yticks(yticks)
