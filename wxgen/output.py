@@ -74,8 +74,14 @@ class Netcdf(Output):
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
       if scale != "agg":
-         file.createDimension("y", database.Y)
-         file.createDimension("x", database.X)
+         if scale == "large":
+            xname = "longitude"
+            yname = "latitude"
+         elif scale == "small":
+            xname = "x"
+            yname = "y"
+         file.createDimension(yname, database.Y)
+         file.createDimension(xname, database.X)
 
       # Time
       var_time = file.createVariable("time", "i4", ("time"))
@@ -100,14 +106,25 @@ class Netcdf(Output):
       var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
 
       # Latitude
-      if scale != "agg":
-         var_lat = file.createVariable("latitude", "f4", ("y", "x"))
+      if scale == "large":
+         var_lat = file.createVariable("latitude", "f4", (yname))
+         var_lat.units = "degrees_north"
+         var_lat.standard_name = "latitude"
+         var_lat[:] = database.lats[:, 0]
+
+         # Longitude
+         var_lon = file.createVariable("longitude", "f4", (xname))
+         var_lon.units = "degrees_east"
+         var_lon.standard_name = "longitude"
+         var_lon[:] = database.lons[0, :]
+      elif scale == "small":
+         var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
          var_lat.standard_name = "latitude"
          var_lat[:] = database.lats
 
          # Longitude
-         var_lon = file.createVariable("longitude", "f4", ("y", "x"))
+         var_lon = file.createVariable("longitude", "f4", (yname, xname))
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
          var_lon[:] = database.lons
@@ -119,7 +136,7 @@ class Netcdf(Output):
          if scale == "agg":
             vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member"))
          else:
-            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", "y", "x"))
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
