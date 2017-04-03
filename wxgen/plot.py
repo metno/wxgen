@@ -357,7 +357,7 @@ class Histogram(Plot):
                   traj = sim.get(m)
                   values = sim.extract(traj)[:, Ivar]
                   values = self.transform(values)
-                  if len(values) <= 365:
+                  if len(values) < 365:
                      wxgen.util.error("Simulations must be longer than 365 days long")
                   values = self.create_yearly_series(values)
                   curr_agg = np.zeros(values.shape[1])
@@ -583,4 +583,43 @@ class Map(Plot):
             map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
             map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
             mpl.title(sim.name)
+      self._finish_plot()
+
+
+class Jump(Plot):
+   def plot(self, sims, truth):
+      if truth is not None:
+         sims += [truth]
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      X = 1
+      Y = len(Ivars)
+      db_length = 10
+      for v in range(len(Ivars)):
+         Ivar = Ivars[v]
+         index = v+1
+         mpl.subplot(X, Y, index)
+         for s in range(len(sims)):
+            count = 0
+            sim = sims[s]
+            values = np.zeros([9])
+            counts = np.zeros([9])
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract_grid(traj)
+               for i in range(0, sim.length-1):
+                  I = i % (db_length-1)
+                  curr = np.mean(np.abs(q[i, :, :, Ivar] - q[i+1, :, :, Ivar]))
+                  values[I] += curr
+                  counts[I] += 1
+            values = values / counts
+            col = self._get_color(s, len(sims))
+            mpl.plot(np.arange(0.5, db_length - 0.5), values, '-o', color=col, label=sim.name)
+         mpl.xlabel("Lead time (days)")
+         mpl.ylabel("Average absolute jump")
+         mpl.legend()
+         mpl.ylim(ymin=0)
       self._finish_plot()
