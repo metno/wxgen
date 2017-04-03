@@ -77,7 +77,7 @@ class IntegrationTest(unittest.TestCase):
       self.run_command("wxgen truth")
       self.run_command("wxgen verif")
 
-   def test_verif_transformation(self):
+   def test_verif_transform(self):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
       self.run_with_image("wxgen verif %s -m histogram -tr dryday" % sim_filename)
 

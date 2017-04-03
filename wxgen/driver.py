@@ -58,7 +58,7 @@ def main(argv):
    sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
-   sp["verif"].add_argument('-tr', dest="transformation", help="Transformation for use in plots")
+   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots")
    sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
@@ -120,7 +120,7 @@ def main(argv):
       plot.vars = args.vars
       plot.thresholds = args.thresholds
       plot.fig_size = args.fs
-      plot.transformation = get_transformation(args)
+      plot.transform = get_transform(args)
       plot.aggregator = get_aggregator(args)
       plot.clim = args.clim
       plot.cmap = args.cmap
@@ -187,11 +187,11 @@ def get_climate_model(args):
    return model
 
 
-def get_transformation(args):
-   transformation = wxgen.transformation.Nothing()
-   if args.transformation is not None:
-      transformation = wxgen.transformation.get(args.transformation)
-   return transformation
+def get_transform(args):
+   transform = wxgen.transform.Nothing()
+   if args.transform is not None:
+      transform = wxgen.transform.get(args.transform)
+   return transform
 
 
 def get_aggregator(args):

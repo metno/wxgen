@@ -18,11 +18,11 @@ def get(name):
       if(name == mm[0].lower()):
          m = mm[1]()
    if m is None:
-      wxgen.util.error("Cannot find transformation called '%s'" % name)
+      wxgen.util.error("Cannot find transform called '%s'" % name)
    return m
 
 
-class Transformation(object):
+class Transform(object):
    def __call__(self, array):
       """ Transforms values in an array
 
@@ -35,13 +35,13 @@ class Transformation(object):
       raise NotImplementedError()
 
 
-class Nothing(Transformation):
-   """ No transformation """
+class Nothing(Transform):
+   """ No transform """
    def __call__(self, array):
       return array
 
 
-class FrostDay(Transformation):
+class FrostDay(Transform):
    """ 1 if temperature is freezing """
    threshold = 273.15
 
@@ -49,7 +49,7 @@ class FrostDay(Transformation):
       return array < self.threshold
 
 
-class SummerDay(Transformation):
+class SummerDay(Transform):
    """ 1 if temperature is above 10 C """
    threshold = 273.15 + 10
 
@@ -57,7 +57,7 @@ class SummerDay(Transformation):
       return array > self.threshold
 
 
-class DryDay(Transformation):
+class DryDay(Transform):
    """ 1 if precip is less than 1 """
    threshold = 1
 
@@ -65,7 +65,7 @@ class DryDay(Transformation):
       return array < self.threshold
 
 
-class WetDay(Transformation):
+class WetDay(Transform):
    """ 1 if precip is greater than 1 """
    threshold = 1
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as mpl
 import numpy as np
 import sys
 import wxgen.util
-import wxgen.transformation
+import wxgen.transform
 import wxgen.aggregator
 import matplotlib.dates
 import scipy.ndimage
@@ -56,7 +56,7 @@ class Plot(object):
       self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
       self.default_lines = ['-', '-', '-', '--']
       self.default_markers = ['o', '', '.', '']
-      self.transformation = wxgen.transformation.Nothing()
+      self.transform = wxgen.transform.Nothing()
       self.aggregator = wxgen.aggregator.Mean()
       self.clim = None
       self.cmap = None
@@ -357,7 +357,7 @@ class Histogram(Plot):
                for m in range(sim.num):
                   traj = sim.get(m)
                   values = sim.extract(traj)[:, Ivar]
-                  values = self.transformation(values)
+                  values = self.transform(values)
                   if len(values) <= 365:
                      wxgen.util.error("Simulations must be longer than 365 days long")
                   values = self.create_yearly_series(values)
@@ -382,7 +382,7 @@ class Histogram(Plot):
             mpl.subplot(X, Y, index)
             traj = truth.get(0)
             values = truth.extract(traj)[:, Ivar]
-            values = self.transformation(values)   # 5 years
+            values = self.transform(values)   # 5 years
             values = self.create_yearly_series(values)  # 5 x 1 year
             agg = np.zeros(values.shape[1])
             for k in range(values.shape[1]):
@@ -562,7 +562,7 @@ class Map(Plot):
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract_grid(traj)
-               sim_values += self.aggregator(self.transformation(q[:, :, :, Ivar]), axis=0)
+               sim_values += self.aggregator(self.transform(q[:, :, :, Ivar]), axis=0)
                count += 1
             [x, y] = map(lons, lats)
             if self.clim is not None:
