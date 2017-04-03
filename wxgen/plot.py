@@ -8,7 +8,6 @@ import wxgen.transform
 import wxgen.aggregator
 import matplotlib.dates
 import scipy.ndimage
-import astropy.convolution
 import datetime
 import copy
 
@@ -466,6 +465,7 @@ class Variance(Plot):
       """
          array: 1D array
       """
+      import astropy.convolution
       # Create 1-year long segments
       truth = self.create_yearly_series(array)
 
@@ -501,6 +501,7 @@ class Variance(Plot):
       Returns:
          list: Variance for different time lengths
       """
+      import astropy.convolution
       N = array.shape[1]
 
       # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
