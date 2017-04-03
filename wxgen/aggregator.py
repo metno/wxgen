@@ -7,7 +7,7 @@ import wxgen.util
 def get_all():
    """ Returns a list of all aggregator classes """
    temp = inspect.getmembers(sys.modules[__name__], inspect.isclass)
-   return [i[1] for i in temp if i[0] != "Aggregator"]
+   return temp
 
 
 def get(name):
@@ -21,8 +21,8 @@ def get(name):
    aggregators = get_all()
    a = None
    for aggregator in aggregators:
-      if name == aggregator.name():
-         a = aggregator()
+      if(name == aggregator[0].lower()):
+         a = aggregator[1]()
    if a is None and wxgen.util.is_number(name):
       a = Quantile(float(name))
 

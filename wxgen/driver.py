@@ -50,7 +50,7 @@ def main(argv):
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
    sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
-   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric", required=True)
+   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric. One of: " + get_help_string(wxgen.plot), dest="metric", required=True)
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
@@ -58,8 +58,8 @@ def main(argv):
    sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
-   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots")
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots")
+   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots. One of: " + get_help_string(wxgen.transform))
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + get_help_string(wxgen.aggregator))
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
 
@@ -199,6 +199,13 @@ def get_aggregator(args):
    if args.aggregator is not None:
       aggregator = wxgen.aggregator.get(args.aggregator)
    return aggregator
+
+
+def get_help_string(module):
+   """
+   Creates a string of options
+   """
+   return ','.join([x[0].lower() for x in module.get_all() if "wxgen." + x[0].lower() != module.__name__])
 
 
 if __name__ == '__main__':
