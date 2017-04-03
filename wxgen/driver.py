@@ -50,7 +50,7 @@ def main(argv):
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
    sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
-   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric")
+   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric", dest="metric", required=True)
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
