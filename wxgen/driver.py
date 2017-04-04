@@ -138,8 +138,8 @@ def main(argv):
          start_day = start_date % 100
          start_month = start_date / 100 % 100
          Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
-         if args.n > len(possible_start_days):
-            wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(possible_start_days), args.n))
+         if args.n > len(Ipossible_start_days):
+            wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
 
          trajectories = list()
          for n in range(min(args.n, len(Ipossible_start_days))):
