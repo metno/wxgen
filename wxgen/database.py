@@ -232,8 +232,8 @@ class Random(Database):
          self._data[:, 0, 0, v, :] = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N) * np.sqrt(self._variance), axis=0)
 
       self.variables = [wxgen.variable.Variable("var%d" % i) for i in range(0, self._V)]
-      self.lats = [0]
-      self.lons = [0]
+      self.lats = np.zeros([1, 1])
+      self.lons = np.zeros([1, 1])
       self.climate_states = np.mod(np.arange(0, N), 12)
       for i in range(N):
           self._data[:, :, :, :, i] += np.cos(self.climate_states[i] / 12.0 * 2 * 3.14159265) * -3
@@ -329,8 +329,8 @@ class Netcdf(Database):
          is_spatial = False
          X = 1
          Y = 1
-         self.lats = [0]
-         self.lons = [0]
+         self.lats = np.zeros([1, 1])
+         self.lons = np.zeros([1, 1])
 
       # Read lat/lon variables
       if is_spatial:
@@ -408,8 +408,8 @@ class Lorenz63(Database):
       self._dt = dt
       self._V = 3  # Number of variables
       self._data = np.zeros([T, 1, 1, self._V, N], float)
-      self.lats = [0]
-      self.lons = [0]
+      self.lats = np.zeros([1, 1])
+      self.lons = np.zeros([1, 1])
       self._initial_state = [-10, -10, 25]
       self._std_initial_state = 0.1  # Standard deviation of initial condition error
 
