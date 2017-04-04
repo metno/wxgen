@@ -5,3 +5,4 @@ coveralls
 pep8
 netCDF4
 PyWavelets
+astropy==1.3.1
