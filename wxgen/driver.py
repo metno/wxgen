@@ -34,8 +34,10 @@ def main(argv):
    Truth trajetory driver
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
-   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="End date of trajectory", dest="end_date")
-   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Start date of trajectory", dest="start_date")
+   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
+   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
+   sp["truth"].add_argument('-n', default=1, metavar="NUM", type=int, help="Number of trajectories (default 1)")
+   sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory (default as long as possible)")
 
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
@@ -109,9 +111,49 @@ def main(argv):
 
    elif args.command == "truth":
       db = get_db(args)
-      trajectory = db.get_truth(args.start_date, args.end_date)
+      if args.n == 1:
+        trajectories = [db.get_truth(args.start_date, args.end_date)]
+      else:
+         """
+         Create a number of ensemble members, by sampling long timeseries from database (no
+         joining). This is determined by -sd, -ed, -n, and -t. -sd -ed sets which dates are allowed
+         to use from the database. Then -n sets the number of scenarios.
+
+         We only want to create scenarios that all start at the same time of the year.
+         """
+
+         # Determine allowable dates from database
+         start_date = args.start_date
+         end_date = args.end_date
+         if args.start_date is None:
+            start_date = wxgen.util.unixtime_to_date(np.min(db.inittimes))
+         if args.end_date is None:
+            end_date = wxgen.util.unixtime_to_date(np.max(db.inittimes))
+         dates = np.array(wxgen.util.parse_dates("%d:%d" % (start_date, end_date)))
+
+         # Figure out which time indices are possible starting dates, by finding dates that have the
+         # same day of year as the first date of the allowable dates
+         months = dates / 100 % 100
+         days = dates % 100
+         start_day = start_date % 100
+         start_month = start_date / 100 % 100
+         Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
+         if args.n > len(possible_start_days):
+            wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(possible_start_days), args.n))
+
+         trajectories = list()
+         for n in range(min(args.n, len(Ipossible_start_days))):
+            s = dates[Ipossible_start_days[n]]
+            e = wxgen.util.get_date(s, args.t)
+            if e < end_date:
+               wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
+               trajectory = db.get_truth(s, e)
+               trajectories += [trajectory]
+            else:
+               wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
+
       output = wxgen.output.Netcdf(args.filename)
-      output.write([trajectory], db, args.scale)
+      output.write(trajectories, db, args.scale)
 
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
