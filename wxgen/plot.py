@@ -61,6 +61,7 @@ class Plot(object):
       self.cmap = None
       self.lat = None
       self.lon = None
+      self.timescale = 1
 
    def plot(self, sims, truth):
       """
@@ -649,6 +650,7 @@ class CovarMap(Plot):
       Y = len(sims)
       X = len(Ivars)
       import mpl_toolkits.basemap
+      import astropy.convolution
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          for s in range(len(sims)):
@@ -673,9 +675,23 @@ class CovarMap(Plot):
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract_grid(traj)
-               # ref = np.resize(q[:,Xref,Yref,Ivar], [q.shape[0], q.shape[1], q.shape[2]])
+               val = q[:, :, :, Ivar]
                ref = np.swapaxes(np.tile(q[:, Xref, Yref, Ivar], [q.shape[2], q.shape[1], 1]), 0, 2)
-               sim_values += wxgen.util.correlation(q[:, :, :, Ivar], ref, axis=0)
+               scale = self.timescale
+               if scale % 2 != 1:
+                  wxgen.util.error("Time scale must be an odd number")
+               if scale > 1:
+                  sarray = 1.0/scale*np.ones(scale)
+                  for i in range(0, ref.shape[1]):
+                     for j in range(0, ref.shape[2]):
+                        ref[:, i, j] = astropy.convolution.convolve(ref[:, i, j], sarray)
+                        val[:, i, j] = astropy.convolution.convolve(val[:, i, j], sarray)
+
+                  # Remove edges in convolution
+                  ref = ref[(scale/2):(-scale/2+1), :, :]
+                  val = val[(scale/2):(-scale/2+1), :, :]
+
+               sim_values += wxgen.util.correlation(val, ref, axis=0)
                count += 1
             [x, y] = map(lons, lats)
             if self.clim is not None:

@@ -64,6 +64,7 @@ def main(argv):
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
    sp["verif"].add_argument('-lon', type=float, help="Lookup longitude")
+   sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
 
    """
    Common options
@@ -128,6 +129,7 @@ def main(argv):
       plot.cmap = args.cmap
       plot.lat = args.lat
       plot.lon = args.lon
+      plot.timescale = args.timescale
       truth = None
       sims = None
       if args.truth is not None:
