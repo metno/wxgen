@@ -491,6 +491,8 @@ class Variance(Plot):
          truth_c = np.zeros([truth.shape[0], N], float)
          for e in range(0, N):
             truth_c[:, e] = astropy.convolution.convolve(truth[:, e], 1.0/s*np.ones(s))
+         if s > 1:
+            truth_c = truth_c[(s/2):(-s/2+1), :]
          variance[i] = np.nanvar(truth_c)
       return variance
 
@@ -526,6 +528,8 @@ class Variance(Plot):
             sim_c = np.zeros([values.shape[0], N], float)
             for e in range(0, N):
                sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
+            if s > 1:
+               sim_c = sim_c[(s/2):(-s/2+1), :]
             variance[i] = np.nanvar(sim_c)
       return variance
 
