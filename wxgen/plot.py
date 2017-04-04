@@ -59,6 +59,8 @@ class Plot(object):
       self.aggregator = wxgen.aggregator.Mean()
       self.clim = None
       self.cmap = None
+      self.lat = None
+      self.lon = None
 
    def plot(self, sims, truth):
       """
@@ -620,6 +622,75 @@ class Jump(Plot):
             mpl.plot(np.arange(0.5, db_length - 0.5), values, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
-         mpl.legend()
+         mpl.legend(loc="best")
+         mpl.grid()
          mpl.ylim(ymin=0)
+      self._finish_plot()
+
+
+class CovarMap(Plot):
+   def plot(self, sims, truth):
+      if self.lat is None or self.lon is None:
+         wxgen.util.error("-lat and/or -lon not specified")
+
+      if truth is not None:
+         sims += [truth]
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      Xref = 5
+      Yref = 10
+      Y = len(sims)
+      X = len(Ivars)
+      import mpl_toolkits.basemap
+      for v in range(len(Ivars)):
+         Ivar = Ivars[v]
+         for s in range(len(sims)):
+            count = 0
+            index = s*X+v+1
+            mpl.subplot(X, Y, index)
+            sim = sims[s]
+            sim_values = np.zeros([sim.Y, sim.X])
+            lats = sim.lats
+            lons = sim.lons
+            dlat = 1.0
+            dlon = 1.0
+            llcrnrlat = max(-90, np.min(lats) - dlat / 10)
+            urcrnrlat = min(90, np.max(lats) + dlat / 10)
+            llcrnrlon = np.min(lons) - dlon / 10
+            urcrnrlon = np.max(lons) + dlon / 10
+            [Xref, Yref] = wxgen.util.get_i_j(lats, lons, self.lat, self.lon)
+            res = "l"
+            map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
+                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
+                  resolution=res)
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract_grid(traj)
+               # ref = np.resize(q[:,Xref,Yref,Ivar], [q.shape[0], q.shape[1], q.shape[2]])
+               ref = np.swapaxes(np.tile(q[:, Xref, Yref, Ivar], [q.shape[2], q.shape[1], 1]), 0, 2)
+               sim_values += wxgen.util.correlation(q[:, :, :, Ivar], ref, axis=0)
+               count += 1
+            [x, y] = map(lons, lats)
+            if self.clim is not None:
+               map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
+                     label=sim.name, cmap=self.cmap, extend="both")
+            else:
+               map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap, extend="both")
+            mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
+            cb = map.colorbar()
+            if self.clim is not None:
+               mpl.clim(self.clim)
+               cb.set_clim(self.clim)
+            map.drawcoastlines(linewidth=1)
+            map.drawcountries(linewidth=2)
+            map.drawmapboundary()
+            dy = 1
+            dx = 1
+            map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
+            map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
+            map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+            mpl.title(sim.name)
       self._finish_plot()

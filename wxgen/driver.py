@@ -62,6 +62,8 @@ def main(argv):
    sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + get_help_string(wxgen.aggregator))
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
+   sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
+   sp["verif"].add_argument('-lon', type=float, help="Lookup longitude")
 
    """
    Common options
@@ -124,6 +126,8 @@ def main(argv):
       plot.aggregator = get_aggregator(args)
       plot.clim = args.clim
       plot.cmap = args.cmap
+      plot.lat = args.lat
+      plot.lon = args.lon
       truth = None
       sims = None
       if args.truth is not None:

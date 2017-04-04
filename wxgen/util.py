@@ -138,6 +138,20 @@ def unixtime_to_date(unixtime):
    return date
 
 
+def correlation(ar1, ar2, axis):
+   """
+   Computes the correlation between two multi-dimensional arrays
+   """
+   ar1mean = np.resize(np.mean(ar1, axis=axis), ar1.shape)
+   ar2mean = np.resize(np.mean(ar2, axis=axis), ar2.shape)
+
+   cov = np.mean((ar1 - ar1mean) * (ar2 - ar2mean), axis=axis)
+   var1 = np.var(ar1, axis=axis)
+   var2 = np.var(ar2, axis=axis)
+
+   return cov / np.sqrt(var1) / np.sqrt(var2)
+
+
 def get_date(date, diff):
    """ Date calculation: Adds 'diff' to 'date'
 
@@ -166,3 +180,48 @@ def day_of_year(unixtimes):
    ar = np.zeros([len(unixtimes), 1], int)
    ar[:, 0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
    return ar
+
+
+def get_i_j(lats, lons, lat, lon):
+   """
+   Finds the nearest neighbour in a lat lon grid. If the point is outside the grid, the nearest
+   point within the grid is still returned.
+
+   Arguments:
+      lats (np.array): 2D array of latitudes
+      lons (np.array): 2D array of longitude
+      lat (float): Loopup latitude
+      lon (float): Loopup longitude
+
+   Returns:
+      I (int): First index into lats/lons arrays
+      J (int): Second index into lats/lons arrays
+   """
+   dist = distance(lat, lon, lats, lons)
+   indices = np.unravel_index(dist.argmin(), dist.shape)
+   X = lats.shape[0]
+   Y = lats.shape[1]
+   I = indices[0]
+   J = indices[1]
+   if(indices[0] == 0 or indices[0] >= X-1 or indices[1] == 0 or indices[1] >= Y-1):
+      warning("Lat/lon %g,%g outside grid" % (lat, lon))
+   return I, J
+
+
+def distance(lat1, lon1, lat2, lon2):
+   """
+   Computes the great circle distance between two points using the
+   haversine formula. Values can be vectors.
+   """
+   # Convert from degrees to radians
+   pi = 3.14159265
+   lon1 = lon1 * 2 * pi / 360
+   lat1 = lat1 * 2 * pi / 360
+   lon2 = lon2 * 2 * pi / 360
+   lat2 = lat2 * 2 * pi / 360
+   dlon = lon2 - lon1
+   dlat = lat2 - lat1
+   a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+   c = 2 * np.arcsin(np.sqrt(a))
+   distance = 6.367e6 * c
+   return distance
