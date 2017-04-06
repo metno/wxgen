@@ -4,6 +4,8 @@
 # [DEFAULT]
 # Suite: precise
 #
+.PHONY: dist
+
 default: nothing
 
 nothing:
@@ -17,17 +19,18 @@ coverage:
 test:
 	nosetests
 
-deb_dist: makefile
+dist: makefile
 	echo $(VERSION)
-	rm -rf deb_dist
-	python setup.py --command-packages=stdeb.command bdist_deb
-	cd deb_dist/wxgen-$(VERSION)/ || exit; debuild -S -sa
+	rm -rf dist
+	python setup.py sdist
+	python setup.py bdist_wheel
+	@ echo "Next, run 'twine upload dist/*'"
 
 clean:
 	python setup.py clean
 	rm -rf build/
 	find . -name '*.pyc' -delete
-	rm -rf deb_dist
+	rm -rf dist
 	rm -rf wxgen.egg-info
 
 lint:
