@@ -612,8 +612,8 @@ class Jump(Plot):
          for s in range(len(sims)):
             count = 0
             sim = sims[s]
-            values = np.zeros([9])
-            counts = np.zeros([9])
+            values = np.zeros([db_length-1])
+            counts = np.zeros([db_length-1])
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract_grid(traj)
@@ -630,6 +630,47 @@ class Jump(Plot):
          mpl.legend(loc="best")
          mpl.grid()
          mpl.ylim(ymin=0)
+      self._finish_plot()
+
+
+class TimeStat(Plot):
+   def plot(self, sims, truth):
+      if truth is not None:
+         sims += [truth]
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      X = 1
+      Y = len(Ivars)
+      for v in range(len(Ivars)):
+         Ivar = Ivars[v]
+         index = v+1
+         mpl.subplot(X, Y, index)
+         for s in range(len(sims)):
+            count = 0
+            sim = sims[s]
+            if self.timemod is None:
+               L = sim.length
+            else:
+               L = self.timemod
+            values = np.zeros([L])
+            counts = np.zeros([L])
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract_grid(traj)
+               for i in range(L):
+                  I = range(i, q.shape[0], L)
+                  values[i] += self.aggregator(self.transform(q[I, :, :, Ivar]))
+                  counts[i] += 1
+            values = values / counts
+            col = self._get_color(s, len(sims))
+            mpl.plot(range(L), values, '-o', color=col, label=sim.name)
+         mpl.xlabel("Lead time (days)")
+         mpl.ylabel("%s" % (self.aggregator.name().capitalize()))
+         mpl.legend(loc="best")
+         mpl.grid()
       self._finish_plot()
 
 
