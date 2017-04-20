@@ -12,69 +12,9 @@ import wxgen.version
 
 
 def main(argv):
-   parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
-   parser.add_argument('--version', action="version", version=wxgen.version.__version__)
-   subparsers = parser.add_subparsers(title="Choose one of these commands", dest="command")
+   parser, sp = get_parsers()
 
-   """
-   Simulation driver
-   """
-   sp = dict()
-   sp["sim"] = subparsers.add_parser('sim', help='Create simulated scenarios')
-   sp["sim"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories", required=True)
-   sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
-   sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
-   sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
-   sp["sim"].add_argument('-w', help="Weights for each variable when joining (comma-separated)", dest="weights")
-   sp["sim"].add_argument('-i', help="Initial state", dest="initial")
-   sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
-   sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
-
-   """
-   Truth trajetory driver
-   """
-   sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
-   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
-   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
-   sp["truth"].add_argument('-n', default=1, metavar="NUM", type=int, help="Number of trajectories (default 1)")
-   sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory (default as long as possible)")
-
-   for driver in ["sim", "truth"]:
-      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
-      sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
-      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
-      sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
-
-   """
-   Verification driver
-   """
-   sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
-   sp["verif"].add_argument('files', help="Input files", nargs="*")
-   sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
-   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric. One of: " + get_help_string(wxgen.plot), dest="metric", required=True)
-   sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
-   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
-   sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
-   sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
-   sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
-   sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
-   sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
-   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots. One of: " + get_help_string(wxgen.transform))
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + get_help_string(wxgen.aggregator))
-   sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
-   sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
-   sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
-   sp["verif"].add_argument('-lon', type=float, help="Lookup longitude")
-   sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
-
-   """
-   Common options
-   """
-   for driver in sp.keys():
-      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
-      sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
-
+   # Show help message when no options are provided
    if len(argv) < 2:
       parser.print_help()
       return
@@ -179,6 +119,79 @@ def main(argv):
       if args.files is not None:
          sims = [wxgen.database.Netcdf(file, None) for file in args.files]
       plot.plot(sims, truth)
+
+
+def get_parsers():
+   """ Sets up the argparser object for wxgen
+
+   Returns:
+      parser: The main argparse object
+      sp: A list of subparsers
+   """
+   parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
+   parser.add_argument('--version', action="version", version=wxgen.version.__version__)
+   subparsers = parser.add_subparsers(title="Choose one of these commands", dest="command")
+
+   """
+   Simulation driver
+   """
+   sp = dict()
+   sp["sim"] = subparsers.add_parser('sim', help='Create simulated scenarios')
+   sp["sim"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories", required=True)
+   sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
+   sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
+   sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
+   sp["sim"].add_argument('-w', help="Weights for each variable when joining (comma-separated)", dest="weights")
+   sp["sim"].add_argument('-i', help="Initial state", dest="initial")
+   sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
+   sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
+
+   """
+   Truth trajetory driver
+   """
+   sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
+   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
+   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
+   sp["truth"].add_argument('-n', default=1, metavar="NUM", type=int, help="Number of trajectories (default 1)")
+   sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory (default as long as possible)")
+
+   for driver in ["sim", "truth"]:
+      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
+      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
+      sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
+      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
+
+   """
+   Verification driver
+   """
+   sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
+   sp["verif"].add_argument('files', help="Input files", nargs="*")
+   sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
+   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric. One of: " + get_help_string(wxgen.plot), dest="metric", required=True)
+   sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
+   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
+   sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
+   sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
+   sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
+   sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
+   sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
+   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots. One of: " + get_help_string(wxgen.transform))
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + get_help_string(wxgen.aggregator))
+   sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
+   sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
+   sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
+   sp["verif"].add_argument('-lon', type=float, help="Lookup longitude")
+   sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
+
+   """
+   Common options
+   """
+   for driver in sp.keys():
+      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
+      sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
+
+   return parser, sp
 
 
 def get_db(args):
