@@ -178,7 +178,8 @@ def get_parsers():
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots", choices=get_module_names(wxgen.aggregator))
+   aggregators = [mod for mod in get_module_names(wxgen.aggregator) if mod != "quantile"]
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")

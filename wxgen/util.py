@@ -225,3 +225,12 @@ def distance(lat1, lon1, lat2, lon2):
    c = 2 * np.arcsin(np.sqrt(a))
    distance = 6.367e6 * c
    return distance
+
+
+def is_number(s):
+   """ Returns true if x is a scalar number """
+   try:
+      float(s)
+      return True
+   except ValueError:
+      return False
