@@ -139,7 +139,7 @@ def get_parsers():
    sp["sim"] = subparsers.add_parser('sim', help='Create simulated scenarios')
    sp["sim"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories", required=True)
    sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
-   sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states (currently only rmsd)", dest="metric")
+   sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states", dest="metric", choices=get_module_names(wxgen.metric))
    sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
    sp["sim"].add_argument('-w', help="Weights for each variable when joining (comma-separated)", dest="weights")
    sp["sim"].add_argument('-i', help="Initial state", dest="initial")
@@ -168,7 +168,7 @@ def get_parsers():
    sp["verif"] = subparsers.add_parser('verif', help='Verify trajectories')
    sp["verif"].add_argument('files', help="Input files", nargs="*")
    sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
-   sp["verif"].add_argument('-m', metavar="METRIC", help="Verification metric. One of: " + get_help_string(wxgen.plot), dest="metric", required=True)
+   sp["verif"].add_argument('-m', help="Verification metric", dest="metric", required=True, choices=get_module_names(wxgen.plot))
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
@@ -176,8 +176,8 @@ def get_parsers():
    sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
-   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots. One of: " + get_help_string(wxgen.transform))
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + get_help_string(wxgen.aggregator))
+   sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots", choices=get_module_names(wxgen.aggregator))
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
@@ -262,11 +262,11 @@ def get_aggregator(args):
    return aggregator
 
 
-def get_help_string(module):
+def get_module_names(module):
    """
-   Creates a string of options
+   Returns a list of strings, one for each class in the module
    """
-   return ','.join([x[0].lower() for x in module.get_all() if "wxgen." + x[0].lower() != module.__name__])
+   return [x[0].lower() for x in module.get_all() if "wxgen." + x[0].lower() != module.__name__]
 
 
 if __name__ == '__main__':
