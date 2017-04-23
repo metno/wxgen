@@ -616,16 +616,16 @@ class SortStat(Plot):
                L = self.timemod
             if L > 100:
                wxgen.util.error("Too many lines. Consider -tm.")
-            for i in range(L):
-               values = np.zeros([0])
-               for m in range(sim.num):
-                  traj = sim.get(m)
-                  q = sim.extract_grid(traj)
+            values = [np.zeros([0])]*L
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract_grid(traj)
+               for i in range(L):
                   I = range(i, q.shape[0], L)
-                  #values = np.append(values, self.aggregator(self.aggregator(self.transform(q[I, :, :, Ivar]),axis=2), axis=1).flatten())
-                  values = np.append(values, self.transform(q[I, :, :, Ivar]).flatten())
+                  values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+            for i in range(L):
                col = self._get_color(i, L)
-               mpl.plot(np.sort(values), np.linspace(0,1,len(values)), '-o', color=col, label="Day %d" % i, ms=0)
+               mpl.plot(np.sort(values[i]), np.linspace(0, 1, len(values[i])), '-o', color=col, label="Day %d" % i, ms=0)
             mpl.xlabel(sim.variables[Ivar].name)
             mpl.ylabel("Quantile")
             mpl.title(sim.name)
