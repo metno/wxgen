@@ -17,6 +17,7 @@ class LargeScale(object):
       else:
          self.model = model
       self.prejoin = None
+      self.policy = "random"
 
    def get(self, N, T, initial_state=None):
       """
@@ -156,7 +157,7 @@ class LargeScale(object):
          weights_v[I1] = 1.0/weights_v[I1]
          weights_v[I0] = 1e3
 
-      I_v = wxgen.util.random_weighted(weights_v)
+      I_v = wxgen.util.random_weighted(weights_v, self.policy)
       I = Itime[I_v]
 
       # Do a weighted random choice of the weights

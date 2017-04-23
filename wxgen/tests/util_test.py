@@ -26,5 +26,15 @@ class MyTest(unittest.TestCase):
       self.assertTrue(np.array_equal(new[:, 0], np.array([9, 4, 9, 4])))
       self.assertTrue(np.array_equal(new[:, 4], np.array([6, 1, 6, 1])))
 
+   def test_random_weighted(self):
+      weights = np.array([1,2,3])
+      for i in range(0, 5):
+         I = wxgen.util.random_weighted(weights, "top2")
+         self.assertTrue(I >= 1 and I <= 2)
+      weights = np.array([3,1,2])
+      I = wxgen.util.random_weighted(weights, "top1")
+      self.assertTrue(I == 0)
+
+
 if __name__ == '__main__':
    unittest.main()

@@ -8,19 +8,31 @@ DEBUG = False
 COLORS = {"red": 31, "yellow": 33, "green": 32}
 
 
-def random_weighted(weights):
+def random_weighted(weights, policy):
    """
    Randomly selects an index into an array based on weights
 
-   weights     A numpy array of weights
+   Arguments:
+      weights (np.array): An array of weights
+      policy (str): A randomization policy
+         'random': Randomly pick based using the weights as probabilities
+         'top<N>': e.g. top3, pick a random (unweighted) value from the top N
    """
-   acc = np.cumsum(weights) / np.sum(weights)
-   r = np.random.rand(1)
-   temp = np.where(acc < r)[0]
-   if len(temp) == 0:
-      I = 0
+   if policy == "random":
+      acc = np.cumsum(weights) / np.sum(weights)
+      r = np.random.rand(1)
+      temp = np.where(acc < r)[0]
+      if len(temp) == 0:
+         I = 0
+      else:
+         I = temp[-1]
+   elif len(policy) > 3 and policy[0:3] == "top" and is_number(policy[3:]):
+      N = int(policy[3:])
+      Isorted = np.argsort(weights)[::-1]
+      II = np.random.randint(min(len(Isorted), N))
+      I = Isorted[II]
    else:
-      I = temp[-1]
+      error("Invalid randomization policy '%s'" % policy)
    return I
 
 
