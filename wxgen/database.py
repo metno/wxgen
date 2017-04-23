@@ -163,6 +163,15 @@ class Database(object):
          self._data_agg_cache = np.mean(np.mean(self._data, axis=2), axis=1)
       return self._data_agg_cache
 
+   def get_wavelet_size(self):
+      if self.wavelet_levels == 0:
+         return 1, 1
+      Nlat = self._data.shape[1]
+      Nlon = self._data.shape[2]
+      NX = int(np.ceil(float(Nlat)/2**self.wavelet_levels))
+      NY = int(np.ceil(float(Nlon)/2**self.wavelet_levels))
+      return NX, NY
+
    @property
    def _data_matching(self):
       if self._data_matching_cache is None:
@@ -175,12 +184,9 @@ class Database(object):
             LT = self._data.shape[0]
             V = self._data.shape[3]
             M = self._data.shape[4]
-            Nlat = self._data.shape[1]
-            Nlon = self._data.shape[2]
             # data: lead_time, lat, lon, variable, member
-            NX = np.ceil(float(Nlat)/2**self.wavelet_levels)
-            NY = np.ceil(float(Nlon)/2**self.wavelet_levels)
-            N = int(NX*NY)
+            NX, NY = self.get_wavelet_size()
+            N = int(NX * NY)
             # print "Number of coefficients: %d" % N
             self._data_matching_cache = np.zeros([LT, V*N, M])
             for lt in range(self._data.shape[0]):

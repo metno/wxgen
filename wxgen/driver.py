@@ -39,7 +39,7 @@ def main(argv):
             wxgen.util.error("Initial state must match the number of variables (%d)" % (V))
 
       # Generate trajectories
-      metric = get_metric(args)
+      metric = get_metric(args, db)
       model = get_climate_model(args)
       generator = wxgen.generator.LargeScale(db, metric, model=model)
       generator.prejoin = args.prejoin
@@ -228,11 +228,17 @@ def get_db(args):
    return db
 
 
-def get_metric(args):
+def get_metric(args, db):
    if args.weights is not None:
       weights = np.array(wxgen.util.parse_numbers(args.weights))
-      # if len(weights) != len(db.variables):
-      #    wxgen.util.error("Weights must match the number of variables (%d)" % (V))
+      if args.wavelet_levels is not None:
+         """
+         If we are using wavelets, then the weights in the metric must be repeated such that each
+         wavelet component gets the same weight for a given variable.
+         """
+         NX, NY = db.get_wavelet_size()
+         N = int(NX * NY)
+         weights = np.repeat(weights, N)
 
       if args.metric == "rmsd":
          metric = wxgen.metric.Rmsd(weights)
