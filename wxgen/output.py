@@ -69,6 +69,8 @@ class Netcdf(Output):
    Writes the trajectories to a netcdf file.
    """
    def write(self, trajectories, database, scale, start_date=20170101):
+      if len(trajectories) == 0:
+         wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
 
       file.createDimension("time")
