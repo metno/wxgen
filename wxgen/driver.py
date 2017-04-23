@@ -51,7 +51,7 @@ def main(argv):
 
    elif args.command == "truth":
       db = get_db(args)
-      if args.n == 1:
+      if args.n is None and args.t is None:
         trajectories = [db.get_truth(args.start_date, args.end_date)]
       else:
          """
@@ -61,6 +61,10 @@ def main(argv):
 
          We only want to create scenarios that all start at the same time of the year.
          """
+         if args.n is None:
+            wxgen.util.error("-n not specified")
+         if args.t is None:
+            wxgen.util.error("-t not specified")
 
          # Determine allowable dates from database
          start_date = args.start_date
@@ -153,8 +157,8 @@ def get_parsers():
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
    sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
    sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
-   sp["truth"].add_argument('-n', default=1, metavar="NUM", type=int, help="Number of trajectories (default 1)")
-   sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory (default as long as possible)")
+   sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
+   sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
 
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
