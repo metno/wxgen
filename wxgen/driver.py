@@ -180,7 +180,7 @@ def get_parsers():
    sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
    sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
-   sp["verif"].add_argument('-ylim', help="y-axis limits: lower,upper")
+   sp["verif"].add_argument('-ylim', type=wxgen.util.parse_ints, help="y-axis limits: lower,upper")
    sp["verif"].add_argument('-ylog', help="Y-axis log scale", action="store_true")
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
