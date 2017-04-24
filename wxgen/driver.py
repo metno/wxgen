@@ -118,6 +118,7 @@ def main(argv):
       plot.lon = args.lon
       plot.timemod = args.timemod
       plot.timescale = args.timescale
+      plot.scale = args.scale
       truth = None
       sims = None
       if args.truth is not None:
@@ -163,7 +164,6 @@ def get_parsers():
    sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
 
    for driver in ["sim", "truth"]:
-      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
       sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
@@ -199,6 +199,7 @@ def get_parsers():
    for driver in sp.keys():
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
+      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
 
    return parser, sp
 

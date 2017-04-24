@@ -62,6 +62,7 @@ class Plot(object):
       self.lat = None
       self.lon = None
       self.timescale = 1
+      self.scale = "large"
 
    def plot(self, sims, truth):
       """
@@ -543,10 +544,16 @@ class Jump(Plot):
             counts = np.zeros([db_length-1])
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj)
+               if self.scale == "agg":
+                  q = sim.extract(traj)
+               else:
+                  q = sim.extract_grid(traj)
                for i in range(0, sim.length-1):
                   I = i % (db_length-1)
-                  curr = np.mean(np.abs(q[i, :, :, Ivar] - q[i+1, :, :, Ivar]))
+                  if self.scale == "agg":
+                     curr = np.mean(np.abs(q[i, Ivar] - q[i+1, Ivar]))
+                  else:
+                     curr = np.mean(np.abs(q[i, :, :, Ivar] - q[i+1, :, :, Ivar]))
                   values[I] += curr
                   counts[I] += 1
             values = values / counts
@@ -592,10 +599,16 @@ class TimeStat(Plot):
             values = [np.zeros([0])]*L
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj)
+               if self.scale == "agg":
+                  q = sim.extract(traj)
+               else:
+                  q = sim.extract_grid(traj)
                for i in range(L):
                   I = range(i, q.shape[0], L)
-                  values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+                  if self.scale == "agg":
+                     values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
+                  else:
+                     values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
             values_agg = np.zeros(L)
             for i in range(L):
                values_agg[i] = self.aggregator(values[i])
@@ -636,10 +649,16 @@ class SortStat(Plot):
             values = [np.zeros([0])]*L
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj)
+               if self.scale == "agg":
+                  q = sim.extract(traj)
+               else:
+                  q = sim.extract_grid(traj)
                for i in range(L):
                   I = range(i, q.shape[0], L)
-                  values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+                  if self.scale == "agg":
+                     values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
+                  else:
+                     values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
             for i in range(L):
                col = self._get_color(i, L)
                mpl.plot(np.sort(values[i]), np.linspace(0, 1, len(values[i])), '-o', color=col, label="Day %d" % i, ms=0)
