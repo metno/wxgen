@@ -77,12 +77,13 @@ class Max(Aggregator):
 
 class Std(Aggregator):
    def __call__(self, array, axis=None):
-      return np.std(array, axis=axis)
+      N = len(array)
+      return np.std(array, axis=axis, ddof=1)
 
 
 class Variance(Aggregator):
    def __call__(self, array, axis=None):
-      return np.var(array, axis=axis)
+      return np.var(array, axis=axis, ddof=1)
 
 
 class Iqr(Aggregator):
