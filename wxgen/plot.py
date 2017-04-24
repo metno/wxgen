@@ -224,7 +224,11 @@ class Timeseries(Plot):
             sim = sims[s]
             for m in range(sim.num):
                traj = sim.get(m)
-               values = sim.extract(traj)
+               if self.lat is not None and self.lon is not None:
+                  Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+                  values = sim.extract_grid(traj)[:, Xref, Yref, :]
+               else:
+                  values = sim.extract(traj)
                for i in range(len(Ivars)):
                   index = s*Y+i+1
                   mpl.subplot(X, Y, index)
