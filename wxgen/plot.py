@@ -573,18 +573,25 @@ class TimeStat(Plot):
                L = sim.length
             else:
                L = self.timemod
-            values = np.zeros([L])
-            counts = np.zeros([L])
+
+            """
+            Take values from all gridpoints, leadtimes, and members and then aggregate at the end.
+            This could potentially require a large memory footprint, but since the aggregation isn't
+            always just a sum, we have to load all data first, then aggregate (instead of
+            iteratively summing up values, without keeping all values in memory at once),
+            """
+            values = [np.zeros([0])]*L
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract_grid(traj)
                for i in range(L):
                   I = range(i, q.shape[0], L)
-                  values[i] += self.aggregator(self.transform(q[I, :, :, Ivar]))
-                  counts[i] += 1
-            values = values / counts
+                  values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+            values_agg = np.zeros(L)
+            for i in range(L):
+               values_agg[i] = self.aggregator(values[i])
             col = self._get_color(s, len(sims))
-            mpl.plot(range(L), values, '-o', color=col, label=sim.name)
+            mpl.plot(range(L), values_agg, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.aggregator.name().capitalize()))
          mpl.legend(loc="best")
