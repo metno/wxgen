@@ -325,7 +325,7 @@ class Variance(Plot):
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
-      self._normalize = False
+      self._normalize_variance = True
       self._normalization_window = 11
 
    def plot(self, sims, truth):
@@ -347,16 +347,10 @@ class Variance(Plot):
          if truth is not None:
             traj = truth.get(0)
             values = truth.extract(traj)[:, Ivar]
-            # I = np.where(np.isnan(values) == 0)[0]
-            # values = values[I]
             truth_var = self.compute_truth_variance(values, scales)
             self._plot_truth(scales, truth_var, label="Truth")
-            # mpl.plot(scales, truth_var, 'o-', label="Truth")
             mpl.title(truth.variables[Ivar].name)
-            if self._normalize:
-               mpl.ylabel("Normalized variance")
-            else:
-               mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
+            mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
 
          if sims is not None:
             for s in range(len(sims)):
@@ -391,15 +385,10 @@ class Variance(Plot):
       # Create 1-year long segments
       truth = self.create_yearly_series(array)
 
-      """
-      Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
-      otherwise the fcst variance is higher because obs gets the advantage of using its own
-      climatology.
-      """
       clim = wxgen.util.climatology(truth, self._normalization_window)
       std = 1
-      if self._normalize:
-         std = np.nanstd(truth, axis=1)
+      if self._normalize_variance and truth.shape[1] > 2:
+            std = np.nanstd(truth, axis=1)
 
       N = truth.shape[1]
       for i in range(0, N):
@@ -430,15 +419,35 @@ class Variance(Plot):
       import astropy.convolution
       N = array.shape[1]
 
+      """
+      Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+      otherwise the fcst variance is higher because obs gets the advantage of using its own
+      climatology.
+      """
       clim = wxgen.util.climatology(array, self._normalization_window)
-      std = 1
-      if self._normalize:
-         std = np.nanstd(array, axis=1)
       values = copy.deepcopy(array)
       for i in range(0, N):
-         values[:, i] = (values[:, i] - clim)/std
+         values[:, i] = (values[:, i] - clim)
 
-      # Compute variance
+      if self._normalize_variance and array.shape[1] > 2:
+         """
+         This removes any seasonally varying variance, which can cause the 1-year variance to be
+         larger than the 1/2 year variance, because the 1/2 year variance samples the summer months
+         more often than the winter months, because of the windowing approach. Also, this
+         normalization does not guarantee that the std of the whole timeseries is 1, therefore in
+         the plot, don't expect the first point to be 1.
+
+         The timeseries is scaled up again to match the average anomaly variance in the timeseries.
+         """
+         std = np.nanstd(array, axis=1)
+         meanstd = np.nanmean(std)
+         for i in range(0, N):
+            values[:, i] = values[:, i] / std * meanstd
+
+      """
+      Compute the variance at different time scales. This is done using a convolution with
+      different window lengths. Remove the edges since they do not have a full convolution
+      """
       variance = np.nan*np.zeros(len(scales))
       for i in range(0, len(scales)):
          s = scales[i]
