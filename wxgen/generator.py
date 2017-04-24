@@ -40,7 +40,7 @@ class LargeScale(object):
 
       for n in range(0, N):
          wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
-         trajectory_indices = np.zeros([T, 2], int)
+         trajectory_indices = -1+np.zeros([T, 2], int)
 
          time = wxgen.util.date_to_unixtime(20170101)
          climate_state = self.model.get([time])[0]
@@ -61,10 +61,13 @@ class LargeScale(object):
          that has a starting state that is similar to the requested initial state. When repeating,
          overwrite the end state of the previous segment. This means that if the segment is 10 days
          long, we are only using 9 days of the segment.
+
+         If the last segment fits exactly, we do not need to search for a new state to fill in the
+         last day with new data. This is the case when start == T-1.
          """
          start = 0  # Starting index into output trajectory where we are inserting a segment
          join = 0
-         while start < T:
+         while start < T-1:
             climate_state = self.model.get([time])[0]
 
             """
@@ -75,17 +78,16 @@ class LargeScale(object):
             if join > 0:
                end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*86400
                search_times = [end_times - 5*86400, end_times + 5*86400]
-            # print "Searching for state: ", state_curr
             wxgen.util.debug("Found random segment", color="yellow")
+            wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
             segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
             indices_curr = segment_curr.indices
-            # print "Found: ", self._database.extract_matching(segment_curr)[0, :]
 
             """
             Account for the fact that the desired trajectory length is not a whole multiple of the
             segment length: Only take the first part of the segment if needed.
             """
-            end = min(start + Tsegment-1, T)  # Ending index
+            end = min(start + Tsegment, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
@@ -100,6 +102,8 @@ class LargeScale(object):
             if self.prejoin > 0:
                join = (join + 1) % self.prejoin
 
+         if len(np.where(trajectory_indices == -1)[0]) > 0:
+            wxgen.util.error("Internal error. The trajectory was not properly filled")
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
          wxgen.util.debug("Trajectory: %s" % trajectory)
          trajectories.append(trajectory)
@@ -161,10 +165,10 @@ class LargeScale(object):
       I = Itime[I_v]
 
       # Do a weighted random choice of the weights
+      wxgen.util.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[0, :, I]]))
       wxgen.util.debug("Date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
       wxgen.util.debug("Climate: %s" % (climate_state))
       wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
-      wxgen.util.debug("Data: %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[0, :, I]]))
       return self._database.get(I)
 
 
