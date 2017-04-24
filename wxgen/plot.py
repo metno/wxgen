@@ -232,6 +232,7 @@ class Timeseries(Plot):
                   mpl.ylabel(sim.variables[Ivar].name)
                   mpl.title(sim.name)
                   mpl.xlabel("Time (days)")
+                  mpl.grid()
 
       if truth is not None:
          traj = truth.get(0)
@@ -242,7 +243,7 @@ class Timeseries(Plot):
             Ivar = Ivars[i]
             mpl.plot(values[:, Ivar], lw=5, color="red")
             mpl.ylabel(truth.variables[Ivar].name)
-      mpl.grid()
+            mpl.grid()
 
       self._finish_plot()
 
