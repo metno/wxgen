@@ -442,7 +442,7 @@ class Variance(Plot):
       variance = np.nan*np.zeros(len(scales))
       for i in range(0, len(scales)):
          s = scales[i]
-         if array.shape[0] > s:
+         if array.shape[0] >= s:
             c = [1.0/s] * s
             sim_c = np.zeros([values.shape[0], N], float)
             for e in range(0, N):
