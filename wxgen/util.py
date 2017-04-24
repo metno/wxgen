@@ -246,3 +246,27 @@ def is_number(s):
       return True
    except ValueError:
       return False
+
+
+def climatology(array, window=1):
+   """
+   Arguments:
+      array (np.array): 2D array with dimensions leadtime, member
+      window (int): Use an average across this many days
+
+   Returns:
+      np.array: 1D array with climatology for each leadtime
+   """
+   import astropy.convolution
+   if window < 1:
+      wxgen.util.error("Cannot have a window size of less than 1")
+   elif window == 1:
+      clim = np.nanmean(array, axis=1)
+   else:
+      # extend: Use the first and last values as padding outside the array
+      clim = astropy.convolution.convolve(np.nanmean(array, axis=1), 1.0/window*np.ones(window), "extend")
+      # reflect: reflect the array outside, i.e. [0,1,2,3] becomes [1,0, 0,1,2,3, 3,2]
+      # scipy doesn't deal with missing values
+      # import scipy.ndimage
+      # clim = scipy.ndimage.convolve(np.nanmean(array, axis=1), 1.0/window*np.ones(window), mode="reflect")
+   return clim

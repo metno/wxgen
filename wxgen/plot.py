@@ -390,10 +390,12 @@ class Variance(Plot):
       # Create 1-year long segments
       truth = self.create_yearly_series(array)
 
-      # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
-      # otherwise the fcst variance is higher because obs gets the advantage of using its own
-      # climatology.
-      clim = np.nanmean(truth, axis=1)
+      """
+      Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+      otherwise the fcst variance is higher because obs gets the advantage of using its own
+      climatology.
+      """
+      clim = wxgen.util.climatology(truth)
       std = 1
       if self._normalize:
          std = np.nanstd(truth, axis=1)
@@ -427,10 +429,7 @@ class Variance(Plot):
       import astropy.convolution
       N = array.shape[1]
 
-      # Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
-      # otherwise the fcst variance is higher because obs gets the advantage of using its own
-      # climatology.
-      clim = np.nanmean(array, axis=1)
+      clim = wxgen.util.climatology(array, 11)
       std = 1
       if self._normalize:
          std = np.nanstd(array, axis=1)
