@@ -326,6 +326,7 @@ class Variance(Plot):
       Plot. __init__(self)
       self._sets_xticks = True
       self._normalize = False
+      self._normalization_window = 11
 
    def plot(self, sims, truth):
       if self.thresholds is None:
@@ -395,7 +396,7 @@ class Variance(Plot):
       otherwise the fcst variance is higher because obs gets the advantage of using its own
       climatology.
       """
-      clim = wxgen.util.climatology(truth)
+      clim = wxgen.util.climatology(truth, self._normalization_window)
       std = 1
       if self._normalize:
          std = np.nanstd(truth, axis=1)
@@ -429,7 +430,7 @@ class Variance(Plot):
       import astropy.convolution
       N = array.shape[1]
 
-      clim = wxgen.util.climatology(array, 11)
+      clim = wxgen.util.climatology(array, self._normalization_window)
       std = 1
       if self._normalize:
          std = np.nanstd(array, axis=1)
