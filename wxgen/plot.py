@@ -219,13 +219,17 @@ class Timeseries(Plot):
       if sims is not None:
          X += len(sims)
       Y = len(Ivars)
+      use_single_gridpoint = self.lat is not None and self.lon is not None
       if sims is not None:
          for s in range(len(sims)):
             sim = sims[s]
+            if use_single_gridpoint:
+               # Find nearest neighbour
+               Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+               wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
             for m in range(sim.num):
                traj = sim.get(m)
-               if self.lat is not None and self.lon is not None:
-                  Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+               if use_single_gridpoint:
                   values = sim.extract_grid(traj)[:, Xref, Yref, :]
                else:
                   values = sim.extract(traj)
