@@ -109,16 +109,16 @@ class Netcdf(Output):
 
       # Latitude
       if scale == "large":
-         var_lat = file.createVariable("latitude", "f4", (yname))
+         var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
          var_lat.standard_name = "latitude"
-         var_lat[:] = database.lats[:, 0]
+         var_lat[:] = database.lats
 
          # Longitude
-         var_lon = file.createVariable("longitude", "f4", (xname))
+         var_lon = file.createVariable("longitude", "f4", (yname, xname))
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
-         var_lon[:] = database.lons[0, :]
+         var_lon[:] = database.lons
       elif scale == "small":
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
