@@ -35,6 +35,8 @@ class LargeScale(object):
       trajectories = list()
       V = len(self._database.variables)
       Tsegment = self._database.length
+      if Tsegment < 2:
+         wxgen.util.error("Cannot create simulation with a database with segments shorter than 2 days")
       X = self._database.X
       Y = self._database.Y
 
