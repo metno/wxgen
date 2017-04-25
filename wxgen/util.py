@@ -28,9 +28,15 @@ def random_weighted(weights, policy):
          I = temp[-1]
    elif len(policy) > 3 and policy[0:3] == "top" and is_number(policy[3:]):
       N = int(policy[3:])
-      Isorted = np.argsort(weights)[::-1]
-      II = np.random.randint(min(len(Isorted), N))
-      I = Isorted[II]
+      if N >= len(weights):
+         return np.random.randint(len(weights))
+      else:
+         """ Expand the search if there are ties in the top scores """
+         Isorted = np.argsort(weights)[::-1]
+         min_weight = weights[Isorted[N-1]]
+         Nsearch = np.sum(weights >= min_weight)
+         II = np.random.randint(Nsearch)
+         I = Isorted[II]
    else:
       error("Invalid randomization policy '%s'" % policy)
    return I
