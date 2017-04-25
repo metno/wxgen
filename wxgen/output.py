@@ -31,6 +31,8 @@ class Output(object):
    def __init__(self, filename):
       self.filename = filename
       self.which_vars = None
+      self.lat = None
+      self.lon = None
 
    def write(self, trajectories, database, scale):
       """ Writes trajectories to file
@@ -75,6 +77,7 @@ class Netcdf(Output):
 
       file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
+      use_single_gridpoint = self.lat is not None and self.lon is not None
       if scale != "agg":
          if scale == "large":
             xname = "longitude"
@@ -82,8 +85,12 @@ class Netcdf(Output):
          elif scale == "small":
             xname = "x"
             yname = "y"
-         file.createDimension(yname, database.Y)
-         file.createDimension(xname, database.X)
+         if use_single_gridpoint:
+            file.createDimension(yname, 1)
+            file.createDimension(xname, 1)
+         else:
+            file.createDimension(yname, database.Y)
+            file.createDimension(xname, database.X)
 
       # Time
       var_time = file.createVariable("time", "i4", ("time"))
@@ -112,13 +119,19 @@ class Netcdf(Output):
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
          var_lat.standard_name = "latitude"
-         var_lat[:] = database.lats
+         if use_single_gridpoint:
+            var_lat[:] = self.lat
+         else:
+            var_lat[:] = database.lats
 
          # Longitude
          var_lon = file.createVariable("longitude", "f4", (yname, xname))
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
-         var_lon[:] = database.lons
+         if use_single_gridpoint:
+            var_lon[:] = self.lon
+         else:
+            var_lon[:] = database.lons
       elif scale == "small":
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
@@ -144,6 +157,8 @@ class Netcdf(Output):
          vars[var.name].grid_mapping = "projection_regular_ll"
 
       # Write forecast variables
+      if use_single_gridpoint:
+         Xref, Yref = wxgen.util.get_i_j(database.lats, database.lons, self.lat, self.lon)
       for m in range(0, len(trajectories)):
          if scale == "agg":
             values = database.extract(trajectories[m])
@@ -154,7 +169,10 @@ class Netcdf(Output):
             # Insert a singleton dimension at dimension index 1
             values = np.expand_dims(values, 1)
             for v in range(0, len(variables)):
-               vars[variables[v].name][:, m, :, :] = values[:, :, :, :, v]
+               if use_single_gridpoint:
+                  vars[variables[v].name][:, m, :, :] = values[:, :, Xref, Yref, v]
+               else:
+                  vars[variables[v].name][:, m, :, :] = values[:, :, :, :, v]
 
       # Global attributes
       file.Conventions = "CF-1.0"

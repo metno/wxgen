@@ -48,6 +48,8 @@ def main(argv):
 
       # Create output
       output = wxgen.output.Netcdf(args.filename)
+      output.lat = args.lat
+      output.lon = args.lon
       output.write(trajectories, db, args.scale)
 
    elif args.command == "truth":
@@ -98,6 +100,8 @@ def main(argv):
                wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
 
       output = wxgen.output.Netcdf(args.filename)
+      output.lat = args.lat
+      output.lon = args.lon
       output.write(trajectories, db, args.scale)
 
    elif args.command == "verif":
@@ -188,8 +192,6 @@ def get_parsers():
    sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
-   sp["verif"].add_argument('-lat', type=float, help="Lookup latitude")
-   sp["verif"].add_argument('-lon', type=float, help="Lookup longitude")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
    sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
 
@@ -200,6 +202,8 @@ def get_parsers():
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
       sp[driver].add_argument('-s', default="large", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
+      sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
 
    return parser, sp
 
