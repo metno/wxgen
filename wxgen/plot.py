@@ -449,9 +449,12 @@ class Variance(Plot):
          The timeseries is scaled up again to match the average anomaly variance in the timeseries.
          """
          std = np.nanstd(array, axis=1)
-         meanstd = np.nanmean(std)
-         for i in range(0, N):
-            values[:, i] = values[:, i] / std * meanstd
+         if np.min(std) == 0:
+            wxgen.util.warning("Standard deviation of 0 at one or more days. Not normalizing variance")
+         else:
+            meanstd = np.nanmean(std)
+            for i in range(0, N):
+               values[:, i] = values[:, i] / std * meanstd
 
       """
       Compute the variance at different time scales. This is done using a convolution with
