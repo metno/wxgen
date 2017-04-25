@@ -199,7 +199,7 @@ def get_parsers():
    for driver in sp.keys():
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
-      sp[driver].add_argument('-s', default="agg", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-s', default="large", help="Output scale (agg, large, small)", dest="scale")
 
    return parser, sp
 
