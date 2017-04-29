@@ -10,11 +10,15 @@ Weather generator software
 produces **gridded** output for **multiple variables** (e.g. temperature, precipitation) and aims to
 have realistic covariances in space, time, and across variables.
 
-The generator uses a database of past weather model simulations (e.g 15 day forecasts) and combines the segments 
-stochastically. Longer trajectories are created by concatenating the shorter trajectories from the database.
-This is done by matching the end state of one trajectory with the beginning state of another. The
-matching is done using a specified metric, such as the sum of the square differences between states
-(with some kind of normalization strategy as each atmospheric variable has different variances).
+The generator uses a database of past weather model simulations (e.g 15 day forecasts) and combines
+the segments stochastically. Longer trajectories are created by concatenating the shorter
+trajectories from the database.  This is done by matching the end state of one trajectory with the
+beginning state of another. The matching is done using a specified metric, such as the sum of the
+square differences between states (with some kind of normalization strategy as each atmospheric
+variable has different variances).
+
+Checkout the wiki page at https://github.com/metno/wxgen/wiki for more information about how to run
+the program.
 
 Installation
 ------------
