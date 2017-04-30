@@ -81,7 +81,7 @@ def get_flag_string(flags, use_elif=True):
    else:
       s += 'if '
    s += '[ "$cur" = "" ] || [[ "$cur" =~ -* ]]; then\n'
-   s += '      COMPREPLY=( $( compgen -W "'
+   s += '      COMPREPLY=( $( compgen -f -W "'
    for flag in flags:
       s += '%s ' % flag
    s += '" -- $cur ) )'
