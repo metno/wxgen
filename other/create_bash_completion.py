@@ -67,7 +67,7 @@ def get_option_string(flag, options, use_elif=True):
       s += 'elif '
    else:
       s += 'if '
-   s += '[ "$prev" = "-m" ]; then\n'
+   s += '[ "$prev" = "' + flag + '" ]; then\n'
    s += '      COMPREPLY=( $( compgen -W "'
    for option in options:
       s += '%s ' % option
