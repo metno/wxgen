@@ -544,7 +544,10 @@ class Jump(Plot):
 
       X = 1
       Y = len(Ivars)
-      db_length = 10
+      if self.timemod is None:
+         L = sim.length
+      else:
+         L = self.timemod
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          index = v+1
@@ -552,8 +555,8 @@ class Jump(Plot):
          for s in range(len(sims)):
             count = 0
             sim = sims[s]
-            values = np.zeros([db_length-1])
-            counts = np.zeros([db_length-1])
+            values = np.zeros([L-1])
+            counts = np.zeros([L-1])
             for m in range(sim.num):
                traj = sim.get(m)
                if self.scale == "agg":
@@ -561,7 +564,7 @@ class Jump(Plot):
                else:
                   q = sim.extract_grid(traj)
                for i in range(0, sim.length-1):
-                  I = i % (db_length-1)
+                  I = i % (L-1)
                   if self.scale == "agg":
                      curr = np.mean(np.abs(q[i, Ivar] - q[i+1, Ivar]))
                   else:
@@ -570,7 +573,7 @@ class Jump(Plot):
                   counts[I] += 1
             values = values / counts
             col = self._get_color(s, len(sims))
-            mpl.plot(np.arange(0.5, db_length - 0.5), values, '-o', color=col, label=sim.name)
+            mpl.plot(np.arange(0.5, L - 0.5), values, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
