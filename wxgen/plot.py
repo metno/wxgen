@@ -372,12 +372,13 @@ class Variance(Plot):
                   sim_values[:, m] = q[:, Ivar]
                sim_var = self.compute_sim_variance(sim_values, scales)
                mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
+               mpl.ylabel("Variance ($%s^s$)" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
          # Include the first one above the limits
-         if len(I) < len(ticks):
-           I = np.append(I, I[-1]+1)
+         # if len(I) < len(ticks):
+         #   I = np.append(I, I[-1]+1)
 
          mpl.gca().set_xticks(ticks[I])
          mpl.gca().set_xticklabels(labels)
