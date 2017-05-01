@@ -126,9 +126,9 @@ def main(argv):
       truth = None
       sims = None
       if args.truth is not None:
-         truth = wxgen.database.Netcdf(args.truth, None)
+         truth = wxgen.database.Netcdf(args.truth, None, members=args.members)
       if args.files is not None:
-         sims = [wxgen.database.Netcdf(file, None) for file in args.files]
+         sims = [wxgen.database.Netcdf(file, None, members=args.members) for file in args.files]
       plot.plot(sims, truth)
 
 
@@ -194,6 +194,7 @@ def get_parsers():
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
    sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
+   sp["verif"].add_argument('-e', type=wxgen.util.parse_numbers, help="Only use these members", dest="members")
 
    """
    Common options

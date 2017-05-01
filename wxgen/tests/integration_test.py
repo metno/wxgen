@@ -90,6 +90,10 @@ class IntegrationTest(unittest.TestCase):
       self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")
       self.run_with_output("wxgen truth -db examples/database.nc -n 2 -t 10")
 
+   def test_member_subset(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 5 -t 20")
+      self.run_with_image("wxgen verif %s -m timeseries -e 0,2:3" % sim_filename)
+
    def test_README(self):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 10 -t 100")
       file = netCDF4.Dataset(sim_filename, 'r')

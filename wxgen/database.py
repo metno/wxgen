@@ -34,10 +34,11 @@ class Database(object):
       _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
       _data_matching (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
-   def __init__(self, model=None):
+   def __init__(self, model=None, members=None):
       self._data_agg_cache = None
       self._data_matching_cache = None
       self.wavelet_levels = 0
+      self.members = members
       if model is None:
          self.model = wxgen.climate_model.Bin(10)
       else:
@@ -265,13 +266,13 @@ class Netcdf(Database):
    where variable_name is one or more names of weather variables. Forecast_reference_time is
    optional, i.e. both the variable and dimension could be missing.
    """
-   def __init__(self, filename, vars=None, model=None):
+   def __init__(self, filename, vars=None, model=None, members=None):
       """
       Arguments:
          filename (str): Load data from this file
          vars (list): List of indices for which variables to use
       """
-      Database.__init__(self, model)
+      Database.__init__(self, model, members)
       self.fullname = filename
       self._file = netCDF4.Dataset(filename)
 
@@ -302,9 +303,14 @@ class Netcdf(Database):
 
       # Load data
       self.length = self._file.dimensions["time"].size
-      self._members = self._file.dimensions["ensemble_member"].size
+
+      # Determine which members to use
       V = len(self.variables)
-      M = self._members
+      if self.members is None:
+         num = self._file.dimensions["ensemble_member"].size
+         self.members = range(num)
+      M = len(self.members)
+
       has_frt = True
       if "forecast_reference_time" in self._file.dimensions:
          D = self._file.dimensions["forecast_reference_time"].size
@@ -363,18 +369,19 @@ class Netcdf(Database):
          if var.name == "precipitation_amount":
             temp[temp < 0] = 0
          index = 0
-         for d in range(0, D):
+         for d in range(D):
             for m in range(0, M):
+               Im = self.members[m]
                if is_spatial:
                   if has_frt:
-                     self._data[:, :, :, v, index] = temp[Itimes[d], :, m, :, :]
+                     self._data[:, :, :, v, index] = temp[Itimes[d], :, Im, :, :]
                   else:
-                     self._data[:, :, :, v, index] = temp[:, m, :, :]
+                     self._data[:, :, :, v, index] = temp[:, Im, :, :]
                else:
                   if has_frt:
-                     self._data[:, :, :, v, index] = np.reshape(temp[Itimes[d], :, m], [T, Y, X])
+                     self._data[:, :, :, v, index] = np.reshape(temp[Itimes[d], :, Im], [T, Y, X])
                   else:
-                     self._data[:, :, :, v, index] = np.reshape(temp[:, m], [T, Y, X])
+                     self._data[:, :, :, v, index] = np.reshape(temp[:, Im], [T, Y, X])
                index = index + 1
 
       # If one or more values are missing for a member, set all values to nan
@@ -384,7 +391,7 @@ class Netcdf(Database):
             self._data[:, :, :, :, e] = np.nan
             wxgen.util.debug("Removing member %d because of %d missing values" % (e, NM))
 
-      self.inittimes = np.repeat(times, self._members)
+      self.inittimes = np.repeat(times, M)
 
       self.climate_states = self.model.get(self.inittimes)
       self._file.close()
