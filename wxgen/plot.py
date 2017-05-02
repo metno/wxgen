@@ -544,10 +544,6 @@ class Jump(Plot):
 
       X = 1
       Y = len(Ivars)
-      if self.timemod is None:
-         L = sim.length
-      else:
-         L = self.timemod
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          index = v+1
@@ -555,6 +551,10 @@ class Jump(Plot):
          for s in range(len(sims)):
             count = 0
             sim = sims[s]
+            if self.timemod is None:
+               L = sim.length
+            else:
+               L = self.timemod
             values = np.zeros([L-1])
             counts = np.zeros([L-1])
             for m in range(sim.num):
