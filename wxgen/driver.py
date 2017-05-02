@@ -156,7 +156,7 @@ def get_parsers():
    sp["sim"].add_argument('-i', help="Initial state", dest="initial")
    sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
    sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
-   sp["sim"].add_argument('-p', default="random", metavar="POLICY", help="Randomization policy. One of 'random', 'top<N>'", dest="policy")
+   sp["sim"].add_argument('-p', default="top5", metavar="POLICY", help="Randomization policy. One of 'random', 'top<N>'", dest="policy")
 
    """
    Truth trajetory driver
