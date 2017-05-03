@@ -2,6 +2,7 @@ import numpy as np
 import calendar
 import datetime
 import sys
+import copy
 
 
 DEBUG = False
@@ -276,3 +277,54 @@ def climatology(array, window=1):
       # import scipy.ndimage
       # clim = scipy.ndimage.convolve(np.nanmean(array, axis=1), 1.0/window*np.ones(window), mode="reflect")
    return clim
+
+
+def nanpercentile(data, pers):
+   I = np.where(np.isnan(data.flatten()) == 0)[0]
+   p = np.nan
+   if(len(I) > 0):
+      p = np.percentile(data.flatten()[I], pers)
+   return p
+
+
+def normalize(array, window=11, normalize_variance=True):
+   """
+   Arguments:
+      array (np.array): 2D array (time, member)
+      window (int): Window length to compute climatology
+      normalize_variance (bool): Adjust variance
+
+   Returns:
+      np.array: Array of normalized values (same size as input array)
+   """
+   N = array.shape[1]
+
+   """
+   Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
+   otherwise the fcst variance is higher because obs gets the advantage of using its own
+   climatology.
+   """
+   clim = climatology(array, window)
+   values = copy.deepcopy(array)
+   for i in range(0, N):
+      values[:, i] = (values[:, i] - clim)
+
+   if normalize_variance and array.shape[1] > 2:
+      """
+      This removes any seasonally varying variance, which can cause the 1-year variance to be
+      larger than the 1/2 year variance, because the 1/2 year variance samples the summer months
+      more often than the winter months, because of the windowing approach. Also, this
+      normalization does not guarantee that the std of the whole timeseries is 1, therefore in
+      the plot, don't expect the first point to be 1.
+
+      The timeseries is scaled up again to match the average anomaly variance in the timeseries.
+      """
+      std = np.nanstd(array, axis=1)
+      if np.min(std) == 0:
+         wxgen.util.warning("Standard deviation of 0 at one or more days. Not normalizing variance")
+      else:
+         meanstd = np.nanmean(std)
+         for i in range(0, N):
+            values[:, i] = values[:, i] / std * meanstd
+
+   return values

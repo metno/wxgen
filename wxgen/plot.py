@@ -9,7 +9,6 @@ import wxgen.aggregator
 import matplotlib.dates
 import scipy.ndimage
 import datetime
-import copy
 
 
 def get_all():
@@ -394,15 +393,8 @@ class Variance(Plot):
       import astropy.convolution
       # Create 1-year long segments
       truth = self.create_yearly_series(array)
-
-      clim = wxgen.util.climatology(truth, self._normalization_window)
-      std = 1
-      if self._normalize_variance and truth.shape[1] > 2:
-            std = np.nanstd(truth, axis=1)
-
+      truth = wxgen.util.normalize(truth, self._normalization_window, self._normalize_variance)
       N = truth.shape[1]
-      for i in range(0, N):
-         truth[:, i] = (truth[:, i] - clim)/std
 
       # Compute variance
       variance = np.zeros(len(scales))
@@ -429,33 +421,7 @@ class Variance(Plot):
       import astropy.convolution
       N = array.shape[1]
 
-      """
-      Remove climatology so we can look at annomalies. Use separate obs and fcst climatology
-      otherwise the fcst variance is higher because obs gets the advantage of using its own
-      climatology.
-      """
-      clim = wxgen.util.climatology(array, self._normalization_window)
-      values = copy.deepcopy(array)
-      for i in range(0, N):
-         values[:, i] = (values[:, i] - clim)
-
-      if self._normalize_variance and array.shape[1] > 2:
-         """
-         This removes any seasonally varying variance, which can cause the 1-year variance to be
-         larger than the 1/2 year variance, because the 1/2 year variance samples the summer months
-         more often than the winter months, because of the windowing approach. Also, this
-         normalization does not guarantee that the std of the whole timeseries is 1, therefore in
-         the plot, don't expect the first point to be 1.
-
-         The timeseries is scaled up again to match the average anomaly variance in the timeseries.
-         """
-         std = np.nanstd(array, axis=1)
-         if np.min(std) == 0:
-            wxgen.util.warning("Standard deviation of 0 at one or more days. Not normalizing variance")
-         else:
-            meanstd = np.nanmean(std)
-            for i in range(0, N):
-               values[:, i] = values[:, i] / std * meanstd
+      values = wxgen.util.normalize(array, self._normalization_window, self._normalize_variance)
 
       """
       Compute the variance at different time scales. This is done using a convolution with
