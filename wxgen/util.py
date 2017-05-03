@@ -223,7 +223,7 @@ def get_i_j(lats, lons, lat, lon):
    I = indices[0]
    J = indices[1]
    if(indices[0] == 0 or indices[0] >= X-1 or indices[1] == 0 or indices[1] >= Y-1):
-      warning("Lat/lon %g,%g outside grid" % (lat, lon))
+      debug("Lat/lon %g,%g outside grid" % (lat, lon))
    return I, J
 
 
