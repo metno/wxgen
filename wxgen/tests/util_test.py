@@ -26,7 +26,9 @@ class MyTest(unittest.TestCase):
       self.assertTrue(np.array_equal(new[:, 0], np.array([9, 4, 9, 4])))
       self.assertTrue(np.array_equal(new[:, 4], np.array([6, 1, 6, 1])))
 
-   def test_random_weighted(self):
+
+class TestRandomWeighted(unittest.TestCase):
+   def test_simple(self):
       weights = np.array([1, 2, 3])
       for i in range(0, 5):
          I = wxgen.util.random_weighted(weights, "top2")
@@ -34,6 +36,10 @@ class MyTest(unittest.TestCase):
       weights = np.array([3, 1, 2])
       I = wxgen.util.random_weighted(weights, "top1")
       self.assertTrue(I == 0)
+
+   def test_top5_ties(self):
+      weights = np.array([0, 3, 1, 3, 1, 3, 1, 3, 1, 3])
+      I = wxgen.util.random_weighted(weights, "top2")
 
 
 class TestClimatology(unittest.TestCase):
