@@ -441,6 +441,70 @@ class Variance(Plot):
       return variance
 
 
+class Autocorr(Plot):
+   def __init__(self):
+      Plot. __init__(self)
+      self._sets_xticks = True
+      self._normalize_variance = True
+      self._normalization_window = 11
+
+   def plot(self, sims, truth):
+      if self.thresholds is None:
+         scales = [1, 2, 3, 5, 7, 11, 15, 30, 45, 60, 180]
+      else:
+         scales = self.thresholds
+
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+      for i in range(len(Ivars)):
+         Ivar = Ivars[i]
+         mpl.subplot(1, len(Ivars), i+1)
+         for s in range(len(sims)):
+            sim = sims[s]
+            sim_values = np.zeros([sim.length, sim.num])
+            col = self._get_color(s, len(sims))
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract(traj)
+               sim_values[:, m] = q[:, Ivar]
+            sim_var = self.compute_autocorr(sim_values, scales)
+            mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
+            mpl.ylabel("Autocorrelation ($%s^s$)" % sim.variables[Ivar].units)
+         ticks = np.array([1, 7, 30, 365])
+         labels = ["day", "week", "month", "year"]
+         I = np.where(ticks < mpl.xlim()[1])[0]
+         # Include the first one above the limits
+         if len(I) < len(ticks):
+            I = np.append(I, I[-1]+1)
+
+         mpl.gca().set_xticks(ticks[I])
+         mpl.gca().set_xticklabels(labels)
+         mpl.xlabel("Time scale (days)")
+         mpl.grid()
+      mpl.legend()
+      self._finish_plot()
+
+   def compute_autocorr(self, array, scales):
+      """
+      Arguments:
+         array (np.array): 2D array (time, member)
+         scales (list): List of time lengths
+
+      Returns:
+         list: Auto-correlation for different time lengths
+      """
+      values = wxgen.util.normalize(array)
+      corr = np.nan*np.zeros(len(scales))
+      for i in range(0, len(scales)):
+         s = scales[i]
+         if array.shape[0] >= s:
+            temp = wxgen.util.correlation(values[s:, :], values[:-s, :], axis=0)
+            corr[i] = np.mean(temp)
+      return corr
+
+
 class Map(Plot):
    def plot(self, sims, truth):
       if truth is not None:
