@@ -229,16 +229,16 @@ def calc_refraction_correction(elevetr, temperature, pressure):
    # Otherwise, we have refraction
    # tangent of the solar elevation angle
    tanelev = np.tan(raddeg * elevetr)
-   I = np.where((elevetr <= 85) & (elevetr >= 5))[0]
+   I = (elevetr <= 85) & (elevetr >= 5)
    refcor[I] = 58.1 / tanelev[I] - 0.07 / tanelev[I]**3 + 0.000086 / tanelev[I]**5
 
-   I = np.where((elevetr < 5) & (elevetr >= -0.575))[0]
+   I = (elevetr < 5) & (elevetr >= -0.575)
    refcor[I] = 1735. + elevetr[I] * (-518.2 + elevetr[I] * (103.4 + elevetr[I] * (-12.79 + elevetr[I] * 0.711)))
 
-   I = np.where(elevetr < -0.575)[0]
+   I = elevetr < -0.575
    refcor[I] = -20.774 / tanelev[I]
 
-   I = np.where(elevetr <= 85)[0]
+   I = elevetr <= 85
    # pressure/temperature correction
    prestemp = (pressure[I] * 283.) / (1013. * (273. + temperature[I]))
    refcor[I] = refcor[I] * prestemp / 3600.
@@ -263,7 +263,7 @@ def calc_global_radiation(elevref, cloud_cover, a1=1041., a2=-69., b1=-0.75, b2=
    sinmin = -a2 / a1
 
    sunrad = np.zeros(shape)
-   I = np.where(sinpsi >= sinmin)[0]
+   I = sinpsi >= sinmin
    sunrad[I] = (a1 * sinpsi[I] * np.exp(-0.057 / sinpsi[I])) * (1. + b1 * cloud_cover[I] ** b2)
 
    return sunrad
