@@ -155,6 +155,7 @@ class Netcdf(Output):
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
+         vars[var.name].coordinates = "latitude longitude"
 
       # Write forecast variables
       if use_single_gridpoint:
