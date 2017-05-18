@@ -715,7 +715,15 @@ class SortStat(Plot):
                      values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
             for i in range(L):
                col = self._get_color(i, L)
-               mpl.plot(np.sort(values[i]), np.linspace(0, 1, len(values[i])), '-o', color=col, label="Day %d" % i, ms=0)
+               style = self._get_style(i, L)
+               x = np.sort(values[i])
+               y = np.linspace(0, 1, len(values[i]))
+               if len(x) > 1000:
+                  # Resample if there are a lot of points
+                  n = int(len(x) / 1000)
+                  x = x[range(0, len(x), n)]
+                  y = y[range(0, len(y), n)]
+               mpl.plot(x, y, style, color=col, label="Day %d" % i)
             mpl.xlabel(sim.variables[Ivar].name)
             mpl.ylabel("Quantile")
             mpl.title(sim.name)
