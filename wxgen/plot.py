@@ -623,6 +623,7 @@ class TimeStat(Plot):
 
       X = 1
       Y = len(Ivars)
+      use_single_gridpoint = self.lat is not None and self.lon is not None
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          index = v+1
@@ -630,6 +631,11 @@ class TimeStat(Plot):
          for s in range(len(sims)):
             count = 0
             sim = sims[s]
+            if use_single_gridpoint:
+               # Find nearest neighbour
+               Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+               wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+
             if self.timemod is None:
                L = sim.length
             else:
@@ -653,7 +659,10 @@ class TimeStat(Plot):
                   if self.scale == "agg":
                      values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
                   else:
-                     values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+                     if use_single_gridpoint:
+                        values[i] = np.append(values[i], self.transform(q[I, Xref, Yref, Ivar]).flatten())
+                     else:
+                        values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
             values_agg = np.zeros(L)
             for i in range(L):
                values_agg[i] = self.aggregator(values[i])
