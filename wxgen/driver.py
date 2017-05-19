@@ -205,6 +205,7 @@ def get_parsers():
       sp[driver].add_argument('-s', default="large", help="Output scale (agg, large, small)", dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
+      sp[driver].add_argument('-mem', type=float, help="Maximum memory (GB)")
 
    return parser, sp
 
@@ -229,6 +230,7 @@ def get_db(args):
       db = wxgen.database.Netcdf(args.db, args.vars, model=model)
 
    db.wavelet_levels = args.wavelet_levels
+   db.mem = args.mem
 
    if args.debug:
       db.info()
