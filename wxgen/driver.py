@@ -200,7 +200,7 @@ def get_parsers():
    for driver in sp.keys():
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
-      sp[driver].add_argument('-s', default="large", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
       sp[driver].add_argument('-mem', type=float, help="Maximum memory allocation when reading from database (GB)")

@@ -85,6 +85,9 @@ class Netcdf(Output):
          elif scale == "small":
             xname = "x"
             yname = "y"
+         else:
+            wxgen.util.error("Cannot understand scale '%s'" % scale)
+
          if use_single_gridpoint:
             file.createDimension(yname, 1)
             file.createDimension(xname, 1)
