@@ -27,8 +27,8 @@ class Zero(ClimateModel):
    def __init__(self):
       pass
 
-   def get(self, unixtime):
-      return 0
+   def get(self, unixtimes):
+      return np.array([0 for t in unixtimes])
 
 
 class Bin(ClimateModel):
