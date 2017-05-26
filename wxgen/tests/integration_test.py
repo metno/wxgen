@@ -107,8 +107,8 @@ class IntegrationTest(unittest.TestCase):
       self.assertEqual(1, file.dimensions["ensemble_member"].size)
       file.close()
 
-      self.run_with_image("wxgen verif %s -truth %s -m timeseries" % (sim_filename, truth_filename))
-      self.run_with_image("wxgen verif %s -truth %s -m variance" % (sim_filename, truth_filename))
+      self.run_with_image("wxgen verif %s %s -m timeseries" % (sim_filename, truth_filename))
+      self.run_with_image("wxgen verif %s %s -m variance" % (sim_filename, truth_filename))
 
       for filename in [sim_filename, truth_filename]:
          self.remove(filename)

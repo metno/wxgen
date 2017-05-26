@@ -122,13 +122,8 @@ def main(argv):
       plot.timemod = args.timemod
       plot.timescale = args.timescale
       plot.scale = args.scale
-      truth = None
-      sims = None
-      if args.truth is not None:
-         truth = wxgen.database.Netcdf(args.truth, None)
-      if args.files is not None:
-         sims = [wxgen.database.Netcdf(file, None) for file in args.files]
-      plot.plot(sims, truth)
+      sims = [wxgen.database.Netcdf(file, None) for file in args.files]
+      plot.plot(sims)
 
 
 def get_parsers():
@@ -180,7 +175,6 @@ def get_parsers():
    sp["verif"].add_argument('-fs', type=wxgen.util.parse_ints, default=[10, 5], help="Figure size: width,height")
    sp["verif"].add_argument('-m', help="Verification metric", dest="metric", required=True, choices=get_module_names(wxgen.plot))
    sp["verif"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename")
-   sp["verif"].add_argument('-truth', metavar="FILENAME", help="File with truth scenario", dest="truth")
    sp["verif"].add_argument('-xlim', type=wxgen.util.parse_ints, help="x-axis limits: lower,upper")
    sp["verif"].add_argument('-xlog', help="X-axis log scale", action="store_true")
    sp["verif"].add_argument('-ylim', type=wxgen.util.parse_ints, help="y-axis limits: lower,upper")

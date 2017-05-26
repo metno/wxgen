@@ -63,11 +63,10 @@ class Plot(object):
       self.timescale = 1
       self.scale = "large"
 
-   def plot(self, sims, truth):
+   def plot(self, sims):
       """
       Arguments:
          sims (list): List of simulation databases
-         truth (wxgen.database): Truth database
       """
       raise NotImplementedError()
 
@@ -205,18 +204,13 @@ class Plot(object):
 
 
 class Timeseries(Plot):
-   def plot(self, sims, truth):
+   def plot(self, sims):
       if self.vars is None:
-         if truth is not None:
-            Ivars = range(len(truth.variables))
-         else:
-            Ivars = range(len(sims[0].variables))
+         Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
 
-      X = (truth is not None)
-      if sims is not None:
-         X += len(sims)
+      X = len(sims)
       Y = len(Ivars)
       use_single_gridpoint = self.lat is not None and self.lon is not None
       if sims is not None:
@@ -245,35 +239,19 @@ class Timeseries(Plot):
                   mpl.xlabel("Time (days)")
                   mpl.grid()
 
-      if truth is not None:
-         traj = truth.get(0)
-         values = truth.extract(traj)
-         for i in range(len(Ivars)):
-            index = (X-1)*Y+i+1
-            mpl.subplot(X, Y, index)
-            Ivar = Ivars[i]
-            mpl.plot(values[:, Ivar], lw=5, color="red")
-            mpl.ylabel(truth.variables[Ivar].name)
-            mpl.grid()
-
       self._finish_plot()
 
 
 class Histogram(Plot):
    """ Plot histogram for annual values for a given statistic """
-   def plot(self, sims, truth):
+   def plot(self, sims):
 
       if self.vars is None:
-         if truth is not None:
-            Ivars = range(len(truth.variables))
-         else:
-            Ivars = range(len(sims[0].variables))
+         Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
 
-      X = (truth is not None)
-      if sims is not None:
-         X += len(sims)
+      X = len(sims)
       Y = len(Ivars)
 
       for i in range(len(Ivars)):
@@ -308,27 +286,6 @@ class Histogram(Plot):
                   dx = self.thresholds[1]-self.thresholds[0]
                   mpl.ylim([0, 1.0/dx])
 
-         if truth is not None:
-            index = (X-1)*Y+i+1
-            mpl.subplot(X, Y, index)
-            traj = truth.get(0)
-            values = truth.extract(traj)[:, Ivar]
-            values = self.transform(values)   # 5 years
-            values = self.create_yearly_series(values)  # 5 x 1 year
-            agg = np.zeros(values.shape[1])
-            for k in range(values.shape[1]):
-               agg[k] = self.aggregator(values[:, k])
-            if self.thresholds is not None:
-               mpl.hist(agg, self.thresholds, normed=1)
-            else:
-               mpl.hist(agg, normed=1)
-            mpl.ylabel("Density")
-            mpl.xlabel(truth.variables[Ivar].name)
-            mpl.title(truth.name)
-            if self.thresholds is not None:
-               dx = self.thresholds[1]-self.thresholds[0]
-               mpl.ylim([0, 1.0/dx])
-
       self._finish_plot()
 
 
@@ -339,42 +296,31 @@ class Variance(Plot):
       self._normalize_variance = True
       self._normalization_window = 11
 
-   def plot(self, sims, truth):
+   def plot(self, sims):
       if self.thresholds is None:
          scales = [1, 3, 7, 11, 31, 61, 181, 365]
       else:
          scales = self.thresholds
 
       if self.vars is None:
-         if truth is not None:
-            Ivars = range(len(truth.variables))
-         else:
-            Ivars = range(len(sims[0].variables))
+         Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
+
       for i in range(len(Ivars)):
          Ivar = Ivars[i]
          mpl.subplot(1, len(Ivars), i+1)
-         if truth is not None:
-            traj = truth.get(0)
-            values = truth.extract(traj)[:, Ivar]
-            truth_var = self.compute_truth_variance(values, scales)
-            self._plot_truth(scales, truth_var, label="Truth")
-            mpl.title(truth.variables[Ivar].name)
-            mpl.ylabel("Variance ($%s^s$)" % truth.variables[Ivar].units)
-
-         if sims is not None:
-            for s in range(len(sims)):
-               sim = sims[s]
-               sim_values = np.zeros([sim.length, sim.num])
-               col = self._get_color(s, len(sims))
-               for m in range(sim.num):
-                  traj = sim.get(m)
-                  q = sim.extract(traj)
-                  sim_values[:, m] = q[:, Ivar]
-               sim_var = self.compute_sim_variance(sim_values, scales)
-               mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
-               mpl.ylabel("Variance ($%s^s$)" % sim.variables[Ivar].units)
+         for s in range(len(sims)):
+            sim = sims[s]
+            sim_values = np.zeros([sim.length, sim.num])
+            col = self._get_color(s, len(sims))
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract(traj)
+               sim_values[:, m] = q[:, Ivar]
+            sim_var = self.compute_sim_variance(sim_values, scales)
+            mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
+            mpl.ylabel("Variance ($%s^s$)" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
@@ -388,29 +334,6 @@ class Variance(Plot):
          mpl.grid()
       mpl.legend()
       self._finish_plot()
-
-   def compute_truth_variance(self, array, scales):
-      """
-         array: 1D array
-      """
-      import astropy.convolution
-      # Create 1-year long segments
-      truth = self.create_yearly_series(array)
-      truth = wxgen.util.normalize(truth, self._normalization_window, self._normalize_variance)
-      N = truth.shape[1]
-
-      # Compute variance
-      variance = np.zeros(len(scales))
-      for i in range(0, len(scales)):
-         s = scales[i]
-         c = [1.0/s] * s
-         truth_c = np.zeros([truth.shape[0], N], float)
-         for e in range(0, N):
-            truth_c[:, e] = astropy.convolution.convolve(truth[:, e], 1.0/s*np.ones(s))
-         if s > 1:
-            truth_c = truth_c[(s/2):(-s/2+1), :]
-         variance[i] = np.nanvar(truth_c, ddof=1)
-      return variance
 
    def compute_sim_variance(self, array, scales):
       """
@@ -451,7 +374,7 @@ class Autocorr(Plot):
       self._normalize_variance = True
       self._normalization_window = 11
 
-   def plot(self, sims, truth):
+   def plot(self, sims):
       if self.thresholds is None:
          scales = [1, 2, 3, 5, 7, 11, 15, 30, 45, 60, 180]
       else:
@@ -461,6 +384,7 @@ class Autocorr(Plot):
          Ivars = range(len(sims[0].variables))
       else:
          Ivars = self.vars
+
       for i in range(len(Ivars)):
          Ivar = Ivars[i]
          mpl.subplot(1, len(Ivars), i+1)
@@ -509,9 +433,7 @@ class Autocorr(Plot):
 
 
 class Map(Plot):
-   def plot(self, sims, truth):
-      if truth is not None:
-         sims += [truth]
+   def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
       else:
@@ -569,9 +491,7 @@ class Map(Plot):
 
 
 class Jump(Plot):
-   def plot(self, sims, truth):
-      if truth is not None:
-         sims += [truth]
+   def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
       else:
@@ -619,9 +539,7 @@ class Jump(Plot):
 
 
 class TimeStat(Plot):
-   def plot(self, sims, truth):
-      if truth is not None:
-         sims += [truth]
+   def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
       else:
@@ -683,9 +601,7 @@ class TimeStat(Plot):
 
 
 class SortStat(Plot):
-   def plot(self, sims, truth):
-      if truth is not None:
-         sims += [truth]
+   def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
       else:
@@ -741,12 +657,10 @@ class SortStat(Plot):
 
 
 class CovarMap(Plot):
-   def plot(self, sims, truth):
+   def plot(self, sims):
       if self.lat is None or self.lon is None:
          wxgen.util.error("-lat and/or -lon not specified")
 
-      if truth is not None:
-         sims += [truth]
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
       else:
