@@ -13,9 +13,9 @@ class Database(object):
    """
    Abstract class which stores weather segments (short time-series)
 
-   The database is stored in self._data, which has dimensions (T, X, Y, V, N) where T is the segment
-   length, V is the number of variables, N is the number of segments, and X and Y are geographical
-   dimensions. A subclass must populate this field during initialization.
+   The database is stored in self._data_cache, which is a dictionary with variable key and arrays of
+   dimensions (T, X, Y, N) as values, where T is the segment length, X and Y are geographical
+   dimensions, and N is the number of segments.
 
    Attributes:
       variables: A list of wxgen.variable.Variable
@@ -29,20 +29,30 @@ class Database(object):
       climate_states (np.array): array of climate states (one for each ensemble member)
       name: Name of this database (e.g. filename)
 
-   Internal:
-      data (np.array): A 5D array of data with dimensions (lead_time, lat, lon, variable, member*time)
-      _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
-      _data_matching (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
+   Subclass requirements (these must be filled out):
+      self.name
+      self.length
+      self.num
+      self.variables
+      self.inittimes
+      self.lats
+      self.lons
+      _load(self, variable)
+
    """
-   def __init__(self, model=None, members=None):
+   def __init__(self, model=None):
       self._data_matching_cache = None
       self.wavelet_levels = 0
-      self.members = members
       self.mem = None
       if model is None:
          self.model = wxgen.climate_model.Bin(10)
       else:
          self.model = model
+
+      # Cache variables to store data returned by @property functions
+      self._data_cache = dict()
+      self._data_agg_cache = None
+      self._climate_states_cache = None
 
    def info(self):
       print "Database information:"
@@ -50,12 +60,40 @@ class Database(object):
       print "  Number of segments: %d" % self.num
       print "  Number of variables: %d" % len(self.variables)
 
-   @property
-   def name(self):
-      """ Default to setting the name to the filename without the path """
-      I = self.fullname.rfind('/')
-      name = self.fullname[I + 1:]
-      return name
+   def load(self, variable):
+      """
+      Loads the variable
+      """
+      t = timing.time()
+      if variable not in self._data_cache:
+         wxgen.util.debug("Cache miss variable '%s'" % variable.name)
+
+         if len(self._data_cache) > 0:
+            # Check if we need to remove data from cache
+            akey = self._data_cache.keys()[0]
+            bytes_per_value = 4
+            size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
+            next_size = float(len(self._data_cache) + 1) * size_per_key
+            next_size_gb = next_size / 1e9
+            if self.mem is not None and next_size_gb > self.mem:
+               # remove from cache
+               I = np.random.randint(len(self._data_cache))
+               rmkey = self._data_cache.keys()[I]
+               self._data_cache.pop(rmkey)
+               wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
+
+         # Get data from subclass
+         data = self._load(variable)
+         self._data_cache[variable] = data
+         e = timing.time()
+         # print "Timing: %g" % (e - t)
+      else:
+         wxgen.util.debug("Cache hit '%s'" % variable.name)
+
+      return self._data_cache[variable]
+
+   def _load(self, variable):
+      raise NotImplementedError()
 
    def get(self, i):
       """ Get the i'th trajectory in the database """
@@ -116,15 +154,16 @@ class Database(object):
 
       Arguments:
          trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+         variable (wxgen.variable.Variable): Variable to extract
 
       Returns:
-         np.array: A 4D array (Time, X, Y, variable) sequence of values
+         np.array: A 4D array (Time, X, Y) sequence of values
       """
       T = trajectory.indices.shape[0]
       V = len(self.variables)
       X = self.X
       Y = self.Y
-      temp = self._load(variable)
+      temp = self.load(variable)
       values = np.nan*np.zeros([T, Y, X], float)
       # Loop over member, lead-time indices
       st = timing.time()
@@ -160,33 +199,66 @@ class Database(object):
    def get_wavelet_size(self):
       if self.wavelet_levels == 0:
          return 1, 1
-      Nlat = self._data.shape[1]
-      Nlon = self._data.shape[2]
-      NX = int(np.ceil(float(Nlat)/2**self.wavelet_levels))
-      NY = int(np.ceil(float(Nlon)/2**self.wavelet_levels))
+      NX = int(np.ceil(float(self.Y)/2**self.wavelet_levels))
+      NY = int(np.ceil(float(self.X)/2**self.wavelet_levels))
       return NX, NY
 
    @property
+   def _data_agg(self):
+      # _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
+      if self._data_agg_cache is None:
+         self._data_agg_cache = np.zeros([self.length, self.V, self.num])
+         for v in range(len(self.variables)):
+            variable = self.variables[v]
+            data = self.load(variable)
+            self._data_agg_cache[:, v, :] = np.mean(np.mean(data, axis=2), axis=1)
+
+      return self._data_agg_cache
+
+   @property
+   def climate_states(self):
+      if self._climate_states_cache is None:
+         self._climate_states_cache = self.model.get(self.inittimes)
+      return self._climate_states_cache
+
+   @property
+   def V(self):
+      return len(self.variables)
+
+   @property
+   def X(self):
+      return self.lats.shape[1]
+
+   @property
+   def Y(self):
+      return self.lats.shape[0]
+
+   @property
    def _data_matching(self):
+      """
+      Get the data used to match states. This may be different than data_agg, since it can include
+      wavelet information.
+
+      Returns:
+         np.array: Dimensions self.length, variable, self.num
+      """
       if self._data_matching_cache is None:
-         # print "Loading from cache"
          if self.wavelet_levels == 0:
             self._data_matching_cache = self._data_agg
          else:
-            # Decompose the grid
+            """
+            Decompose all gridded fields into wavelet components. Do this separately for each
+            variable, leadtime, and ensemble member and store the values in
+            self._data_matching_cache.
+            """
             s = timing.time()
-            LT = self._data.shape[0]
-            V = self._data.shape[3]
-            M = self._data.shape[4]
-            # data: lead_time, lat, lon, variable, member
             NX, NY = self.get_wavelet_size()
             N = int(NX * NY)
-            # print "Number of coefficients: %d" % N
-            self._data_matching_cache = np.zeros([LT, V*N, M])
-            for v in range(V):
-               data = self._load(self.variables[v])
-               for lt in range(LT):
-                  for m in range(M):
+            self._data_matching_cache = np.zeros([self.length, self.V*N, self.num])
+            for v in range(self.V):
+               data = self.load(self.variables[v])
+               for lt in range(self.length):
+                  for m in range(self.num):
                      # print "Computing wavelet for leadtime %d variable %d member %d" % (lt, v, m)
                      dec = pywt.wavedec2(data[lt, :, :, m], 'haar', level=self.wavelet_levels)[0]
                      dec = dec.flatten()/2**self.wavelet_levels
@@ -195,11 +267,7 @@ class Database(object):
             e = timing.time()
             wxgen.util.debug("Wavelet time: %f" % (e - s))
 
-            # print "Size of matching cache:", self._data_matching_cache.shape
       return self._data_matching_cache
-
-   def index2(self):
-      pass
 
 
 class Netcdf(Database):
@@ -219,18 +287,17 @@ class Netcdf(Database):
    where variable_name is one or more names of weather variables. Forecast_reference_time is
    optional, i.e. both the variable and dimension could be missing.
    """
-   def __init__(self, filename, vars=None, model=None, members=None, mem=None):
+   def __init__(self, filename, vars=None, model=None, mem=None):
       """
       Arguments:
          filename (str): Load data from this file
          vars (list): List of indices for which variables to use
       """
-      Database.__init__(self, model, members)
-      self.mem = mem
-      self.fullname = filename
-      self._file = netCDF4.Dataset(filename)
+      Database.__init__(self, model)
+      self.name = filename[filename.rfind('/') + 1:]
 
-      self._initname = "forecast_reference_time"
+      self.mem = mem
+      self._file = netCDF4.Dataset(filename)
 
       # Set dimensions
       var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll"]]
@@ -258,43 +325,37 @@ class Netcdf(Database):
       # Load data
       self.length = self._file.dimensions["time"].size
 
-      # Determine which members to use
-      V = len(self.variables)
-      if self.members is None:
-         num = self._file.dimensions["ensemble_member"].size
-         self.members = range(num)
-      M = len(self.members)
-
       self.has_frt = True
       if "forecast_reference_time" in self._file.dimensions:
-         D = self._file.dimensions["forecast_reference_time"].size
+         times = self._file.variables["forecast_reference_time"][:]
+         self.ens = self._file.dimensions["ensemble_member"].size
+         self.num = self._file.dimensions["forecast_reference_time"].size * self.ens
+         self.inittimes = np.repeat(times, self.ens)
       else:
-         D = 1
          self.has_frt = False
-      times = self._file.variables[self._initname][:]
-      if len(times.shape) == 0:
-         times = np.array([times])
+         times = np.array([self._file.variables["forecast_reference_time"][:]])
+         self.num = self._file.dimensions["ensemble_member"].size
+         self.inittimes = times
+         self.ens = self.num
 
-      self.Itimes = np.where(np.isnan(times) == 0)[0]
-      times = times[self.Itimes]
-      D = len(times)
-      T = self.length
+      self._Itimes = np.where(np.isnan(times) == 0)[0]
+      times = times[self._Itimes]
 
       # Read lat/lon dimensions
       self.is_spatial = True
       if "lon" in self._file.dimensions:
-         self.X = self._file.dimensions["lon"].size
-         self.Y = self._file.dimensions["lat"].size
+         X = self._file.dimensions["lon"].size
+         Y = self._file.dimensions["lat"].size
       elif "longitude" in self._file.dimensions:
-         self.X = self._file.dimensions["longitude"].size
-         self.Y = self._file.dimensions["latitude"].size
+         X = self._file.dimensions["longitude"].size
+         Y = self._file.dimensions["latitude"].size
       elif "x" in self._file.dimensions:
-         self.X = self._file.dimensions["x"].size
-         self.Y = self._file.dimensions["y"].size
+         X = self._file.dimensions["x"].size
+         Y = self._file.dimensions["y"].size
       else:
          self.is_spatial = False
-         self.X = 1
-         self.Y = 1
+         X = 1
+         Y = 1
          self.lats = np.zeros([1, 1])
          self.lons = np.zeros([1, 1])
 
@@ -308,90 +369,37 @@ class Netcdf(Database):
             self.lons = self._copy(self._file.variables["longitude"])
          if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
             wxgen.util.debug("Meshing latitudes and longitudes")
-            [self.lons, self.lats] = np.meshgrid(self.lons, self.lats)
-
-      self.num = M * D
-      # wxgen.util.debug("Allocating %.2f GB" % (T*self.Y*self.X*V*M*D*4.0/1024/1024/1024))
-      # self._data = np.nan*np.zeros([T, Y, X, V, M*D], float)
-      self._date = np.zeros(self.num, float)
-
-      self.inittimes = np.repeat(times, M)
-      self.T = T
-      self.V = V
-
-      self.climate_states = self.model.get(self.inittimes)
-      # self._file.close()
-      self._data_cache = dict()
-      self._data_agg = np.zeros([T, V, self.num])
-      for v in range(len(self.variables)):
-         variable = self.variables[v]
-         data = self._load(variable)
-         self._data_agg[:, v, :] = np.mean(np.mean(data, axis=2), axis=1)
+            self.lons, self.lats = np.meshgrid(self.lons, self.lats)
 
    def _load(self, variable):
-      t = timing.time()
-      if variable not in self._data_cache:
-         wxgen.util.debug("Cache miss variable '%s'" % variable.name)
-         if len(self._data_cache) > 0:
-            akey = self._data_cache.keys()[0]
-            bytes_per_value = 4
-            size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
-            next_size = float(len(self._data_cache) + 1) * size_per_key
-            next_size_gb = next_size / 1e9
-            if self.mem is not None and next_size_gb > self.mem:
-               # remove from cache
-               I = np.random.randint(len(self._data_cache))
-               rmkey = self._data_cache.keys()[I]
-               self._data_cache.pop(rmkey)
-               wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
-         temp = self._file.variables[variable.name][:] # dims: D, T, M, X, Y
+      temp = self._file.variables[variable.name][:]
 
-         # TODO
-         if self.members is None:
-            num = self._file.dimensions["ensemble_member"].size
-            self.members = range(num)
-         M = len(self.members)
-         times = self._file.variables[self._initname][:]
-         if len(times.shape) == 0:
-            times = np.array([times])
+      data = np.nan*np.zeros([self.length, self.Y, self.X, self.num], np.float32)
 
-         D = len(self.Itimes)
-         T = self.length
-         data = np.zeros([self.T, self.Y, self.X, M*D], np.float32)
-
-         index = 0
-         for d in range(D):
-            for m in range(0, M):
-               Im = self.members[m]
-               if self.is_spatial:
-                  if self.has_frt:
-                     data[:, :, :, index] = temp[self.Itimes[d], :, Im, :, :]
-                  else:
-                     data[:, :, :, index] = temp[:, Im, :, :]
-
+      index = 0
+      for d in range(len(self._Itimes)):
+         for m in range(0, self.ens):
+            if self.is_spatial:
+               if self.has_frt:
+                  data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
                else:
-                  # data[:, :, :] = temp[:, :, :, :, :]
-                  # TODO: Fix all these to be like above
-                  if self.has_frt:
-                     data[:, :, :, index] = np.reshape(temp[self.Itimes[d], :, Im], [self.T, self.Y, self.X])
-                  else:
-                     data[:, :, index] = np.reshape(temp[:, Im], [self.T, self.Y, self.X])
-               index = index + 1
-         # Quality control
-         if variable.name == "precipitation_amount":
-            data[data < 0] = 0
-         # If one or more values are missing for a member, set all values to nan
-         NM = np.sum(np.isnan(data))
-         if NM > 0:
-            data[:] = np.nan
-            wxgen.util.debug("Removing member %d because of %d missing values" % (member, NM))
-         self._data_cache[variable] = data
-         e = timing.time()
-         # print "Timing: %g" % (e - t)
-      else:
-         wxgen.util.debug("Cache hit '%s'" % variable.name)
+                  data[:, :, :, index] = temp[:, m, :, :]
+            else:
+               if self.has_frt:
+                  data[:, :, :, index] = np.reshape(temp[self._Itimes[d], :, m], [self.length, self.Y, self.X])
+               else:
+                  data[:, :, :, index] = np.reshape(temp[:, m], [self.length, self.Y, self.X])
+            # If one or more values are missing for a member, set all values to nan
+            NM = np.sum(np.isnan(data[:, :, :, index]))
+            if NM > 0:
+               data[:, :, index] = np.nan
+               wxgen.util.debug("Removing member %d because of %d missing values" % (index, NM))
+            index = index + 1
+      # Quality control
+      if variable.name == "precipitation_amount":
+         data[data < 0] = 0
 
-      return self._data_cache[variable]
+      return data
 
    def _copy(self, data):
       data = data[:].astype(float)
@@ -403,68 +411,41 @@ class Netcdf(Database):
       return q
 
 
-class Random(Database):
-   """
-   Trajectories are random Gaussian walks, with constant variance over time. There is no covariance
-   between different forecast variables.
-   """
-   def __init__(self, N, T, V, variance=1, model=None):
-      Database.__init__(self, model)
-      self.num = N
-      self.length = T
-      if V is None:
-         V = 1
-      self._V = V
-      self._variance = variance
-      self._data = np.zeros([T, 1, 1, V, N], float)
-      self.fullname = "Random(%d,%d,%d)" % (N, T, V)
-
-      # Ensure that the signal has a constant variance over time
-      scale = 1./np.sqrt(np.linspace(1, T, T))
-
-      for v in range(0, self._V):
-         self._data[:, 0, 0, v, :] = np.transpose(np.resize(scale, [N, T])) * np.cumsum(np.random.randn(T, N) * np.sqrt(self._variance), axis=0)
-
-      self.variables = [wxgen.variable.Variable("var%d" % i) for i in range(0, self._V)]
-      self.lats = np.zeros([1, 1])
-      self.lons = np.zeros([1, 1])
-      self.climate_states = np.mod(np.arange(0, N), 12)
-      for i in range(N):
-          self._data[:, :, :, :, i] += np.cos(self.climate_states[i] / 12.0 * 2 * 3.14159265) * -3
-      start = wxgen.util.date_to_unixtime(20150101)
-      num_inits = 30
-      self.inittimes = start + np.mod(np.arange(0, N), num_inits) * 86400
-
-
 class Lorenz63(Database):
    """
    Trajectories based on the Lorenz 63 model.
    """
-   def __init__(self, N, T, R=28, S=10, B=2.6667, dt=0.0001, model=None):
+   def __init__(self, num=1000, length=100, R=28, S=10, B=2.6667, dt=0.0001, model=wxgen.climate_model.Zero()):
       Database.__init__(self, model)
-      self.num = N
-      self.length = T
+      self.name = "Lorenz(%d,%d,%f,%f,%f)" % (num, length, R, S, B)
+      self.length = length
+      self.num = num
       self._R = R
       self._S = S
       self._B = B
       self._dt = dt
-      self._V = 3  # Number of variables
-      self._data = np.zeros([T, 1, 1, self._V, N], float)
       self.lats = np.zeros([1, 1])
       self.lons = np.zeros([1, 1])
-      self._initial_state = [-10, -10, 25]
-      self._std_initial_state = 0.1  # Standard deviation of initial condition error
+      var_x = wxgen.variable.Variable("X")
+      var_y = wxgen.variable.Variable("Y")
+      var_z = wxgen.variable.Variable("Z")
+      self.variables = [var_x, var_y, var_z]
+      self._initial_state = {var_x: -10, var_y: -10, var_z: -25}
+      self._std_initial_state = 10  # Standard deviation of initial condition error
+      self.inittimes = np.ones(self.num) + wxgen.util.date_to_unixtime(20150101)
 
       # Initialize
-      for v in range(0, self._V):
-         self._data[0, 0, 0, v, :] = self._initial_state[v] + np.random.randn(N) * self._std_initial_state
+      self._data = dict()
+      for var in self.variables:
+         self._data[var] = np.zeros([self.length, self.X, self.Y, self.num])
+         self._data[var][0, 0, 0, :] = self._initial_state[var] + np.random.randn(self.num) * self._std_initial_state
 
       TT = int(1 / self._dt)/10
       # Iterate
-      for t in range(1, T):
-         x0 = copy.deepcopy(self._data[t-1, 0, 0, 0, :])
-         y0 = copy.deepcopy(self._data[t-1, 0, 0, 1, :])
-         z0 = copy.deepcopy(self._data[t-1, 0, 0, 2, :])
+      for t in range(1, self.length):
+         x0 = copy.deepcopy(self._data[var_x][t-1, 0, 0, :])
+         y0 = copy.deepcopy(self._data[var_y][t-1, 0, 0, :])
+         z0 = copy.deepcopy(self._data[var_z][t-1, 0, 0, :])
          # Iterate from t-1 to t
          for tt in range(0, TT):
             x1 = x0 + self._dt * self._S * (y0 - x0)
@@ -479,9 +460,39 @@ class Lorenz63(Database):
             y0 = 0.5 * (y2 + y0)
             z0 = 0.5 * (z2 + z0)
 
-         self._data[t, 0, 0, 0, :] = x0
-         self._data[t, 0, 0, 1, :] = y0
-         self._data[t, 0, 0, 2, :] = z0
+         self._data[var_x][t, 0, 0, :] = x0
+         self._data[var_y][t, 0, 0, :] = y0
+         self._data[var_z][t, 0, 0, :] = z0
 
-      self.variables = [wxgen.variable.Variable(i) for i in ["X", "Y", "Z"]]
-      self.fullname = "Lorenz(%d,%d,%f,%f,%f)" % (N, T, R, S, B)
+   def _load(self, variable):
+      return self._data[variable]
+
+
+class Random(Database):
+   """
+   A minimal database to check that the subclass requirements specified are correct
+
+   Trajectories are random Gaussian walks, with constant variance over time. There is no covariance
+   between different forecast variables.
+   """
+   def __init__(self, num=365, length=10, num_vars=1, model=None):
+      Database.__init__(self, model)
+      self.name = "Test"
+      self.length = length
+      self.num = num
+      self.variables = [wxgen.variable.Variable("temperature")] * num_vars
+      self.inittimes = np.array(range(self.num)) * 86400 + wxgen.util.date_to_unixtime(20150101)
+      X = 10
+      Y = 8
+      self.lats, self.lons = np.meshgrid(range(50, 50 + Y), range(X))
+
+      self._variance = 1
+
+   def _load(self, variable):
+      values = np.random.randn(self.length, self.Y, self.X, self.num) * np.sqrt(self._variance)
+      values = np.cumsum(values, axis=0)
+      for i in range(self.length):
+         # Ensure that the signal has a constant variance over time
+         scale = 1./np.sqrt(1 + i)
+         values[i, :, :, :] = values[i, :, :, :] * scale
+      return values

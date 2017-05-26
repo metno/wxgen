@@ -12,10 +12,6 @@ class LargeScale(object):
    def __init__(self, database, metric=wxgen.metric.Rmsd(), model=None):
       self._database = database
       self._metric = metric
-      if model is None:
-         self.model = wxgen.climate_model.Bin(10)
-      else:
-         self.model = model
       self.prejoin = None
       self.policy = "random"
 
@@ -45,7 +41,7 @@ class LargeScale(object):
          trajectory_indices = -1+np.zeros([T, 2], int)
 
          time = wxgen.util.date_to_unixtime(20170101)
-         climate_state = self.model.get([time])[0]
+         climate_state = self._database.model.get([time])[0]
          if initial_state is None:
             wxgen.util.debug("Finding random starting state", color="yellow")
             I = np.random.randint(self._database.num)
@@ -70,7 +66,7 @@ class LargeScale(object):
          start = 0  # Starting index into output trajectory where we are inserting a segment
          join = 0
          while start < T-1:
-            climate_state = self.model.get([time])[0]
+            climate_state = self._database.model.get([time])[0]
 
             """
             Prejoin multiple segments that are nearby in time. This is done by passing
