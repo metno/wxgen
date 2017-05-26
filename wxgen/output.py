@@ -160,20 +160,20 @@ class Netcdf(Output):
       # Write forecast variables
       if use_single_gridpoint:
          Xref, Yref = wxgen.util.get_i_j(database.lats, database.lons, self.lat, self.lon)
-      for m in range(0, len(trajectories)):
-         if scale == "agg":
-            values = database.extract(trajectories[m])
-            for v in range(0, len(variables)):
-               vars[variables[v].name][:, m] = values[:, v]
-         else:
-            values = database.extract_grid(trajectories[m])
-            # Insert a singleton dimension at dimension index 1
-            values = np.expand_dims(values, 1)
-            for v in range(0, len(variables)):
-               if use_single_gridpoint:
-                  vars[variables[v].name][:, m, :, :] = values[:, :, Xref, Yref, v]
-               else:
-                  vars[variables[v].name][:, m, :, :] = values[:, :, :, :, v]
+      for v in range(0, len(variables)):
+         for m in range(0, len(trajectories)):
+            if scale == "agg":
+               values = database.extract(trajectories[m])
+               for v in range(0, len(variables)):
+                  vars[variables[v].name][:, m] = values[:, v]
+            else:
+                  values = database.extract_grid(trajectories[m], variables[v])
+                  # Insert a singleton dimension at dimension index 1
+                  values = np.expand_dims(values, 1)
+                  if use_single_gridpoint:
+                     vars[variables[v].name][:, m, :, :] = values[:, :, Xref, Yref]
+                  else:
+                     vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
 
       # Global attributes
       file.Conventions = "CF-1.0"

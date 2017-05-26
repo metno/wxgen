@@ -227,10 +227,9 @@ def get_db(args):
       else:
          wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
    else:
-      db = wxgen.database.Netcdf(args.db, args.vars, model=model)
+      db = wxgen.database.Netcdf(args.db, args.vars, model=model, mem=args.mem)
 
    db.wavelet_levels = args.wavelet_levels
-   db.mem = args.mem
 
    if args.debug:
       db.info()

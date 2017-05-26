@@ -35,7 +35,6 @@ class Database(object):
       _data_matching (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
    """
    def __init__(self, model=None, members=None):
-      self._data_agg_cache = None
       self._data_matching_cache = None
       self.wavelet_levels = 0
       self.members = members
@@ -111,7 +110,7 @@ class Database(object):
             values[i, :] = self._data_agg[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
       return values
 
-   def extract_grid(self, trajectory):
+   def extract_grid(self, trajectory, variable):
       """
       Extract a trajectory of large-scale values from the database
 
@@ -125,26 +124,20 @@ class Database(object):
       V = len(self.variables)
       X = self.X
       Y = self.Y
-      if 1:
-         values = np.nan*np.zeros([T, Y, X, V], float)
-         # Loop over member, lead-time indices
-         st = timing.time()
-         print trajectory.indices.shape[0]
-         for i in range(0, trajectory.indices.shape[0]):
-            m = trajectory.indices[i, 0]
-            t = trajectory.indices[i, 1]
-            # print i, m, t
-            assert(not np.isnan(m))
-            assert(not np.isnan(t))
-            if t >= 0:
-               values[i, :, :, :] = self._load(m)[t, :, :, :]
-         e = timing.time()
-         print "Q Timing: %g" % (e - st)
-      else:
-         # Slightly faster way (but not much faster)
-         I0 = trajectory.indices[:, 0]
-         I1 = trajectory.indices[:, 1]
-         values = self._data[I1, :, :, :, I0]
+      temp = self._load(variable)
+      values = np.nan*np.zeros([T, Y, X], float)
+      # Loop over member, lead-time indices
+      st = timing.time()
+      for i in range(0, trajectory.indices.shape[0]):
+         m = trajectory.indices[i, 0]
+         t = trajectory.indices[i, 1]
+         # print i, m, t
+         assert(not np.isnan(m))
+         assert(not np.isnan(t))
+         if t >= 0:
+            values[i, :, :] = temp[t, :, :, m]
+      e = timing.time()
+      # print "Q Timing: %g" % (e - st)
       return values
 
    def extract_matching(self, trajectory):
@@ -176,7 +169,7 @@ class Database(object):
    @property
    def _data_matching(self):
       if self._data_matching_cache is None:
-         print "Loading from cache"
+         # print "Loading from cache"
          if self.wavelet_levels == 0:
             self._data_matching_cache = self._data_agg
          else:
@@ -190,11 +183,12 @@ class Database(object):
             N = int(NX * NY)
             # print "Number of coefficients: %d" % N
             self._data_matching_cache = np.zeros([LT, V*N, M])
-            for lt in range(self._data.shape[0]):
-               for v in range(self._data.shape[3]):
-                  for m in range(self._data.shape[4]):
+            for v in range(V):
+               data = self._load(self.variables[v])
+               for lt in range(LT):
+                  for m in range(M):
                      # print "Computing wavelet for leadtime %d variable %d member %d" % (lt, v, m)
-                     dec = pywt.wavedec2(self._data[lt, :, :, v, m], 'haar', level=self.wavelet_levels)[0]
+                     dec = pywt.wavedec2(data[lt, :, :, m], 'haar', level=self.wavelet_levels)[0]
                      dec = dec.flatten()/2**self.wavelet_levels
                      I = range(v*N, (v+1)*N)
                      self._data_matching_cache[lt, I, m] = dec
@@ -225,13 +219,14 @@ class Netcdf(Database):
    where variable_name is one or more names of weather variables. Forecast_reference_time is
    optional, i.e. both the variable and dimension could be missing.
    """
-   def __init__(self, filename, vars=None, model=None, members=None):
+   def __init__(self, filename, vars=None, model=None, members=None, mem=None):
       """
       Arguments:
          filename (str): Load data from this file
          vars (list): List of indices for which variables to use
       """
       Database.__init__(self, model, members)
+      self.mem = mem
       self.fullname = filename
       self._file = netCDF4.Dataset(filename)
 
@@ -327,51 +322,76 @@ class Netcdf(Database):
       self.climate_states = self.model.get(self.inittimes)
       # self._file.close()
       self._data_cache = dict()
-      self._data_agg = np.random.rand(T, V, self.num)
-      self._data_matching_cache = np.random.rand(T, V, self.num)
+      self._data_agg = np.zeros([T, V, self.num])
+      for v in range(len(self.variables)):
+         variable = self.variables[v]
+         data = self._load(variable)
+         self._data_agg[:, v, :] = np.mean(np.mean(data, axis=2), axis=1)
 
-   def _load(self, member):
+   def _load(self, variable):
       t = timing.time()
-      if member not in self._data_cache:
-         # print "Cache miss %d" % member
-         if self.mem is not None and len(self._data_cache) > self.mem:
-            # remove from cache
-            print "Removing from cache"
-            I = np.random.randint(len(self._data_cache))
-            rmkey = self._data_cache.keys()[I]
-            self._data_cache.pop(rmkey)
-         data = np.zeros([self.T, self.Y, self.X, self.V])
-         for v in range(0, self.V):
-            var = self.variables[v]
-            temp = self._file.variables[var.name]  # dims: D, T, M, X, Y
-            # print len(self.members)
-            Im = member % len(self.members)
-            It = member / len(self.members)
-            Im = self.members[Im]
+      if variable not in self._data_cache:
+         wxgen.util.debug("Cache miss variable '%s'" % variable.name)
+         if len(self._data_cache) > 0:
+            akey = self._data_cache.keys()[0]
+            bytes_per_value = 4
+            size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
+            next_size = float(len(self._data_cache) + 1) * size_per_key
+            next_size_gb = next_size / 1e9
+            if self.mem is not None and next_size_gb > self.mem:
+               # remove from cache
+               I = np.random.randint(len(self._data_cache))
+               rmkey = self._data_cache.keys()[I]
+               self._data_cache.pop(rmkey)
+               wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
+         temp = self._file.variables[variable.name][:] # dims: D, T, M, X, Y
 
-            if self.is_spatial:
-               if self.has_frt:
-                  data[:, :, :, v] = temp[self.Itimes[It], :, Im, :, :]
+         # TODO
+         if self.members is None:
+            num = self._file.dimensions["ensemble_member"].size
+            self.members = range(num)
+         M = len(self.members)
+         times = self._file.variables[self._initname][:]
+         if len(times.shape) == 0:
+            times = np.array([times])
+
+         D = len(self.Itimes)
+         T = self.length
+         data = np.zeros([self.T, self.Y, self.X, M*D], np.float32)
+
+         index = 0
+         for d in range(D):
+            for m in range(0, M):
+               Im = self.members[m]
+               if self.is_spatial:
+                  if self.has_frt:
+                     data[:, :, :, index] = temp[self.Itimes[d], :, Im, :, :]
+                  else:
+                     data[:, :, :, index] = temp[:, Im, :, :]
+
                else:
-                  data[:, :, :, v] = temp[:, Im, :, :]
-            else:
-               if self.has_frt:
-                  data[:, :, :, v] = np.reshape(temp[Itimes[It], :, Im], [self.T, self.Y, self.X])
-               else:
-                  data[:, :, :, v] = np.reshape(temp[:, Im], [self.T, self.Y, self.X])
-            # Quality control
-            if var.name == "precipitation_amount":
-               data[data < 0] = 0
+                  # data[:, :, :] = temp[:, :, :, :, :]
+                  # TODO: Fix all these to be like above
+                  if self.has_frt:
+                     data[:, :, :, index] = np.reshape(temp[self.Itimes[d], :, Im], [self.T, self.Y, self.X])
+                  else:
+                     data[:, :, index] = np.reshape(temp[:, Im], [self.T, self.Y, self.X])
+               index = index + 1
+         # Quality control
+         if variable.name == "precipitation_amount":
+            data[data < 0] = 0
          # If one or more values are missing for a member, set all values to nan
          NM = np.sum(np.isnan(data))
          if NM > 0:
-            data[:, :, :, :] = np.nan
+            data[:] = np.nan
             wxgen.util.debug("Removing member %d because of %d missing values" % (member, NM))
-         self._data_cache[member] = data
+         self._data_cache[variable] = data
          e = timing.time()
-         print "Timing: %g" % (e - t)
+         # print "Timing: %g" % (e - t)
+      else:
+         wxgen.util.debug("Cache hit '%s'" % variable.name)
 
-      return self._data_cache[member]
+      return self._data_cache[variable]
 
    def _copy(self, data):
       data = data[:].astype(float)
