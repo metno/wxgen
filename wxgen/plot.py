@@ -228,16 +228,19 @@ class Timeseries(Plot):
                wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
             for m in range(sim.num):
                traj = sim.get(m)
-               if use_single_gridpoint:
-                  values = sim.extract_grid(traj)[:, Xref, Yref, :]
-               else:
+               if not use_single_gridpoint:
                   values = sim.extract(traj)
-               for i in range(len(Ivars)):
-                  index = s*Y+i+1
+               for v in range(len(Ivars)):
+                  index = s*Y+v+1
                   mpl.subplot(X, Y, index)
-                  Ivar = Ivars[i]
-                  mpl.plot(values[:, Ivar], '-')
-                  mpl.ylabel(sim.variables[Ivar].name)
+                  Ivar = Ivars[v]
+                  variable = sims[0].variables[Ivar]
+                  if use_single_gridpoint:
+                     values = sim.extract_grid(traj, variable)[:, Xref, Yref]
+                     mpl.plot(values, '-')
+                  else:
+                     mpl.plot(values[:, Ivar], '-')
+                  mpl.ylabel(variable.name)
                   mpl.title(sim.name)
                   mpl.xlabel("Time (days)")
                   mpl.grid()
@@ -517,8 +520,10 @@ class Map(Plot):
       X = len(sims)
       Y = len(Ivars)
       import mpl_toolkits.basemap
+      variables = sims[0].variables
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
+         variable = variables[Ivar]
          for s in range(len(sims)):
             count = 0
             index = s*Y+v+1
@@ -539,8 +544,8 @@ class Map(Plot):
                   resolution=res)
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj)
-               sim_values += self.aggregator(self.transform(q[:, :, :, Ivar]), axis=0)
+               q = sim.extract_grid(traj, variable)
+               sim_values += self.aggregator(self.transform(q[:, :, :]), axis=0)
                count += 1
             [x, y] = map(lons, lats)
             if self.clim is not None:
@@ -559,7 +564,7 @@ class Map(Plot):
             map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
             map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
             map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
-            mpl.title(sim.name)
+            mpl.title("%s (%s)" % (sim.name, variable.name))
       self._finish_plot()
 
 
@@ -576,6 +581,7 @@ class Jump(Plot):
       Y = len(Ivars)
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
+         variable = sims[0].variables[Ivar]
          index = v+1
          mpl.subplot(X, Y, index)
          for s in range(len(sims)):
@@ -592,13 +598,13 @@ class Jump(Plot):
                if self.scale == "agg":
                   q = sim.extract(traj)
                else:
-                  q = sim.extract_grid(traj)
+                  q = sim.extract_grid(traj, variable)
                for i in range(0, sim.length-1):
                   I = i % (L)
                   if self.scale == "agg":
                      curr = np.mean(np.abs(q[i, Ivar] - q[i+1, Ivar]))
                   else:
-                     curr = np.mean(np.abs(q[i, :, :, Ivar] - q[i+1, :, :, Ivar]))
+                     curr = np.mean(np.abs(q[i, :, :] - q[i+1, :, :]))
                   values[I] += curr
                   counts[I] += 1
             values = values / counts
@@ -627,6 +633,7 @@ class TimeStat(Plot):
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          index = v+1
+         variable = sims[0].variables[Ivar]
          mpl.subplot(X, Y, index)
          for s in range(len(sims)):
             count = 0
@@ -653,16 +660,16 @@ class TimeStat(Plot):
                if self.scale == "agg":
                   q = sim.extract(traj)
                else:
-                  q = sim.extract_grid(traj)
+                  q = sim.extract_grid(traj, variable)
                for i in range(L):
                   I = range(i, q.shape[0], L)
                   if self.scale == "agg":
                      values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
                   else:
                      if use_single_gridpoint:
-                        values[i] = np.append(values[i], self.transform(q[I, Xref, Yref, Ivar]).flatten())
+                        values[i] = np.append(values[i], self.transform(q[I, Xref, Yref]).flatten())
                      else:
-                        values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+                        values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
             values_agg = np.zeros(L)
             for i in range(L):
                values_agg[i] = self.aggregator(values[i])
@@ -688,6 +695,7 @@ class SortStat(Plot):
       Y = len(Ivars)
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
+         variable = sims[0].variables[Ivar]
          for s in range(len(sims)):
             index = v+1
             index = s*Y+v+1
@@ -706,13 +714,13 @@ class SortStat(Plot):
                if self.scale == "agg":
                   q = sim.extract(traj)
                else:
-                  q = sim.extract_grid(traj)
+                  q = sim.extract_grid(traj, variable)
                for i in range(L):
                   I = range(i, q.shape[0], L)
                   if self.scale == "agg":
                      values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
                   else:
-                     values[i] = np.append(values[i], self.transform(q[I, :, :, Ivar]).flatten())
+                     values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
             for i in range(L):
                col = self._get_color(i, L)
                style = self._get_style(i, L)
@@ -752,6 +760,7 @@ class CovarMap(Plot):
       import astropy.convolution
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
+         variable = sims[0].variables[Ivar]
          for s in range(len(sims)):
             count = 0
             index = s*X+v+1
@@ -773,9 +782,8 @@ class CovarMap(Plot):
                   resolution=res)
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj)
-               val = q[:, :, :, Ivar]
-               ref = np.swapaxes(np.tile(q[:, Xref, Yref, Ivar], [q.shape[2], q.shape[1], 1]), 0, 2)
+               val = sim.extract_grid(traj, variable)
+               ref = np.swapaxes(np.tile(val[:, Xref, Yref], [val.shape[2], val.shape[1], 1]), 0, 2)
                scale = self.timescale
                if scale % 2 != 1:
                   wxgen.util.error("Time scale must be an odd number")
@@ -811,5 +819,5 @@ class CovarMap(Plot):
             map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
             map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
             map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
-            mpl.title(sim.name)
+            mpl.title("%s (%s)" % (sim.name, variable.name))
       self._finish_plot()

@@ -40,8 +40,7 @@ def main(argv):
 
       # Generate trajectories
       metric = get_metric(args, db)
-      model = get_climate_model(args)
-      generator = wxgen.generator.LargeScale(db, metric, model=model)
+      generator = wxgen.generator.LargeScale(db, metric)
       generator.prejoin = args.prejoin
       generator.policy = args.policy
       trajectories = generator.get(args.n, args.t, initial_state)
@@ -126,9 +125,9 @@ def main(argv):
       truth = None
       sims = None
       if args.truth is not None:
-         truth = wxgen.database.Netcdf(args.truth, None, members=args.members)
+         truth = wxgen.database.Netcdf(args.truth, None)
       if args.files is not None:
-         sims = [wxgen.database.Netcdf(file, None, members=args.members) for file in args.files]
+         sims = [wxgen.database.Netcdf(file, None) for file in args.files]
       plot.plot(sims, truth)
 
 
@@ -194,7 +193,6 @@ def get_parsers():
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
    sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
-   sp["verif"].add_argument('-e', type=wxgen.util.parse_numbers, help="Only use these members", dest="members")
 
    """
    Common options
@@ -202,9 +200,10 @@ def get_parsers():
    for driver in sp.keys():
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
-      sp[driver].add_argument('-s', default="large", help="Output scale (agg, large, small)", dest="scale")
+      sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
+      sp[driver].add_argument('-mem', type=float, help="Maximum memory allocation when reading from database (GB)")
 
    return parser, sp
 
@@ -220,13 +219,13 @@ def get_db(args):
       # Don't use args.t as the segment length, because then you never get to join
       # Don't use args.n as the number of segments, because then you never get to join
       if args.dbtype is None or args.dbtype == "random":
-         db = wxgen.database.Random(1000, 10, 3, model=model)
+         db = wxgen.database.Random(model=model)
       elif args.dbtype == "lorenz63":
-         db = wxgen.database.Lorenz63(10, 500, model=model)
+         db = wxgen.database.Lorenz63(10, 50, model=wxgen.climate_model.Zero())
       else:
          wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
    else:
-      db = wxgen.database.Netcdf(args.db, args.vars, model=model)
+      db = wxgen.database.Netcdf(args.db, args.vars, model=model, mem=args.mem)
 
    db.wavelet_levels = args.wavelet_levels
 
