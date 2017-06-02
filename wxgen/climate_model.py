@@ -42,10 +42,36 @@ class Bin(ClimateModel):
          num_days (int): Number of days in each bin
       """
       self._num_days = num_days
+      self._min_bin_fraction_size = 0.5
+
+      # Ensure that you don't get a tiny bin at the end of the year. Instead, pool the last few days
+      # together with the second last bin. For example, when using -b 30, the last 6 days of the
+      # year will be in a bin of its own. Prevent this, by only creating a separate last bin if the
+      # last bin is at least half the size of the other bins.
+      max_bin = np.floor(365 / self._num_days)
+      last_bin_start = self._num_days * max_bin
+      last_bin_size = 365 - last_bin_start + 1
+      min_bin_size = np.floor(self._num_days * self._min_bin_fraction_size)
+      self._remove_last_bin = last_bin_size < min_bin_size
 
    def get(self, unixtimes):
-      day = wxgen.util.day_of_year(unixtimes)-1
-      return day / self._num_days
+      # Find the day of year on the interval [0, 365]
+      day = np.array([wxgen.util.day_of_year(unixtime)-1 for unixtime in unixtimes])
+      bin = day / self._num_days
+
+      if self._remove_last_bin:
+         # Find all times that are in the highest bin and put it in the previous bin
+         max_bin = np.floor(365 / self._num_days)
+         last_bin_start = self._num_days * max_bin
+         I = day > last_bin_start
+         if max_bin == 0:
+            # This should never happen, but lets just be safe just in case
+            bin[I] = 0
+         else:
+            bin[I] = max_bin - 1
+
+      bin = np.expand_dims(bin, 1)
+      return bin
 
 
 class Index(ClimateModel):
@@ -76,7 +102,7 @@ class Index(ClimateModel):
          self._index[unixtime] = I[-1]
 
    def get(self, unixtimes):
-      day = wxgen.util.day_of_year(unixtimes)/self._num_days
+      day = np.array([wxgen.util.day_of_year(unixtime)/self._num_days for unixtime in unixtimes])
       index = np.nan*np.zeros(len(unixtimes))
       for i in range(0, len(unixtimes)):
          unixtime = unixtimes[i]
@@ -84,8 +110,9 @@ class Index(ClimateModel):
             index[i] = self._index[unixtime]
          else:
             print "Missing: %d" % unixtime
-      print index
-      return day + index * 100
+      bin = day + index * 100
+      bin = np.expand_dims(bin, 1)
+      return bin
 
 
 class Combo(ClimateModel):

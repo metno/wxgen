@@ -188,7 +188,7 @@ def get_date(date, diff):
    return int(date2.strftime('%Y%m%d'))
 
 
-def day_of_year(unixtimes):
+def day_of_year(unixtime):
    """
    Arguments:
       unixtime (int): Number of seconds since 1970-01-01
@@ -196,9 +196,8 @@ def day_of_year(unixtimes):
    Returns:
       int: Day of year
    """
-   ar = np.zeros([len(unixtimes), 1], int)
-   ar[:, 0] = [int(datetime.datetime.fromtimestamp(unixtime).strftime('%j')) for unixtime in unixtimes]
-   return ar
+   day = int(datetime.datetime.fromtimestamp(unixtime).strftime('%j'))
+   return day
 
 
 def get_i_j(lats, lons, lat, lon):
