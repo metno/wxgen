@@ -25,6 +25,8 @@ def get(name):
          a = aggregator[1]()
    if a is None and wxgen.util.is_number(name):
       a = Quantile(float(name))
+   if a is None:
+      wxgen.util.error("Cannot find aggregator called '%s'" % name)
 
    return a
 
