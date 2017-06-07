@@ -327,3 +327,7 @@ def normalize(array, window=11, normalize_variance=True):
             values[:, i] = values[:, i] / std * meanstd
 
    return values
+
+
+def nprange(data, axis):
+   return np.max(data, axis=axis) - np.min(data, axis=axis)

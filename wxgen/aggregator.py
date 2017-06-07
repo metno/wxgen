@@ -95,7 +95,7 @@ class Iqr(Aggregator):
 
 class Range(Aggregator):
    def __call__(self, array, axis=None):
-      return wxgen.util.nprange(array=axis)
+      return wxgen.util.nprange(array, axis)
 
 
 class Sum(Aggregator):
