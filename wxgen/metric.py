@@ -67,7 +67,7 @@ class Rmsd(Metric):
    def __init__(self, weights=None):
       self._weights = weights
       if self._weights is None:
-         self._weights = 1
+         self._weights = 0
 
    def _compute(self, state1, state2):
       weights = wxgen.util.resize(self._weights, state2.shape)
