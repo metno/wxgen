@@ -265,7 +265,7 @@ def climatology(array, window=1):
    """
    import astropy.convolution
    if window < 1:
-      wxgen.util.error("Cannot have a window size of less than 1")
+      error("Cannot have a window size of less than 1")
    elif window == 1:
       clim = np.nanmean(array, axis=1)
    else:
@@ -320,7 +320,7 @@ def normalize(array, window=11, normalize_variance=True):
       """
       std = np.nanstd(array, axis=1)
       if np.min(std) == 0:
-         wxgen.util.warning("Standard deviation of 0 at one or more days. Not normalizing variance")
+         warning("Standard deviation of 0 at one or more days. Not normalizing variance")
       else:
          meanstd = np.nanmean(std)
          for i in range(0, N):
