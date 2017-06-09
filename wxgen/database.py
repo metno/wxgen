@@ -251,19 +251,24 @@ class Database(object):
             variable, leadtime, and ensemble member and store the values in
             self._data_matching_cache.
             """
+            wxgen.util.debug("Computing wavelets")
             s = timing.time()
             NX, NY = self.get_wavelet_size()
             N = int(NX * NY)
             self._data_matching_cache = np.zeros([self.length, self.V*N, self.num])
             for v in range(self.V):
                data = self.load(self.variables[v])
-               for lt in range(self.length):
-                  for m in range(self.num):
-                     # print "Computing wavelet for leadtime %d variable %d member %d" % (lt, v, m)
-                     dec = pywt.wavedec2(data[lt, :, :, m], 'haar', level=self.wavelet_levels)[0]
-                     dec = dec.flatten()/2**self.wavelet_levels
-                     I = range(v*N, (v+1)*N)
-                     self._data_matching_cache[lt, I, m] = dec
+               # Compute wavelet decomposition on axes 1 2
+               dec = pywt.wavedec2(data, 'haar', level=self.wavelet_levels, axes=(1,2))[0]
+               dec = dec / 2**self.wavelet_levels
+
+               # Collapse axes 1 and 2
+               dec = np.reshape(dec, [self.length, N, self.num])
+
+               # Write data into the right location in the cache
+               I = range(v*N, (v+1)*N)
+               self._data_matching_cache[:, I, :] = dec
+
             e = timing.time()
             wxgen.util.debug("Wavelet time: %f" % (e - s))
 
