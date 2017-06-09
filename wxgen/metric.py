@@ -75,6 +75,44 @@ class Rmsd(Metric):
       return np.sqrt(total)
 
 
+class Max(Metric):
+   """ Max difference of the states
+
+   Arguments:
+      weights (np.array): array of variable-weights
+   """
+   _orientation = -1
+
+   def __init__(self, weights=None):
+      self._weights = weights
+      if self._weights is None:
+         self._weights = 0
+
+   def _compute(self, state1, state2):
+      weights = wxgen.util.resize(self._weights, state2.shape)
+      total = np.max(weights*abs(state1 - state2), axis=0)
+      return total
+
+
+class Mad(Metric):
+   """ Mean absolute difference of the states
+
+   Arguments:
+      weights (np.array): array of variable-weights
+   """
+   _orientation = -1
+
+   def __init__(self, weights=None):
+      self._weights = weights
+      if self._weights is None:
+         self._weights = 0
+
+   def _compute(self, state1, state2):
+      weights = wxgen.util.resize(self._weights, state2.shape)
+      total = np.mean(weights*abs(state1 - state2), axis=0)
+      return total
+
+
 class Exp(Metric):
    """ Exponential score based on exp(-sum(|factor * diff|))
 

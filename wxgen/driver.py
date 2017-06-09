@@ -243,6 +243,10 @@ def get_metric(args, db):
 
       if args.metric == "rmsd":
          metric = wxgen.metric.Rmsd(weights)
+      elif args.metric == "max":
+         metric = wxgen.metric.Max(weights)
+      elif args.metric == "mad":
+         metric = wxgen.metric.Mad(weights)
       elif args.metric == "exp":
          metric = wxgen.metric.Exp(weights)
    else:
