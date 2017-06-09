@@ -45,8 +45,8 @@ class LargeScale(object):
          if initial_state is None:
             wxgen.util.debug("Finding random starting state", color="yellow")
             I = np.random.randint(self._database.num)
-            N = self._database._data_matching.shape[1]
-            tr = self.get_random(np.zeros(N), wxgen.metric.Exp(np.zeros(N)), climate_state)
+            num_vars = self._database._data_matching.shape[1]
+            tr = self.get_random(np.zeros(num_vars), wxgen.metric.Exp(np.zeros(num_vars)), climate_state)
             if 1:
                state_curr = self._database.extract_matching(tr)[0, :]
             else:
