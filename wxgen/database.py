@@ -1,6 +1,7 @@
 import numpy as np
 import wxgen.util
 import pywt
+import os
 import datetime
 import wxgen.variable
 import wxgen.climate_model
@@ -299,6 +300,9 @@ class Netcdf(Database):
          vars (list): List of indices for which variables to use
       """
       Database.__init__(self, model)
+      if not os.path.isfile(filename):
+         wxgen.util.error("File '%s' does not exist" % filename)
+
       self.name = filename[filename.rfind('/') + 1:]
 
       self.mem = mem
