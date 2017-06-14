@@ -44,18 +44,18 @@ def random_weighted(weights, policy):
 
 
 def error(message):
-   print "\033[1;31mError: " + message + "\033[0m"
+   print("\033[1;31mError: " + message + "\033[0m")
    sys.exit(1)
 
 
 def warning(message):
-   print "\033[1;33mWarning: " + message + "\033[0m"
+   print("\033[1;33mWarning: " + message + "\033[0m")
 
 
 def debug(message, color="green"):
    col = COLORS[color]
    if DEBUG:
-      print "\033[1;%imDebug: " % (col) + message + "\033[0m"
+      print("\033[1;%imDebug: " % (col) + message + "\033[0m")
 
 
 def parse_dates(dates):

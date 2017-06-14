@@ -83,8 +83,8 @@ class Index(ClimateModel):
          if unixtime in self._index:
             index[i] = self._index[unixtime]
          else:
-            print "Missing: %d" % unixtime
-      print index
+            print("Missing: %d" % unixtime)
+      print(index)
       return day + index * 100
 
 

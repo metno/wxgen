@@ -55,10 +55,10 @@ class Database(object):
       self._climate_states_cache = None
 
    def info(self):
-      print "Database information:"
-      print "  Length of segments: %d" % self.length
-      print "  Number of segments: %d" % self.num
-      print "  Number of variables: %d" % len(self.variables)
+      print("Database information:")
+      print("  Length of segments: %d" % self.length)
+      print("  Number of segments: %d" % self.num)
+      print("  Number of variables: %d" % len(self.variables))
 
    def load(self, variable):
       """
