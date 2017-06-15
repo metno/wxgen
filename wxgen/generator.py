@@ -97,7 +97,7 @@ class LargeScale(object):
             state_curr = self._database.extract_matching(segment_curr)[-1, :]
             start = start + Tsegment-1
             time = time + (Tsegment-1)*86400
-            if self.prejoin > 0:
+            if self.prejoin is not None and self.prejoin > 0:
                join = (join + 1) % self.prejoin
 
          if len(np.where(trajectory_indices == -1)[0]) > 0:
