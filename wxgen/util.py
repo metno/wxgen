@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import calendar
 import datetime
@@ -20,7 +21,7 @@ def random_weighted(weights, policy):
          'top<N>': e.g. top3, pick a random (unweighted) value from the top N
    """
    if policy == "random":
-      acc = np.cumsum(weights) / np.sum(weights)
+      acc = np.cumsum(weights) // np.sum(weights)
       r = np.random.rand(1)
       temp = np.where(acc < r)[0]
       if len(temp) == 0:
@@ -110,7 +111,7 @@ def parse_numbers(numbers, isDate=False):
                values = values + list(range(int(start), int(end)+1, int(step)))
             else:
                # arange does not include the end point:
-               stepSign = step / abs(step)
+               stepSign = step // abs(step)
                values = values + list(np.arange(start, end + stepSign*0.0001, step))
       else:
          error("Could not translate '" + numbers + "' into numbers")
@@ -139,13 +140,13 @@ def resize(vec, size):
       # Check that the output dims are multiples of input dims
       assert(size[0] % vec.shape[0] == 0)
       assert(size[1] % vec.shape[1] == 0)
-      vec_resized = np.tile(vec, (size[0] / vec.shape[0], size[1] / vec.shape[1]))
+      vec_resized = np.tile(vec, (size[0] // vec.shape[0], size[1] // vec.shape[1]))
    return vec_resized
 
 
 def date_to_unixtime(date):
-   year = date / 10000
-   month = date / 100 % 100
+   year = date // 10000
+   month = date // 100 % 100
    day = date % 100
    ut = calendar.timegm(datetime.datetime(year, month, day).timetuple())
    return ut
@@ -168,7 +169,7 @@ def correlation(ar1, ar2, axis):
    var1 = np.var(ar1, axis=axis)
    var2 = np.var(ar2, axis=axis)
 
-   return cov / np.sqrt(var1) / np.sqrt(var2)
+   return cov // np.sqrt(var1) // np.sqrt(var2)
 
 
 def get_date(date, diff):
@@ -181,8 +182,8 @@ def get_date(date, diff):
    Returns:
       int: A new date in the form YYYYMMDD
    """
-   year = int(date / 10000)
-   month = int(date / 100 % 100)
+   year = int(date // 10000)
+   month = int(date // 100 % 100)
    day = int(date % 100)
    date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
    return int(date2.strftime('%Y%m%d'))
@@ -234,13 +235,13 @@ def distance(lat1, lon1, lat2, lon2):
    """
    # Convert from degrees to radians
    pi = 3.14159265
-   lon1 = lon1 * 2 * pi / 360
-   lat1 = lat1 * 2 * pi / 360
-   lon2 = lon2 * 2 * pi / 360
-   lat2 = lat2 * 2 * pi / 360
+   lon1 = lon1 * 2 * pi // 360
+   lat1 = lat1 * 2 * pi // 360
+   lon2 = lon2 * 2 * pi // 360
+   lat2 = lat2 * 2 * pi // 360
    dlon = lon2 - lon1
    dlat = lat2 - lat1
-   a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+   a = np.sin(dlat // 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon // 2)**2
    c = 2 * np.arcsin(np.sqrt(a))
    distance = 6.367e6 * c
    return distance
@@ -325,6 +326,6 @@ def normalize(array, window=11, normalize_variance=True):
       else:
          meanstd = np.nanmean(std)
          for i in range(0, N):
-            values[:, i] = values[:, i] / std * meanstd
+            values[:, i] = values[:, i] // std * meanstd
 
    return values

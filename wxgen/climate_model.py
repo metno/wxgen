@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import datetime
 import wxgen.util
@@ -45,7 +46,7 @@ class Bin(ClimateModel):
 
    def get(self, unixtimes):
       day = wxgen.util.day_of_year(unixtimes)-1
-      return day / self._num_days
+      return day // self._num_days
 
 
 class Index(ClimateModel):
