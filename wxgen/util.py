@@ -21,7 +21,7 @@ def random_weighted(weights, policy):
          'top<N>': e.g. top3, pick a random (unweighted) value from the top N
    """
    if policy == "random":
-      acc = np.cumsum(weights) // np.sum(weights)
+      acc = np.cumsum(weights) / np.sum(weights)
       r = np.random.rand(1)
       temp = np.where(acc < r)[0]
       if len(temp) == 0:
@@ -111,7 +111,7 @@ def parse_numbers(numbers, isDate=False):
                values = values + list(range(int(start), int(end)+1, int(step)))
             else:
                # arange does not include the end point:
-               stepSign = step // abs(step)
+               stepSign = step / abs(step)
                values = values + list(np.arange(start, end + stepSign*0.0001, step))
       else:
          error("Could not translate '" + numbers + "' into numbers")
@@ -140,7 +140,7 @@ def resize(vec, size):
       # Check that the output dims are multiples of input dims
       assert(size[0] % vec.shape[0] == 0)
       assert(size[1] % vec.shape[1] == 0)
-      vec_resized = np.tile(vec, (size[0] // vec.shape[0], size[1] // vec.shape[1]))
+      vec_resized = np.tile(vec, (size[0] / vec.shape[0], size[1] / vec.shape[1]))
    return vec_resized
 
 
@@ -169,7 +169,7 @@ def correlation(ar1, ar2, axis):
    var1 = np.var(ar1, axis=axis)
    var2 = np.var(ar2, axis=axis)
 
-   return cov // np.sqrt(var1) // np.sqrt(var2)
+   return cov / np.sqrt(var1) / np.sqrt(var2)
 
 
 def get_date(date, diff):
@@ -326,6 +326,6 @@ def normalize(array, window=11, normalize_variance=True):
       else:
          meanstd = np.nanmean(std)
          for i in range(0, N):
-            values[:, i] = values[:, i] // std * meanstd
+            values[:, i] = values[:, i] / std * meanstd
 
    return values
