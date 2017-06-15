@@ -70,7 +70,7 @@ class Database(object):
 
          if len(self._data_cache) > 0:
             # Check if we need to remove data from cache
-            akey = self._data_cache.keys()[0]
+            akey = list(self._data_cache.keys())[0]
             bytes_per_value = 4
             size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
             next_size = float(len(self._data_cache) + 1) * size_per_key
