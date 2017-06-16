@@ -78,7 +78,7 @@ class Database(object):
             if self.mem is not None and next_size_gb > self.mem:
                # remove from cache
                I = np.random.randint(len(self._data_cache))
-               rmkey = self._data_cache.keys()[I]
+               rmkey = list(self._data_cache.keys())[I]
                self._data_cache.pop(rmkey)
                wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
 
