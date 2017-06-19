@@ -582,7 +582,14 @@ class TimeStat(Plot):
                else:
                   q = sim.extract_grid(traj, variable)
                for i in range(L):
-                  I = range(i, q.shape[0], L)
+                  """
+                  Create array of indices that are 'L' elements apart. However, we want all index
+                  arrays to be the same size so that we don't get strange sampling effects when for
+                  some 'i's we sample the end of the timeseries one extra time). To achieve this
+                  when the array is 365 long and timemod is 9, only use the first 360 elements of
+                  the array
+                  """
+                  I = range(i, q.shape[0] // L * L, L)
                   if self.scale == "agg":
                      values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
                   else:
@@ -634,7 +641,7 @@ class SortStat(Plot):
                else:
                   q = sim.extract_grid(traj, variable)
                for i in range(L):
-                  I = range(i, q.shape[0], L)
+                  I = range(i, q.shape[0] // L * L, L)
                   if self.scale == "agg":
                      values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
                   else:
