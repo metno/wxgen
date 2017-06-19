@@ -295,6 +295,7 @@ class Variance(Plot):
       self._sets_xticks = True
       self._normalize_variance = True
       self._normalization_window = 11
+      self.aggregator = wxgen.aggregator.Variance()
 
    def plot(self, sims):
       if self.thresholds is None:
@@ -320,7 +321,8 @@ class Variance(Plot):
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_sim_variance(sim_values, scales)
             mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
-            mpl.ylabel("Variance ($%s^s$)" % sim.variables[Ivar].units)
+            units = self.aggregator.units(sim.variables[Ivar].units)
+            mpl.ylabel("%s ($%s$)" % (self.aggregator.name().title(), units))
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
@@ -363,7 +365,7 @@ class Variance(Plot):
                sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
             if s > 1:
                sim_c = sim_c[(s/2):(-s/2+1), :]
-            variance[i] = np.nanvar(sim_c, ddof=1)
+            variance[i] = self.aggregator(sim_c.flatten())
       return variance
 
 

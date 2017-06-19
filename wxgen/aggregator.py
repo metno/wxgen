@@ -56,6 +56,9 @@ class Aggregator(object):
       """ Implement this function to return the scalar value """
       raise NotImplementedError()
 
+   def units(self, units):
+      """ Returns the units of this aggregator given the base variable's units """
+      return units
 
 class Mean(Aggregator):
    def __call__(self, array, axis=None):
@@ -86,6 +89,9 @@ class Std(Aggregator):
 class Variance(Aggregator):
    def __call__(self, array, axis=None):
       return np.var(array, axis=axis, ddof=1)
+
+   def units(self, units):
+      return "%s^2" % units
 
 
 class Iqr(Aggregator):
@@ -169,6 +175,9 @@ class Consecutive(Aggregator):
                   acc[i, j] = acc[i, j] - last_acc
 
       return np.max(acc, axis=axis)
+
+   def units(self, units):
+      return "Days"
 
 
 class Quantile(Aggregator):

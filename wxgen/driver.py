@@ -114,7 +114,9 @@ def main(argv):
       plot.thresholds = args.thresholds
       plot.fig_size = args.fs
       plot.transform = get_transform(args)
-      plot.aggregator = get_aggregator(args)
+      aggregator = get_aggregator(args)
+      if aggregator is not None:
+         plot.aggregator = aggregator
       plot.clim = args.clim
       plot.cmap = args.cmap
       plot.lat = args.lat
@@ -274,7 +276,7 @@ def get_transform(args):
 
 
 def get_aggregator(args):
-   aggregator = wxgen.aggregator.Mean()
+   aggregator = None
    if args.aggregator is not None:
       aggregator = wxgen.aggregator.get(args.aggregator)
    return aggregator
