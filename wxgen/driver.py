@@ -19,7 +19,7 @@ def main(argv):
       parser.print_help()
       return
    elif len(argv) == 2 and argv[1] == "--version":
-      print wxgen.version.__version__
+      print(wxgen.version.__version__)
       return
    elif len(argv) == 2 and argv[1] in sp.keys():
       sp[argv[1]].print_help()
