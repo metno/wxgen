@@ -1,3 +1,4 @@
+from __future__ import division
 import inspect
 import netCDF4
 import matplotlib.pyplot as mpl
@@ -186,7 +187,7 @@ class Plot(object):
          return listStyles[I]
 
       else:  # default linestyles
-         I = (i / len(self.colors)) % len(self.default_lines)
+         I = (i // len(self.colors)) % len(self.default_lines)
          line = self.default_lines[I]
          marker = self.default_markers[I]
          if lineOnly:
@@ -362,7 +363,7 @@ class Variance(Plot):
             for e in range(0, N):
                sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
             if s > 1:
-               sim_c = sim_c[(s/2):(-s/2+1), :]
+               sim_c = sim_c[(s//2):(-s//2+1), :]
             variance[i] = np.nanvar(sim_c, ddof=1)
       return variance
 
@@ -709,8 +710,8 @@ class CovarMap(Plot):
                         val[:, i, j] = astropy.convolution.convolve(val[:, i, j], sarray)
 
                   # Remove edges in convolution
-                  ref = ref[(scale/2):(-scale/2+1), :, :]
-                  val = val[(scale/2):(-scale/2+1), :, :]
+                  ref = ref[(scale//2):(-scale//2+1), :, :]
+                  val = val[(scale//2):(-scale//2+1), :, :]
 
                sim_values += wxgen.util.correlation(val, ref, axis=0)
                count += 1
