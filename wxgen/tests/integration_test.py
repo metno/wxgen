@@ -71,7 +71,7 @@ class IntegrationTest(unittest.TestCase):
       os.close(fd)
       self.remove(textFile)
 
-   def valid(self):
+   def test_valid(self):
       self.run_command("wxgen")
       self.run_command("wxgen --version")
       self.run_command("wxgen sim")
