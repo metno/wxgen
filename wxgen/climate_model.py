@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import datetime
 import wxgen.util
@@ -57,7 +58,7 @@ class Bin(ClimateModel):
    def get(self, unixtimes):
       # Find the day of year on the interval [0, 365]
       day = np.array([wxgen.util.day_of_year(unixtime)-1 for unixtime in unixtimes])
-      bin = day / self._num_days
+      bin = day // self._num_days
 
       if self._remove_last_bin:
          # Find all times that are in the highest bin and put it in the previous bin
@@ -109,7 +110,7 @@ class Index(ClimateModel):
          if unixtime in self._index:
             index[i] = self._index[unixtime]
          else:
-            print "Missing: %d" % unixtime
+            print("Missing: %d" % unixtime)
       bin = day + index * 100
       bin = np.expand_dims(bin, 1)
       return bin

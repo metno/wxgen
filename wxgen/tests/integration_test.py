@@ -4,6 +4,7 @@ import numpy as np
 import tempfile
 import netCDF4
 import wxgen.driver
+import time
 np.seterr('raise')
 
 
@@ -70,7 +71,7 @@ class IntegrationTest(unittest.TestCase):
       os.close(fd)
       self.remove(textFile)
 
-   def valid(self):
+   def test_valid(self):
       self.run_command("wxgen")
       self.run_command("wxgen --version")
       self.run_command("wxgen sim")
@@ -110,9 +111,11 @@ class IntegrationTest(unittest.TestCase):
       self.run_with_image("wxgen verif %s %s -m timeseries" % (sim_filename, truth_filename))
       self.run_with_image("wxgen verif %s %s -m variance" % (sim_filename, truth_filename))
 
+      time.sleep(1)
+
       for filename in [sim_filename, truth_filename]:
          self.remove(filename)
-
+           
 
 if __name__ == '__main__':
    unittest.main()

@@ -4,7 +4,11 @@ env:
  - DIST=trusty
 
 python:
-   - "2.7_with_system_site_packages"
+   - "2.7"
+   - "3.5"
+
+cache:
+   - pip
 
 addons:
    apt:
@@ -21,7 +25,7 @@ before_install:
    - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-mpltoolkits.basemap
 
 install:
-   - sudo pip install .
+   - pip install .
 
 script:
    - pip install coveralls pep8

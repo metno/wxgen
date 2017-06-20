@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import calendar
 import datetime
@@ -44,18 +45,18 @@ def random_weighted(weights, policy):
 
 
 def error(message):
-   print "\033[1;31mError: " + message + "\033[0m"
+   print("\033[1;31mError: " + message + "\033[0m")
    sys.exit(1)
 
 
 def warning(message):
-   print "\033[1;33mWarning: " + message + "\033[0m"
+   print("\033[1;33mWarning: " + message + "\033[0m")
 
 
 def debug(message, color="green"):
    col = COLORS[color]
    if DEBUG:
-      print "\033[1;%imDebug: " % (col) + message + "\033[0m"
+      print("\033[1;%imDebug: " % (col) + message + "\033[0m")
 
 
 def parse_dates(dates):
@@ -139,13 +140,13 @@ def resize(vec, size):
       # Check that the output dims are multiples of input dims
       assert(size[0] % vec.shape[0] == 0)
       assert(size[1] % vec.shape[1] == 0)
-      vec_resized = np.tile(vec, (size[0] / vec.shape[0], size[1] / vec.shape[1]))
+      vec_resized = np.tile(vec, (size[0] // vec.shape[0], size[1] // vec.shape[1]))
    return vec_resized
 
 
 def date_to_unixtime(date):
-   year = date / 10000
-   month = date / 100 % 100
+   year = date // 10000
+   month = date // 100 % 100
    day = date % 100
    ut = calendar.timegm(datetime.datetime(year, month, day).timetuple())
    return ut
@@ -181,8 +182,8 @@ def get_date(date, diff):
    Returns:
       int: A new date in the form YYYYMMDD
    """
-   year = int(date / 10000)
-   month = int(date / 100 % 100)
+   year = int(date // 10000)
+   month = int(date // 100 % 100)
    day = int(date % 100)
    date2 = datetime.datetime(year, month, day, 0) + datetime.timedelta(diff)
    return int(date2.strftime('%Y%m%d'))

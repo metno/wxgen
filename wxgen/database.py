@@ -56,10 +56,10 @@ class Database(object):
       self._climate_states_cache = None
 
    def info(self):
-      print "Database information:"
-      print "  Length of segments: %d" % self.length
-      print "  Number of segments: %d" % self.num
-      print "  Number of variables: %d" % len(self.variables)
+      print("Database information:")
+      print("  Length of segments: %d" % self.length)
+      print("  Number of segments: %d" % self.num)
+      print("  Number of variables: %d" % len(self.variables))
 
    def load(self, variable):
       """
@@ -71,7 +71,7 @@ class Database(object):
 
          if len(self._data_cache) > 0:
             # Check if we need to remove data from cache
-            akey = self._data_cache.keys()[0]
+            akey = list(self._data_cache.keys())[0]
             bytes_per_value = 4
             size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
             next_size = float(len(self._data_cache) + 1) * size_per_key
@@ -79,7 +79,7 @@ class Database(object):
             if self.mem is not None and next_size_gb > self.mem:
                # remove from cache
                I = np.random.randint(len(self._data_cache))
-               rmkey = self._data_cache.keys()[I]
+               rmkey = list(self._data_cache.keys())[I]
                self._data_cache.pop(rmkey)
                wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
 
