@@ -115,7 +115,7 @@ class IntegrationTest(unittest.TestCase):
 
       for filename in [sim_filename, truth_filename]:
          self.remove(filename)
-           
+
 
 if __name__ == '__main__':
    unittest.main()

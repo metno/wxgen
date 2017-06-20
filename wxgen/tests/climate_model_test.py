@@ -24,7 +24,7 @@ class BinTest(unittest.TestCase):
       def get_state(date):
          unixtimes = np.array([wxgen.util.date_to_unixtime(date)])
          states = model.get(unixtimes)
-         return states[0,0]
+         return states[0, 0]
 
       # Test that we do not get a small bin at the end of the year
       # That is, 20151230 should be assigned to bin 11 not bin 12

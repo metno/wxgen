@@ -60,6 +60,7 @@ class Aggregator(object):
       """ Returns the units of this aggregator given the base variable's units """
       return units
 
+
 class Mean(Aggregator):
    def __call__(self, array, axis=None):
       return np.mean(array, axis=axis)

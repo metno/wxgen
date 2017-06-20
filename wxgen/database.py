@@ -260,7 +260,7 @@ class Database(object):
             for v in range(self.V):
                data = self.load(self.variables[v])
                # Compute wavelet decomposition on axes 1 2
-               dec = pywt.wavedec2(data, 'haar', level=self.wavelet_levels, axes=(1,2))[0]
+               dec = pywt.wavedec2(data, 'haar', level=self.wavelet_levels, axes=(1, 2))[0]
                dec = dec / 2**self.wavelet_levels
 
                # Collapse axes 1 and 2
