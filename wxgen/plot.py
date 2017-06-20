@@ -612,6 +612,9 @@ class TimeStat(Plot):
       else:
          Ivars = self.vars
 
+      if self.timemod is not None and self.timescale > 1:
+         wxgen.util.warning("-tm and -ts probably does not make sense for -m timestat")
+
       X = 1
       Y = len(Ivars)
       use_single_gridpoint = self.lat is not None and self.lon is not None
@@ -642,10 +645,30 @@ class TimeStat(Plot):
             values = [np.zeros([0])]*L
             for m in range(sim.num):
                traj = sim.get(m)
+               """ Load the data and put it into a 3D array with time, X, Y """
                if self.scale == "agg":
                   q = sim.extract(traj)
+                  q = q[:, Ivar]
+                  q = np.expand_dims(q, 1)
+                  q = np.expand_dims(q, 2)
                else:
                   q = sim.extract_grid(traj, variable)
+                  if use_single_gridpoint:
+                     q = q[:, Xref, Yref].flatten()
+                     q = np.expand_dims(q, 1)
+                     q = np.expand_dims(q, 2)
+                  else:
+                     q = q[:, :, :]
+
+               q = self.transform(q)
+
+               if self.timescale > 1:
+                  import astropy.convolution
+                  conv = 1.0/self.timescale*np.ones(self.timescale)
+                  conv = np.expand_dims(conv, 1)
+                  conv = np.expand_dims(conv, 2)
+                  q = astropy.convolution.convolve(q, conv)
+
                for i in range(L):
                   """
                   Create array of indices that are 'L' elements apart. However, we want all index
@@ -656,17 +679,24 @@ class TimeStat(Plot):
                   """
                   I = range(i, q.shape[0] // L * L, L)
                   if self.scale == "agg":
-                     values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
+                     values[i] = np.append(values[i], q[I, :, :].flatten())
                   else:
                      if use_single_gridpoint:
-                        values[i] = np.append(values[i], self.transform(q[I, Xref, Yref]).flatten())
+                        values[i] = np.append(values[i], q[I, :, :].flatten())
                      else:
-                        values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
+                        values[i] = np.append(values[i], q[I, :, :].flatten())
+
             values_agg = np.zeros(L)
             for i in range(L):
                values_agg[i] = self.aggregator(values[i])
             col = self._get_color(s, len(sims))
-            mpl.plot(range(L), values_agg, '-o', color=col, label=sim.name)
+            x = np.arange(L)
+
+            if self.timemod is None and self.timescale > 1:
+               # Remove the ends when a time convolution is used
+               values_agg = values_agg[(self.timescale // 2):(-self.timescale // 2 + 1)]
+               x = x[(self.timescale // 2):(-self.timescale // 2+1)]
+            mpl.plot(x, values_agg, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.aggregator.name().capitalize()))
          mpl.legend(loc="best")

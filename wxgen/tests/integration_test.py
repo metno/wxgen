@@ -91,6 +91,14 @@ class IntegrationTest(unittest.TestCase):
       self.run_with_image("wxgen verif %s -m distribution" % sim_filename)
       self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
 
+   def test_verif_timestat(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -v 0")
+      self.run_with_image("wxgen verif %s -m timestat" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a variance" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday -ts 31" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tm 9" % sim_filename)
+
    def test_truth(self):
       self.run_with_output("wxgen truth -db examples/database.nc")
       self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")
