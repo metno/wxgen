@@ -34,6 +34,9 @@ class Plot(object):
    """
    Class for representing a verification plot of trajectory information
    """
+   supports_aggregator = False
+   supports_transform = False
+
    def __init__(self):
       self.filename = None
       self.dpi = 100
@@ -63,6 +66,7 @@ class Plot(object):
       self.lon = None
       self.timescale = 1
       self.scale = "large"
+      self.timemod = None
 
    def plot(self, sims):
       """
@@ -245,6 +249,9 @@ class Timeseries(Plot):
 
 class Histogram(Plot):
    """ Plot histogram for annual values for a given statistic """
+   supports_aggregator = True
+   supports_transform = True
+
    def plot(self, sims):
 
       if self.vars is None:
@@ -291,6 +298,8 @@ class Histogram(Plot):
 
 
 class Variance(Plot):
+   supports_aggregator = True
+
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
@@ -371,6 +380,9 @@ class Variance(Plot):
 
 
 class Distribution(Plot):
+   supports_aggregator = True
+   supports_transform = True
+
    def __init__(self):
       Plot. __init__(self)
 
@@ -473,6 +485,9 @@ class Autocorr(Plot):
 
 
 class Map(Plot):
+   supports_aggregator = True
+   supports_transform = True
+
    def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
@@ -579,6 +594,18 @@ class Jump(Plot):
 
 
 class TimeStat(Plot):
+   """
+   Plots statistics across ensemble members as a function of leadtime. The order of the
+   various options are as follows:
+
+   Step 1: Apply transformation (-tr)
+   Step 2: Apply timescale smoothing (-ts)
+   Step 3: Apply time modulus (-tm)
+   Step 4: Aggregate across ensemble members (-a)
+   """
+   supports_aggregator = True
+   supports_transform = True
+
    def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
@@ -648,6 +675,8 @@ class TimeStat(Plot):
 
 
 class SortStat(Plot):
+   supports_transform = True
+
    def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))

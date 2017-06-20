@@ -116,10 +116,6 @@ def main(argv):
       plot.vars = args.vars
       plot.thresholds = args.thresholds
       plot.fig_size = args.fs
-      plot.transform = get_transform(args)
-      aggregator = get_aggregator(args)
-      if aggregator is not None:
-         plot.aggregator = aggregator
       plot.clim = args.clim
       plot.cmap = args.cmap
       plot.lat = args.lat
@@ -127,6 +123,18 @@ def main(argv):
       plot.timemod = args.timemod
       plot.timescale = args.timescale
       plot.scale = args.scale
+
+      transform = get_transform(args)
+      if transform is not None:
+         if not plot.supports_transform:
+            wxgen.util.error("Plot does not support -tr")
+         plot.transform = transform
+      aggregator = get_aggregator(args)
+      if aggregator is not None:
+         if not plot.supports_aggregator:
+            wxgen.util.error("Plot does not support -a")
+         plot.aggregator = aggregator
+
       sims = [wxgen.database.Netcdf(file, None) for file in args.files]
       plot.plot(sims)
 
@@ -272,7 +280,7 @@ def get_climate_model(args):
 
 
 def get_transform(args):
-   transform = wxgen.transform.Nothing()
+   transform = None
    if args.transform is not None:
       transform = wxgen.transform.get(args.transform)
    return transform
