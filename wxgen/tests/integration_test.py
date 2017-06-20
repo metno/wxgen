@@ -86,6 +86,11 @@ class IntegrationTest(unittest.TestCase):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
       self.run_with_image("wxgen verif %s -m histogram -a mean" % sim_filename)
 
+   def test_verif_distribution(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m distribution" % sim_filename)
+      self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
+
    def test_truth(self):
       self.run_with_output("wxgen truth -db examples/database.nc")
       self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")

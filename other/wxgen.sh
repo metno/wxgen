@@ -12,7 +12,7 @@ elif [ "$mode" = "sim" ]; then
    if [ "$prev" = "-db" ]; then
       COMPREPLY=( $( compgen -f -W -- $cur ) )
    elif [ "$prev" = "-m" ]; then
-      COMPREPLY=( $( compgen -W "exp rmsd " -- $cur ) )
+      COMPREPLY=( $( compgen -W "exp mad max rmsd " -- $cur ) )
    elif [ "$cur" = "" ] || [[ "$cur" =~ -* ]]; then
       COMPREPLY=( $( compgen -f -W "-h -n -t -m -rs -w -i -j -b -p -db -dbtype --dbtype -o -wl -v --debug -s -lat -lon -mem " -- $cur ) )
    fi
@@ -28,7 +28,7 @@ elif [ "$mode" = "verif" ]; then
    elif [ "$prev" = "-tr" ]; then
       COMPREPLY=( $( compgen -W "dryday frostday nothing summerday wetday " -- $cur ) )
    elif [ "$prev" = "-m" ]; then
-      COMPREPLY=( $( compgen -W "autocorr covarmap histogram jump map sortstat timestat timeseries variance " -- $cur ) )
+      COMPREPLY=( $( compgen -W "autocorr covarmap distribution histogram jump map sortstat timestat timeseries variance " -- $cur ) )
    elif [ "$cur" = "" ] || [[ "$cur" =~ -* ]]; then
       COMPREPLY=( $( compgen -f -W "-h -fs -m -o -xlim -xlog -ylim -ylog -r -tr -a -clim -cmap -tm -ts -v --debug -s -lat -lon -mem " -- $cur ) )
    fi

@@ -370,6 +370,43 @@ class Variance(Plot):
       return variance
 
 
+class Distribution(Plot):
+   def __init__(self):
+      Plot. __init__(self)
+
+   def plot(self, sims):
+      if self.vars is None:
+         Ivars = range(len(sims[0].variables))
+      else:
+         Ivars = self.vars
+
+      for i in range(len(Ivars)):
+         Ivar = Ivars[i]
+         mpl.subplot(1, len(Ivars), i+1)
+         min_length = np.inf
+         for s in range(len(sims)):
+            min_length = min(min_length, sims[s].length)
+         for s in range(len(sims)):
+            sim = sims[s]
+            sim_values = np.zeros([sim.num])
+            col = self._get_color(s, len(sims))
+            for m in range(sim.num):
+               traj = sim.get(m)
+               q = sim.extract(traj)
+               sim_values[m] = self.aggregator(self.transform(q[range(min_length), Ivar]))
+               N = len(sim_values)
+            x = np.sort(sim_values)
+            y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
+            mpl.plot(x, y, '-o', label=sim.name, color=col)
+            mpl.ylabel("Quantile")
+
+         mpl.xlabel("%s %s ($%s$)" % (self.aggregator.name().title(), sim.variables[Ivar].name,
+            sim.variables[Ivar].units))
+         mpl.grid()
+      mpl.legend()
+      self._finish_plot()
+
+
 class Autocorr(Plot):
    def __init__(self):
       Plot. __init__(self)
