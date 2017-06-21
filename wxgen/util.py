@@ -255,11 +255,12 @@ def is_number(s):
       return False
 
 
-def climatology(array, window=1):
+def climatology(array, window=1, use_future_years=False):
    """
    Arguments:
       array (np.array): 2D array with dimensions leadtime, member
       window (int): Use an average across this many days
+      use_future_years (bool): Use day 366 in the calculation for day 1, etc
 
    Returns:
       np.array: 1D array with climatology for each leadtime
@@ -272,10 +273,13 @@ def climatology(array, window=1):
    else:
       # extend: Use the first and last values as padding outside the array
       clim = astropy.convolution.convolve(np.nanmean(array, axis=1), 1.0/window*np.ones(window), "extend")
-      # reflect: reflect the array outside, i.e. [0,1,2,3] becomes [1,0, 0,1,2,3, 3,2]
-      # scipy doesn't deal with missing values
-      # import scipy.ndimage
-      # clim = scipy.ndimage.convolve(np.nanmean(array, axis=1), 1.0/window*np.ones(window), mode="reflect")
+
+   if use_future_years and clim.shape[0] > 365:
+      temp = copy.deepcopy(clim)
+      for i in range(temp.shape[0]):
+         I = range(i % 365, temp.shape[0], 365)
+         clim[i] = np.mean(temp[I])
+
    return clim
 
 
@@ -304,7 +308,7 @@ def normalize(array, window=11, normalize_variance=True):
    otherwise the fcst variance is higher because obs gets the advantage of using its own
    climatology.
    """
-   clim = climatology(array, window)
+   clim = climatology(array, window, use_future_years=True)
    values = copy.deepcopy(array)
    for i in range(0, N):
       values[:, i] = (values[:, i] - clim)

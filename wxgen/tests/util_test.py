@@ -46,16 +46,35 @@ class TestClimatology(unittest.TestCase):
    array = np.array([[1, 2], [2, 2], [3, 1], [12, 0], [-2, 2]])  # 5 times, 2 members
 
    def test_simple(self):
-      clim = wxgen.util.climatology(self.array)
-      self.assertEqual(1, len(clim.shape))
-      self.assertEqual(5, len(clim))
-      self.assertTrue(np.array_equal(clim, np.array([1.5, 2, 2, 6, 0])))
+      for flag in [False, True]:
+         clim = wxgen.util.climatology(self.array, use_future_years=flag)
+         self.assertEqual(1, len(clim.shape))
+         self.assertEqual(5, len(clim))
+         self.assertTrue(np.array_equal(clim, np.array([1.5, 2, 2, 6, 0])))
 
    def test_window(self):
-      clim = wxgen.util.climatology(self.array, window=3)
+      for flag in [False, True]:
+         clim = wxgen.util.climatology(self.array, window=3, use_future_years=flag)
+         self.assertEqual(1, len(clim.shape))
+         self.assertEqual(5, len(clim))
+         self.assertTrue(np.min(np.isclose(clim, np.array([5.0/3, 11.0/6, 10.0/3, 8.0/3, 2]))))
+
+   def test_use_future_years(self):
+      array = np.zeros([730, 1])
+      array[0:365] = 1.1
+      array[365:] = 3.2
+      clim = wxgen.util.climatology(array, use_future_years=False)
       self.assertEqual(1, len(clim.shape))
-      self.assertEqual(5, len(clim))
-      self.assertTrue(np.min(np.isclose(clim, np.array([5.0/3, 11.0/6, 10.0/3, 8.0/3, 2]))))
+      self.assertEqual(730, len(clim))
+      self.assertTrue(np.isclose(clim[0], 1.1))
+      self.assertTrue(np.isclose(clim[365], 3.2))
+
+      # All values should be 2.15
+      clim = wxgen.util.climatology(array, use_future_years=True)
+      self.assertEqual(1, len(clim.shape))
+      self.assertEqual(730, len(clim))
+      self.assertTrue(np.isclose(np.max(clim), 2.15))
+      self.assertTrue(np.isclose(np.min(clim), 2.15))
 
 
 if __name__ == '__main__':
