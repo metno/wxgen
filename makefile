@@ -18,6 +18,7 @@ coverage:
 
 test:
 	nosetests
+	nosetests3
 
 dist: makefile
 	echo $(VERSION)
