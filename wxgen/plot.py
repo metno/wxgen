@@ -485,6 +485,14 @@ class Autocorr(Plot):
 
 
 class Map(Plot):
+   """
+   Plots statistics across ensemble members ona map. The order of the
+   various options are as follows:
+
+   Step 1: Apply transformation (-tr)
+   Step 2: Compute average across leadtimes
+   Step 3: Aggregate across ensemble members (-a)
+   """
    supports_aggregator = True
    supports_transform = True
 
@@ -502,10 +510,12 @@ class Map(Plot):
          Ivar = Ivars[v]
          variable = variables[Ivar]
          for s in range(len(sims)):
-            count = 0
+            sim = sims[s]
+            if sim.X <= 1 or sim.Y <= 1:
+               wxgen.util.error("Cannot create map of aggregated scenarios")
+
             index = s*Y+v+1
             mpl.subplot(X, Y, index)
-            sim = sims[s]
             sim_values = np.zeros([sim.Y, sim.X])
             lats = sim.lats
             lons = sim.lons
@@ -519,17 +529,22 @@ class Map(Plot):
             map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
                   urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
                   resolution=res)
+
+            sim_values = np.nan*np.zeros([sim.num, sim.Y, sim.X])
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract_grid(traj, variable)
-               sim_values += self.aggregator(self.transform(q[:, :, :]), axis=0)
-               count += 1
+               q = self.transform(sim.extract_grid(traj, variable))
+               sim_values[m, :, :] = np.mean(q, axis=0)
+
+            agg = self.aggregator(sim_values, axis=0)
+
             [x, y] = map(lons, lats)
             if self.clim is not None:
-               map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
+               map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
             else:
-               map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap)
-            cb = map.colorbar()
+               map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
+            label = "%s %s (%s)" % (self.aggregator.name().title(), variable.name, self.aggregator.units(variable.units))
+            cb = map.colorbar(label=label)
             if self.clim is not None:
                mpl.clim(self.clim)
                cb.set_clim(self.clim)
@@ -541,7 +556,7 @@ class Map(Plot):
             map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
             map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
             map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
-            mpl.title("%s (%s)" % (sim.name, variable.name))
+            mpl.title("%s" % (sim.name))
       self._finish_plot()
 
 
