@@ -129,11 +129,24 @@ def main(argv):
          if not plot.supports_transform:
             wxgen.util.error("Plot does not support -tr")
          plot.transform = transform
-      aggregator = get_aggregator(args)
-      if aggregator is not None:
-         if not plot.supports_aggregator:
-            wxgen.util.error("Plot does not support -a")
-         plot.aggregator = aggregator
+      if args.aggregator is not None:
+         aggregator = get_aggregator(args.aggregator)
+         if aggregator is not None:
+            if not plot.supports_time_aggregator and not plot.supports_ens_aggregator:
+               wxgen.util.error("Plot does not support -a")
+            plot.time_aggregator = aggregator
+            plot.ens_aggregator = aggregator
+      else:
+         if args.ens_aggregator is not None:
+            if not plot.supports_ens_aggregator:
+               wxgen.util.error("Plot does not support -ea")
+            aggregator = get_aggregator(args.ens_aggregator)
+            plot.ens_aggregator = aggregator
+         if args.time_aggregator is not None:
+            if not plot.supports_time_aggregator:
+               wxgen.util.error("Plot does not support -ta")
+            aggregator = get_aggregator(args.time_aggregator)
+            plot.time_aggregator = aggregator
 
       sims = [wxgen.database.Netcdf(file, None) for file in args.files]
       plot.plot(sims)
@@ -195,7 +208,9 @@ def get_parsers():
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
    aggregators = [mod for mod in get_module_names(wxgen.aggregator) if mod != "quantile"]
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for use in plots. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for all dimensions (overrides -ta -te). One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
+   sp["verif"].add_argument('-ta', dest="time_aggregator", help="Aggregator for time dimension. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
+   sp["verif"].add_argument('-ea', dest="ens_aggregator", help="Aggregator for ensemble dimension. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
@@ -286,10 +301,10 @@ def get_transform(args):
    return transform
 
 
-def get_aggregator(args):
+def get_aggregator(name):
    aggregator = None
-   if args.aggregator is not None:
-      aggregator = wxgen.aggregator.get(args.aggregator)
+   if name is not None:
+      aggregator = wxgen.aggregator.get(name)
    return aggregator
 
 

@@ -34,7 +34,8 @@ class Plot(object):
    """
    Class for representing a verification plot of trajectory information
    """
-   supports_aggregator = False
+   supports_time_aggregator = False
+   supports_ens_aggregator = False
    supports_transform = False
 
    def __init__(self):
@@ -59,7 +60,8 @@ class Plot(object):
       self.default_lines = ['-', '-', '-', '--']
       self.default_markers = ['o', '', '.', '']
       self.transform = wxgen.transform.Nothing()
-      self.aggregator = wxgen.aggregator.Mean()
+      self.time_aggregator = wxgen.aggregator.Mean()
+      self.ens_aggregator = wxgen.aggregator.Mean()
       self.clim = None
       self.cmap = None
       self.lat = None
@@ -249,7 +251,7 @@ class Timeseries(Plot):
 
 class Histogram(Plot):
    """ Plot histogram for annual values for a given statistic """
-   supports_aggregator = True
+   supports_time_aggregator = True
    supports_transform = True
 
    def plot(self, sims):
@@ -280,7 +282,7 @@ class Histogram(Plot):
                   values = self.create_yearly_series(values)
                   curr_agg = np.zeros(values.shape[1])
                   for k in range(values.shape[1]):
-                     curr_agg[k] = self.aggregator(values[:, k])
+                     curr_agg[k] = self.time_aggregator(values[:, k])
                   agg = np.append(agg, curr_agg)
 
                if self.thresholds is not None:
@@ -298,14 +300,14 @@ class Histogram(Plot):
 
 
 class Variance(Plot):
-   supports_aggregator = True
+   supports_ens_aggregator = True
 
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
       self._normalize_variance = True
       self._normalization_window = 11
-      self.aggregator = wxgen.aggregator.Variance()
+      self.ens_aggregator = wxgen.aggregator.Variance()
 
    def plot(self, sims):
       if self.thresholds is None:
@@ -331,8 +333,8 @@ class Variance(Plot):
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_sim_variance(sim_values, scales)
             mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
-            units = self.aggregator.units(sim.variables[Ivar].units)
-            mpl.ylabel("%s ($%s$)" % (self.aggregator.name().title(), units))
+            units = self.ens_aggregator.units(sim.variables[Ivar].units)
+            mpl.ylabel("%s ($%s$)" % (self.ens_aggregator.name().capitalize(), units))
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
@@ -375,12 +377,12 @@ class Variance(Plot):
                sim_c[:, e] = astropy.convolution.convolve(values[:, e], 1.0/s*np.ones(s))
             if s > 1:
                sim_c = sim_c[(s//2):(-s//2+1), :]
-            variance[i] = self.aggregator(sim_c.flatten())
+            variance[i] = self.ens_aggregator(sim_c.flatten())
       return variance
 
 
 class Distribution(Plot):
-   supports_aggregator = True
+   supports_time_aggregator = True
    supports_transform = True
 
    def __init__(self):
@@ -405,14 +407,14 @@ class Distribution(Plot):
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
-               sim_values[m] = self.aggregator(self.transform(q[range(min_length), Ivar]))
+               sim_values[m] = self.time_aggregator(self.transform(q[range(min_length), Ivar]))
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
             mpl.plot(x, y, '-o', label=sim.name, color=col)
             mpl.ylabel("Quantile")
 
-         mpl.xlabel("%s %s ($%s$)" % (self.aggregator.name().title(), sim.variables[Ivar].name,
+         mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
             sim.variables[Ivar].units))
          mpl.grid()
       mpl.legend()
@@ -490,10 +492,11 @@ class Map(Plot):
    various options are as follows:
 
    Step 1: Apply transformation (-tr)
-   Step 2: Compute average across leadtimes
-   Step 3: Aggregate across ensemble members (-a)
+   Step 2: Aggregate across leadtimes (-ta)
+   Step 3: Aggregate across ensemble members (-ea)
    """
-   supports_aggregator = True
+   supports_time_aggregator = True
+   supports_ens_aggregator = True
    supports_transform = True
 
    def plot(self, sims):
@@ -534,16 +537,16 @@ class Map(Plot):
             for m in range(sim.num):
                traj = sim.get(m)
                q = self.transform(sim.extract_grid(traj, variable))
-               sim_values[m, :, :] = np.mean(q, axis=0)
+               sim_values[m, :, :] = self.time_aggregator(q, axis=0)
 
-            agg = self.aggregator(sim_values, axis=0)
+            agg = self.ens_aggregator(sim_values, axis=0)
 
             [x, y] = map(lons, lats)
             if self.clim is not None:
                map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
             else:
                map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
-            label = "%s %s (%s)" % (self.aggregator.name().title(), variable.name, self.aggregator.units(variable.units))
+            label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
             cb = map.colorbar(label=label)
             if self.clim is not None:
                mpl.clim(self.clim)
@@ -618,7 +621,7 @@ class TimeStat(Plot):
    Step 3: Apply time modulus (-tm)
    Step 4: Aggregate across ensemble members (-a)
    """
-   supports_aggregator = True
+   supports_ens_aggregator = True
    supports_transform = True
 
    def plot(self, sims):
@@ -703,7 +706,7 @@ class TimeStat(Plot):
 
             values_agg = np.zeros(L)
             for i in range(L):
-               values_agg[i] = self.aggregator(values[i])
+               values_agg[i] = self.ens_aggregator(values[i])
             col = self._get_color(s, len(sims))
             x = np.arange(L)
 
@@ -713,7 +716,7 @@ class TimeStat(Plot):
                x = x[(self.timescale // 2):(-self.timescale // 2+1)]
             mpl.plot(x, values_agg, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
-         mpl.ylabel("%s" % (self.aggregator.name().capitalize()))
+         mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
          mpl.legend(loc="best")
          mpl.grid()
       self._finish_plot()
