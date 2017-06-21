@@ -381,6 +381,8 @@ class Netcdf(Database):
             self.lons, self.lats = np.meshgrid(self.lons, self.lats)
 
    def _load(self, variable):
+      if variable.name not in self._file.variables:
+         wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
       temp = self._file.variables[variable.name][:]
 
       data = np.nan*np.zeros([self.length, self.Y, self.X, self.num], np.float32)
