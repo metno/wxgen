@@ -14,6 +14,7 @@ class LargeScale(object):
       self._metric = metric
       self.prejoin = None
       self.policy = "random"
+      self.stagger = False
 
    def get(self, N, T, initial_state=None):
       """
@@ -27,11 +28,9 @@ class LargeScale(object):
          T (int): Number of timesteps in each trajectory
          initial_state (np.array): An array of the initial state (must be of length V)
       """
-      # Initialize
       trajectories = list()
       V = len(self._database.variables)
-      Tsegment = self._database.length
-      if Tsegment < 2:
+      if self._database.length < 2:
          wxgen.util.error("Cannot create simulation with a database with segments shorter than 2 days")
       X = self._database.X
       Y = self._database.Y
@@ -79,12 +78,22 @@ class LargeScale(object):
             wxgen.util.debug("Found random segment", color="yellow")
             wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
             segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
+
+            """
+            Stagger the trajectories so that they don't all potentially have jumps at the same
+            leadtimes. This is done by truncating the first segment to a random length.
+            """
+            if self.stagger and start == 0:
+               I = np.random.randint(2, segment_curr.indices.shape[0])
+               segment_curr.indices = segment_curr.indices[0:I, :]
+
             indices_curr = segment_curr.indices
 
             """
             Account for the fact that the desired trajectory length is not a whole multiple of the
             segment length: Only take the first part of the segment if needed.
             """
+            Tsegment = len(indices_curr)
             end = min(start + Tsegment, T)  # Ending index
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment

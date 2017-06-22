@@ -8,34 +8,29 @@ import time
 np.seterr('raise')
 
 
+def run_command(command):
+   """ Runs a wxgen command line """
+   argv = command.split()
+   wxgen.driver.main(argv)
+
+
+def remove(file):
+   """ Removes a file """
+   os.remove(file)
+
+
+def file_size(filename):
+   """ Returns the number of bytes of a file """
+   statinfo = os.stat(filename)
+   return statinfo.st_size
+
+
+def is_valid_file(filename, min_size=3000):
+   """ Checks if a file is larger in size than min_size bytes """
+   return file_size(filename) > min_size
+
+
 class IntegrationTest(unittest.TestCase):
-   """
-   These tests run wxgen on the command-line, but do not test the validity of the
-   output graphics, only that they do or do not create errors.
-   """
-
-   @staticmethod
-   def run_command(command):
-      """ Runs a wxgen command line """
-      argv = command.split()
-      wxgen.driver.main(argv)
-
-   @staticmethod
-   def remove(file):
-      """ Removes a file """
-      os.remove(file)
-
-   @staticmethod
-   def file_size(filename):
-      """ Returns the number of bytes of a file """
-      statinfo = os.stat(filename)
-      return statinfo.st_size
-
-   @staticmethod
-   def is_valid_file(filename, min_size=3000):
-      """ Checks if a file is larger in size than min_size bytes """
-      return IntegrationTest.file_size(filename) > min_size
-
    def run_with_image(self, command):
       """
       Runs the wxgen command and appends -f <somefile>.png so that it will write output
@@ -43,10 +38,10 @@ class IntegrationTest(unittest.TestCase):
       """
       fd, imageFile = tempfile.mkstemp(suffix=".png")
       command = command + " -o " + imageFile
-      self.run_command(command)
-      self.assertTrue(self.is_valid_file(imageFile), 3000)
+      run_command(command)
+      self.assertTrue(is_valid_file(imageFile), 3000)
       os.close(fd)
-      self.remove(imageFile)
+      remove(imageFile)
 
    def run_with_output(self, command):
       """
@@ -55,7 +50,8 @@ class IntegrationTest(unittest.TestCase):
       """
       fd, file = tempfile.mkstemp(suffix=".nc")
       command = command + " -o " + file
-      self.run_command(command)
+      run_command(command)
+      self.assertTrue(is_valid_file(file), 100)
       os.close(fd)
       return file
 
@@ -66,49 +62,20 @@ class IntegrationTest(unittest.TestCase):
       """
       fd, textFile = tempfile.mkstemp(suffix=".txt")
       command = command + " -f " + textFile
-      self.run_command(command)
-      self.assertTrue(self.is_valid_file(textFile, 10))
+      run_command(command)
+      self.assertTrue(is_valid_file(textFile, 10))
       os.close(fd)
-      self.remove(textFile)
+      remove(textFile)
 
    def test_valid(self):
-      self.run_command("wxgen")
-      self.run_command("wxgen --version")
-      self.run_command("wxgen sim")
-      self.run_command("wxgen truth")
-      self.run_command("wxgen verif")
+      run_command("wxgen")
+      run_command("wxgen --version")
+      run_command("wxgen sim")
+      run_command("wxgen truth")
+      run_command("wxgen verif")
 
-   def test_verif_transform(self):
-      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
-      self.run_with_image("wxgen verif %s -m histogram -tr dryday" % sim_filename)
 
-   def test_verif_aggregator(self):
-      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
-      self.run_with_image("wxgen verif %s -m histogram -a mean" % sim_filename)
-      self.run_with_image("wxgen verif %s -m variance -a mean" % sim_filename)
-      self.run_with_image("wxgen verif %s -m variance -ea mean" % sim_filename)
-      self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
-      self.run_with_image("wxgen verif %s -m distribution -ta median" % sim_filename)
-
-   def test_verif_distribution(self):
-      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
-      self.run_with_image("wxgen verif %s -m distribution" % sim_filename)
-      self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
-
-   def test_verif_timestat(self):
-      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -v 0")
-      self.run_with_image("wxgen verif %s -m timestat" % sim_filename)
-      self.run_with_image("wxgen verif %s -m timestat -a variance" % sim_filename)
-      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday" % sim_filename)
-      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday -ts 31" % sim_filename)
-      self.run_with_image("wxgen verif %s -m timestat -a mean -tm 9" % sim_filename)
-      self.run_with_image("wxgen verif %s -m timestat -ea mean -tm 9" % sim_filename)
-
-   def test_truth(self):
-      self.run_with_output("wxgen truth -db examples/database.nc")
-      self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")
-      self.run_with_output("wxgen truth -db examples/database.nc -n 2 -t 10")
-
+class SimTest(IntegrationTest):
    def test_README(self):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 10 -t 100")
       file = netCDF4.Dataset(sim_filename, 'r')
@@ -132,7 +99,50 @@ class IntegrationTest(unittest.TestCase):
       time.sleep(1)
 
       for filename in [sim_filename, truth_filename]:
-         self.remove(filename)
+         remove(filename)
+
+   def test_stagger(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -g")
+
+
+class TruthTest(IntegrationTest):
+   def test_basic(self):
+      self.run_with_output("wxgen truth -db examples/database.nc")
+      self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")
+      self.run_with_output("wxgen truth -db examples/database.nc -n 2 -t 10")
+
+
+class VerifTest(IntegrationTest):
+   """
+   These tests run wxgen on the command-line, but do not test the validity of the output graphics,
+   only that they do or do not create errors and that the output image is at least 3 KB in size.
+   """
+
+   def test_transform(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m histogram -tr dryday" % sim_filename)
+
+   def test_aggregator(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m histogram -a mean" % sim_filename)
+      self.run_with_image("wxgen verif %s -m variance -a mean" % sim_filename)
+      self.run_with_image("wxgen verif %s -m variance -ea mean" % sim_filename)
+      self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
+      self.run_with_image("wxgen verif %s -m distribution -ta median" % sim_filename)
+
+   def test_distribution(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730")
+      self.run_with_image("wxgen verif %s -m distribution" % sim_filename)
+      self.run_with_image("wxgen verif %s -m distribution -a mean" % sim_filename)
+
+   def test_timestat(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -v 0")
+      self.run_with_image("wxgen verif %s -m timestat" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a variance" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tr summerday -ts 31" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -a mean -tm 9" % sim_filename)
+      self.run_with_image("wxgen verif %s -m timestat -ea mean -tm 9" % sim_filename)
 
 
 if __name__ == '__main__':

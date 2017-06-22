@@ -46,6 +46,7 @@ def main(argv):
       generator = wxgen.generator.LargeScale(db, metric)
       generator.prejoin = args.prejoin
       generator.policy = args.policy
+      generator.stagger = args.stagger
       trajectories = generator.get(args.n, args.t, initial_state)
 
       # Create output
@@ -177,6 +178,7 @@ def get_parsers():
    sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
    sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
    sp["sim"].add_argument('-p', default="top5", metavar="POLICY", help="Randomization policy. One of 'random', 'top<N>'", dest="policy")
+   sp["sim"].add_argument('-g', help="Randomly truncate the first segment so that potential jumps are staggered", dest="stagger", action="store_true")
 
    """
    Truth trajetory driver
