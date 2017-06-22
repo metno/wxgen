@@ -38,6 +38,7 @@ class Plot(object):
    supports_ens_aggregator = False
    supports_transform = False
    supports_timemod = False
+   supports_timescale = False
 
    def __init__(self):
       self.filename = None
@@ -627,6 +628,7 @@ class TimeStat(Plot):
    supports_ens_aggregator = True
    supports_transform = True
    supports_timemod = True
+   supports_timescale = True
 
    def plot(self, sims):
       if self.vars is None:
@@ -786,6 +788,8 @@ class SortStat(Plot):
 
 
 class CovarMap(Plot):
+   supports_timescale = True
+
    def plot(self, sims):
       if self.lat is None or self.lon is None:
          wxgen.util.error("-lat and/or -lon not specified")

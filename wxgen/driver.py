@@ -121,8 +121,12 @@ def main(argv):
       plot.cmap = args.cmap
       plot.lat = args.lat
       plot.lon = args.lon
-      plot.timescale = args.timescale
       plot.scale = args.scale
+
+      if args.timescale is not None:
+         if not plot.supports_timescale:
+            wxgen.util.error("Plot does not support -ts")
+         plot.timescale = args.timescale
 
       if args.timemod is not None:
          if not plot.supports_timemod:
@@ -134,6 +138,7 @@ def main(argv):
          if not plot.supports_transform:
             wxgen.util.error("Plot does not support -tr")
          plot.transform = transform
+
       if args.aggregator is not None:
          aggregator = get_aggregator(args.aggregator)
          if aggregator is not None:
@@ -220,7 +225,7 @@ def get_parsers():
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
-   sp["verif"].add_argument('-ts', default=1, type=int, help="Time scale (in days)", dest="timescale")
+   sp["verif"].add_argument('-ts', type=int, help="Time scale (in days)", dest="timescale")
 
    """
    Common options
