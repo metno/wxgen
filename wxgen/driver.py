@@ -121,9 +121,13 @@ def main(argv):
       plot.cmap = args.cmap
       plot.lat = args.lat
       plot.lon = args.lon
-      plot.timemod = args.timemod
       plot.timescale = args.timescale
       plot.scale = args.scale
+
+      if args.timemod is not None:
+         if not plot.supports_timemod:
+            wxgen.util.error("Plot does not support -tm")
+         plot.timemod = args.timemod
 
       transform = get_transform(args)
       if transform is not None:
@@ -211,8 +215,8 @@ def get_parsers():
    sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
    aggregators = [mod for mod in get_module_names(wxgen.aggregator) if mod != "quantile"]
    sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for all dimensions (overrides -ta -te). One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
-   sp["verif"].add_argument('-ta', dest="time_aggregator", help="Aggregator for time dimension. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
-   sp["verif"].add_argument('-ea', dest="ens_aggregator", help="Aggregator for ensemble dimension. One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
+   sp["verif"].add_argument('-ta', dest="time_aggregator", help="Aggregator for time dimension")
+   sp["verif"].add_argument('-ea', dest="ens_aggregator", help="Aggregator for ensemble dimension")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")

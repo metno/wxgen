@@ -37,6 +37,7 @@ class Plot(object):
    supports_time_aggregator = False
    supports_ens_aggregator = False
    supports_transform = False
+   supports_timemod = False
 
    def __init__(self):
       self.filename = None
@@ -564,6 +565,8 @@ class Map(Plot):
 
 
 class Jump(Plot):
+   supports_timemod = True
+
    def plot(self, sims):
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
@@ -623,6 +626,7 @@ class TimeStat(Plot):
    """
    supports_ens_aggregator = True
    supports_transform = True
+   supports_timemod = True
 
    def plot(self, sims):
       if self.vars is None:
@@ -724,6 +728,7 @@ class TimeStat(Plot):
 
 class SortStat(Plot):
    supports_transform = True
+   supports_timemod = True
 
    def plot(self, sims):
       if self.vars is None:
