@@ -58,7 +58,7 @@ def main(argv):
    elif args.command == "truth":
       db = get_db(args)
       if args.n is None and args.t is None:
-        trajectories = [db.get_truth(args.start_date, args.end_date)]
+        trajectories = [db.get_truth(args.start_date, args.end_date, args.which_leadtime)]
       else:
          """
          Create a number of ensemble members, by sampling long timeseries from database (no
@@ -97,7 +97,7 @@ def main(argv):
             e = wxgen.util.get_date(s, args.t)
             if e < end_date:
                wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
-               trajectory = db.get_truth(s, e)
+               trajectory = db.get_truth(s, e, args.which_leadtime)
                trajectories += [trajectory]
             else:
                wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
@@ -197,6 +197,7 @@ def get_parsers():
    sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
    sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
    sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
+   sp["truth"].add_argument('-d', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
 
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")

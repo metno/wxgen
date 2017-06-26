@@ -104,8 +104,18 @@ class Database(object):
       assert(np.sum(np.isnan(indices)) == 0)
       return wxgen.trajectory.Trajectory(indices)
 
-   def get_truth(self, start_date=None, end_date=None):
-      """ Concatenate the initialization state of all trajectories """
+   def get_truth(self, start_date=None, end_date=None, which_leadtime=0):
+      """
+      Concatenate the initialization state of all trajectories
+
+      Arguments:
+         start_date (int): Starting date of scenario (YYYYMMDD)
+         end_date (int): Starting date of scenario (YYYYMMDD)
+         which_leadtime (int): Which lead time should be used to create the truth?
+
+      Returns:
+         trajectory.Trajectory: Truth trajectory
+      """
       start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
       end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
       times = np.arange(start, end, 86400)
@@ -118,7 +128,10 @@ class Database(object):
             wxgen.util.error("There are no inittimes available before %d. The earliest is %d." %
                   (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(
                      np.min(self.inittimes))))
-         inittime = np.max(self.inittimes[I])
+         """ Find the inittime and leadtime that is closest to the desired date and 'which_leadtime' """
+         curr_times = self.inittimes[I] + 86400 * which_leadtime
+         Ibest = np.argmin(np.abs(curr_times - time))
+         inittime = self.inittimes[I][Ibest]
          lt = int((time - inittime)/86400)
          if lt < self.length:
             indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
