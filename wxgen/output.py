@@ -33,6 +33,7 @@ class Output(object):
       self.which_vars = None
       self.lat = None
       self.lon = None
+      self.write_indices = False
 
    def write(self, trajectories, database, scale):
       """ Writes trajectories to file
@@ -177,6 +178,14 @@ class Netcdf(Output):
                      vars[variables[v].name][:, m, :, :] = values[:, :, Xref, Yref]
                   else:
                      vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
+
+      if self.write_indices:
+         var_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
+         var_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
+         for m in range(0, len(trajectories)):
+            trajectory = trajectories[m]
+            var_member[:, m] = trajectory.indices[:, 0]
+            var_leadtime[:, m] = trajectory.indices[:, 1]
 
       # Global attributes
       file.Conventions = "CF-1.0"

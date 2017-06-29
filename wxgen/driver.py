@@ -53,6 +53,7 @@ def main(argv):
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
+      output.write_indices = args.write_indices
       output.write(trajectories, db, args.scale)
 
    elif args.command == "truth":
@@ -105,6 +106,7 @@ def main(argv):
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
+      output.write_indices = args.write_indices
       output.write(trajectories, db, args.scale)
 
    elif args.command == "verif":
@@ -204,6 +206,7 @@ def get_parsers():
       sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If --db is provided, then --dbtype is automatically set to 'netcdf'. If neither --db nor --dbtype is set, then --dbtype is automatically set to 'random'.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
       sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
+      sp[driver].add_argument('--write-indices', help="Write segment indicies into output", dest="write_indices", action="store_true")
 
    """
    Verification driver
