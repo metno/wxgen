@@ -576,6 +576,7 @@ class Jump(Plot):
       else:
          Ivars = self.vars
 
+      use_single_gridpoint = self.lat is not None and self.lon is not None
       X = 1
       Y = len(Ivars)
       for v in range(len(Ivars)):
@@ -586,6 +587,11 @@ class Jump(Plot):
          for s in range(len(sims)):
             count = 0
             sim = sims[s]
+            if use_single_gridpoint:
+               # Find nearest neighbour
+               Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+               wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+
             if self.timemod is None:
                L = sim.length
             else:
@@ -602,6 +608,8 @@ class Jump(Plot):
                   I = i % (L)
                   if self.scale == "agg":
                      curr = np.mean(np.abs(q[i, Ivar] - q[i+1, Ivar]))
+                  elif use_single_gridpoint:
+                     curr = np.mean(np.abs(q[i, Xref, Yref] - q[i+1, Xref, Yref]))
                   else:
                      curr = np.mean(np.abs(q[i, :, :] - q[i+1, :, :]))
                   values[I] += curr
