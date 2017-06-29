@@ -424,6 +424,7 @@ class Distribution(Plot):
 
 
 class Autocorr(Plot):
+   supports_ens_aggregator = True
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
@@ -443,6 +444,7 @@ class Autocorr(Plot):
 
       for i in range(len(Ivars)):
          Ivar = Ivars[i]
+
          mpl.subplot(1, len(Ivars), i+1)
          for s in range(len(sims)):
             sim = sims[s]
@@ -484,7 +486,7 @@ class Autocorr(Plot):
          s = scales[i]
          if array.shape[0] >= s:
             temp = wxgen.util.correlation(values[s:, :], values[:-s, :], axis=0)
-            corr[i] = np.mean(temp)
+            corr[i] = self.ens_aggregator(temp)
       return corr
 
 
