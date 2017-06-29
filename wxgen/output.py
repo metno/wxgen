@@ -180,12 +180,18 @@ class Netcdf(Output):
                      vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
 
       if self.write_indices:
-         var_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
-         var_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
+         var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
+         var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
+         var_segment_leadtime.units = "day"
+         var_segment_time = file.createVariable("segment_time", "i4", ("time", "ensemble_member"))
+         var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+         var_segment_time.standard_name = "time"
+         var_segment_time.long_name = "time"
          for m in range(0, len(trajectories)):
             trajectory = trajectories[m]
-            var_member[:, m] = trajectory.indices[:, 0]
-            var_leadtime[:, m] = trajectory.indices[:, 1]
+            var_segment_member[:, m] = trajectory.indices[:, 0]
+            var_segment_leadtime[:, m] = trajectory.indices[:, 1]
+            var_segment_time[:, m] = database.inittimes[trajectory.indices[:, 0]]
 
       # Global attributes
       file.Conventions = "CF-1.0"
