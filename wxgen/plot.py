@@ -425,6 +425,7 @@ class Distribution(Plot):
 
 class Autocorr(Plot):
    supports_ens_aggregator = True
+
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
