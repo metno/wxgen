@@ -512,7 +512,10 @@ class Map(Plot):
 
       X = len(sims)
       Y = len(Ivars)
-      import mpl_toolkits.basemap
+
+      import cartopy
+      import cartopy.crs as ccrs
+
       variables = sims[0].variables
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
@@ -523,20 +526,9 @@ class Map(Plot):
                wxgen.util.error("Cannot create map of aggregated scenarios")
 
             index = s*Y+v+1
-            mpl.subplot(X, Y, index)
-            sim_values = np.zeros([sim.Y, sim.X])
+            map = mpl.subplot(X, Y, index, projection=ccrs.PlateCarree())
             lats = sim.lats
             lons = sim.lons
-            dlat = 1.0
-            dlon = 1.0
-            llcrnrlat = max(-90, np.min(lats) - dlat / 10)
-            urcrnrlat = min(90, np.max(lats) + dlat / 10)
-            llcrnrlon = np.min(lons) - dlon / 10
-            urcrnrlon = np.max(lons) + dlon / 10
-            res = "l"
-            map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
-                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
-                  resolution=res)
 
             sim_values = np.nan*np.zeros([sim.num, sim.Y, sim.X])
             for m in range(sim.num):
@@ -546,25 +538,29 @@ class Map(Plot):
 
             agg = self.ens_aggregator(sim_values, axis=0)
 
-            [x, y] = map(lons, lats)
+            [x, y] = lons, lats
             if self.clim is not None:
-               map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
             else:
-               map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
             label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
-            cb = map.colorbar(label=label)
+            cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
             if self.clim is not None:
                mpl.clim(self.clim)
                cb.set_clim(self.clim)
-            map.drawcoastlines(linewidth=1)
-            map.drawcountries(linewidth=2)
-            map.drawmapboundary()
-            dy = 1
-            dx = 1
-            map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
-            map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
-            map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+            map.coastlines(resolution='50m')
+            map.add_feature(cartopy.feature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land',
+                                                                '50m', edgecolor='black', facecolor='none'))
+            gl = map.gridlines(draw_labels=True)
+            gl.xlabels_top = False
+            gl.ylabels_right = False
             mpl.title("%s" % (sim.name))
+      fig = mpl.gcf()
+      fig.subplots_adjust(wspace=0.6)
+      fig.subplots_adjust(bottom=0)
+      fig.subplots_adjust(top=1)
+      fig.subplots_adjust(right=0.97)
+      fig.subplots_adjust(left=0.03)
       self._finish_plot()
 
 
