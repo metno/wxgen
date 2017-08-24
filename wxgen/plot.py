@@ -512,7 +512,16 @@ class Map(Plot):
 
       X = len(sims)
       Y = len(Ivars)
-      import mpl_toolkits.basemap
+
+      try:
+         import cartopy
+         import cartopy.crs as ccrs
+         from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+         cartopytest = True
+      except ImportError:
+         import mpl_toolkits.basemap
+         cartopytest = False
+
       variables = sims[0].variables
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
@@ -523,20 +532,23 @@ class Map(Plot):
                wxgen.util.error("Cannot create map of aggregated scenarios")
 
             index = s*Y+v+1
-            mpl.subplot(X, Y, index)
-            sim_values = np.zeros([sim.Y, sim.X])
             lats = sim.lats
             lons = sim.lons
-            dlat = 1.0
-            dlon = 1.0
-            llcrnrlat = max(-90, np.min(lats) - dlat / 10)
-            urcrnrlat = min(90, np.max(lats) + dlat / 10)
-            llcrnrlon = np.min(lons) - dlon / 10
-            urcrnrlon = np.max(lons) + dlon / 10
-            res = "l"
-            map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
-                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
-                  resolution=res)
+
+            if cartopytest:
+               map = mpl.subplot(X, Y, index, projection=ccrs.PlateCarree())
+            else:
+               mpl.subplot(X, Y, index)
+               dlat = 1.0
+               dlon = 1.0
+               llcrnrlat = max(-90, np.min(lats) - dlat / 10)
+               urcrnrlat = min(90, np.max(lats) + dlat / 10)
+               llcrnrlon = np.min(lons) - dlon / 10
+               urcrnrlon = np.max(lons) + dlon / 10
+               res = "l"
+               map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
+                                                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
+                                                  resolution=res)
 
             sim_values = np.nan*np.zeros([sim.num, sim.Y, sim.X])
             for m in range(sim.num):
@@ -546,25 +558,42 @@ class Map(Plot):
 
             agg = self.ens_aggregator(sim_values, axis=0)
 
-            [x, y] = map(lons, lats)
+            [x, y] = lons, lats
             if self.clim is not None:
-               map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap,
+                                   vmin=self.clim[0], vmax=self.clim[1])
             else:
-               map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
             label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
-            cb = map.colorbar(label=label)
+            cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
             if self.clim is not None:
-               mpl.clim(self.clim)
                cb.set_clim(self.clim)
-            map.drawcoastlines(linewidth=1)
-            map.drawcountries(linewidth=2)
-            map.drawmapboundary()
-            dy = 1
-            dx = 1
-            map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
-            map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
-            map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+            if cartopytest:
+               map.coastlines(resolution='10m')
+               map.add_feature(cartopy.feature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land',
+                                                                   '10m', edgecolor='black', facecolor='none'))
+               gl = map.gridlines(draw_labels=True)
+               gl.xlabels_top = False
+               gl.ylabels_right = False
+               gl.xformatter = LONGITUDE_FORMATTER
+               gl.yformatter = LATITUDE_FORMATTER
+            else:
+               map.drawcoastlines(linewidth=1)
+               map.drawcountries(linewidth=2)
+               map.drawmapboundary()
+               dy = 1
+               dx = 1
+               map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
+               map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
+               map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+
             mpl.title("%s" % (sim.name))
+      fig = mpl.gcf()
+      fig.subplots_adjust(wspace=0.8)
+      fig.subplots_adjust(bottom=0)
+      fig.subplots_adjust(top=1)
+      fig.subplots_adjust(right=0.97)
+      fig.subplots_adjust(left=0.03)
       self._finish_plot()
 
 
@@ -814,19 +843,27 @@ class CovarMap(Plot):
       Yref = 10
       Y = len(sims)
       X = len(Ivars)
-      import mpl_toolkits.basemap
+
       import astropy.convolution
+      try:
+         import cartopy
+         import cartopy.crs as ccrs
+         from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+         cartopytest = True
+      except ImportError:
+         import mpl_toolkits.basemap
+         cartopytest = False
+
       for v in range(len(Ivars)):
          Ivar = Ivars[v]
          variable = sims[0].variables[Ivar]
          for s in range(len(sims)):
             count = 0
-            index = s*X+v+1
-            mpl.subplot(X, Y, index)
             sim = sims[s]
             sim_values = np.zeros([sim.Y, sim.X])
             lats = sim.lats
             lons = sim.lons
+            index = s*X+v+1
             dlat = 1.0
             dlon = 1.0
             llcrnrlat = max(-90, np.min(lats) - dlat / 10)
@@ -835,9 +872,15 @@ class CovarMap(Plot):
             urcrnrlon = np.max(lons) + dlon / 10
             [Xref, Yref] = wxgen.util.get_i_j(lats, lons, self.lat, self.lon)
             res = "l"
-            map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
-                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
-                  resolution=res)
+
+            if cartopytest:
+               map = mpl.subplot(X, Y, index, projection=ccrs.PlateCarree())
+            else:
+               mpl.subplot(X, Y, index)
+               map = mpl_toolkits.basemap.Basemap(llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
+                                                  urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, projection='cyl',
+                                                  resolution=res)
+
             for m in range(sim.num):
                traj = sim.get(m)
                val = sim.extract_grid(traj, variable)
@@ -858,24 +901,42 @@ class CovarMap(Plot):
 
                sim_values += wxgen.util.correlation(val, ref, axis=0)
                count += 1
-            [x, y] = map(lons, lats)
+            [x, y] = lons, lats
             if self.clim is not None:
-               map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
-                     label=sim.name, cmap=self.cmap, extend="both")
+               cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
+                     label=sim.name, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
             else:
-               map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap, extend="both")
+               cont = map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap, extend="both")
             mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
-            cb = map.colorbar()
+            cb = mpl.colorbar(cont, fraction=0.046, pad=0.04)
             if self.clim is not None:
-               mpl.clim(self.clim)
                cb.set_clim(self.clim)
-            map.drawcoastlines(linewidth=1)
-            map.drawcountries(linewidth=2)
-            map.drawmapboundary()
-            dy = 1
-            dx = 1
-            map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
-            map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
-            map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+            if cartopytest:
+               map.coastlines(resolution='10m')
+               map.add_feature(cartopy.feature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land',
+                                                                   '10m', edgecolor='black', facecolor='none'))
+               gl = map.gridlines(draw_labels=True)
+               gl.xlabels_top = False
+               gl.ylabels_right = False
+               gl.xformatter = LONGITUDE_FORMATTER
+               gl.yformatter = LATITUDE_FORMATTER
+            else:
+               map.drawcoastlines(linewidth=1)
+               map.drawcountries(linewidth=2)
+               map.drawmapboundary()
+               dy = 1
+               dx = 1
+               map.drawparallels(np.arange(-90., 120., dy), labels=[1, 0, 0, 0])
+               map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
+               map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
+
             mpl.title("%s (%s)" % (sim.name, variable.name))
+      fig = mpl.gcf()
+      fig.subplots_adjust(wspace=0.6)
+      fig.subplots_adjust(bottom=0)
+      fig.subplots_adjust(top=1)
+      fig.subplots_adjust(right=0.97)
+      fig.subplots_adjust(left=0.03)
+
       self._finish_plot()
+
