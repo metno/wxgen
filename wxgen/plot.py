@@ -939,4 +939,3 @@ class CovarMap(Plot):
       fig.subplots_adjust(left=0.03)
 
       self._finish_plot()
-
