@@ -345,18 +345,18 @@ class Netcdf(Database):
             wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
-      self.length = self._file.dimensions["time"].size
+      self.length = len(self._file.dimensions["time"])
 
       self.has_frt = True
       if "forecast_reference_time" in self._file.dimensions:
          times = self._file.variables["forecast_reference_time"][:]
-         self.ens = self._file.dimensions["ensemble_member"].size
-         self.num = self._file.dimensions["forecast_reference_time"].size * self.ens
+         self.ens = len(self._file.dimensions["ensemble_member"])
+         self.num = len(self._file.dimensions["forecast_reference_time"]) * self.ens
          self.inittimes = np.repeat(times, self.ens)
       else:
          self.has_frt = False
          times = np.array([self._file.variables["forecast_reference_time"][:]])
-         self.num = self._file.dimensions["ensemble_member"].size
+         self.num = len(self._file.dimensions["ensemble_member"])
          self.inittimes = times
          self.ens = self.num
 
@@ -366,14 +366,14 @@ class Netcdf(Database):
       # Read lat/lon dimensions
       self.is_spatial = True
       if "lon" in self._file.dimensions:
-         X = self._file.dimensions["lon"].size
-         Y = self._file.dimensions["lat"].size
+         X = len(self._file.dimensions["lon"])
+         Y = len(self._file.dimensions["lat"])
       elif "longitude" in self._file.dimensions:
-         X = self._file.dimensions["longitude"].size
-         Y = self._file.dimensions["latitude"].size
+         X = len(self._file.dimensions["longitude"])
+         Y = len(self._file.dimensions["latitude"])
       elif "x" in self._file.dimensions:
-         X = self._file.dimensions["x"].size
-         Y = self._file.dimensions["y"].size
+         X = len(self._file.dimensions["x"])
+         Y = len(self._file.dimensions["y"])
       else:
          self.is_spatial = False
          X = 1
