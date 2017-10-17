@@ -20,10 +20,10 @@ variable has different variances).
 Checkout the wiki page at https://github.com/metno/wxgen/wiki for more information about how to run
 the program.
 
-Installation
-------------
+Installating on Ubuntu
+----------------------
 
-**Ubuntu**
+**Prerequisites**
 
 Install the required pacakges:
 
@@ -34,23 +34,37 @@ Install the required pacakges:
   sudo apt-get install python-setuptools python-pip
   sudo apt-get install python-numpy python-scipy python-matplotlib python-mpltoolkits.basemap
 
+**Installing using pip**
+
+After this, the easiest is to install the latest version of ``wxgen`` using pip:
+
+.. code-block:: bash
+
+  sudo pip install wxgen
+
+
+This will create the executable ``/usr/local/bin/wxgen``. If ``/usr/local/bin`` is not in your PATH
+environment variable, then add it (i.e add ``export PATH=/usr/local/bin/:$PATH`` to ``~/.bashrc``).
+If you do not have sudo privileges do:
+
+.. code-block:: bash
+
+  pip install wxgen --user
+
+This will create the executable ``~/.local/bin/wxgen``. Add this to your PATH environment
+variable if necessary (i.e add ``export PATH=$PATH:~/.local/bin`` to ``~/.bashrc``).
+
+**Installing from source**
+
+Alternatively, to install from source, download the source code of the latest version:
+https://github.com/metno/wxgen/releases/. Unzip the file and navigate into the extracted folder.
+
 Then install ``wxgen`` by executing the following inside the extracted folder:
 
 .. code-block:: bash
 
-  sudo pip install .
-
-This will create the executable ``/usr/local/bin/wxgen``. If ``/user/local/bin`` is not in your PATH
-environment variable, then add it (i.e add ``export PATH=/usr/local/bin/:$PATH`` to ``~/.bashrc``).
-If you do not have sudo privileges do:
-
-
-.. code-block:: bash
-
-  pip install .
-
-This will create the executable ``~/.local/bin/wxgen``. Add the folder to your PATH environment
-variable (if necessary).
+  sudo pip install -r requirements.txt
+  sudo python setup.py install
 
 If you are working on the code, the -e flag ensures that you do not need to rerun pip install every
 time you make changes to the code:
@@ -58,6 +72,9 @@ time you make changes to the code:
 .. code-block:: bash
 
   sudo pip install -e .
+
+Again, if you do not have sudo privileges, remove ``sudo`` and append ``--user`` to the previous pip
+and python commands.
 
 Example use
 -----------
