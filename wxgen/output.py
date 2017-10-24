@@ -120,23 +120,25 @@ class Netcdf(Output):
 
       # Latitude
       if scale == "large":
-         var_lat = file.createVariable("latitude", "f4", (yname, xname))
+         # Assume a lat/lon grid
+         var_lat = file.createVariable("latitude", "f4", (yname))
          var_lat.units = "degrees_north"
          var_lat.standard_name = "latitude"
          if use_single_gridpoint:
             var_lat[:] = self.lat
          else:
-            var_lat[:] = database.lats
+            var_lat[:] = database.lats[:, 0]
 
          # Longitude
-         var_lon = file.createVariable("longitude", "f4", (yname, xname))
+         var_lon = file.createVariable("longitude", "f4", (xname))
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
          if use_single_gridpoint:
             var_lon[:] = self.lon
          else:
-            var_lon[:] = database.lons
+            var_lon[:] = database.lons[0, :]
       elif scale == "small":
+         # Assume a projected grid
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
          var_lat.units = "degrees_north"
          var_lat.standard_name = "latitude"
@@ -159,7 +161,8 @@ class Netcdf(Output):
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
-         vars[var.name].coordinates = "latitude longitude"
+         if scale == "small":
+            vars[var.name].coordinates = "latitude longitude"
 
       # Write forecast variables
       if use_single_gridpoint:
