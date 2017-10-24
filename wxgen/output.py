@@ -98,7 +98,7 @@ class Netcdf(Output):
             file.createDimension(xname, database.X)
 
       # Time
-      var_time = file.createVariable("time", "i4", ("time"))
+      var_time = file.createVariable("time", "f8", ("time"))
       start_unixtime = wxgen.util.date_to_unixtime(start_date)
       end_unixtime = start_unixtime + 86400 * trajectories[0].length
       var_time[:] = np.arange(start_unixtime, end_unixtime, 86400)
@@ -107,7 +107,7 @@ class Netcdf(Output):
       var_time.long_name = "time"
 
       # Forecast reference time
-      var_frt = file.createVariable("forecast_reference_time", "i4")
+      var_frt = file.createVariable("forecast_reference_time", "f8")
       var_frt[:] = start_unixtime
       var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
       var_frt.standard_name = "forecast_reference_time"
@@ -187,7 +187,7 @@ class Netcdf(Output):
          var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
          var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
          var_segment_leadtime.units = "day"
-         var_segment_time = file.createVariable("segment_time", "i4", ("time", "ensemble_member"))
+         var_segment_time = file.createVariable("segment_time", "f8", ("time", "ensemble_member"))
          var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
          var_segment_time.standard_name = "time"
          var_segment_time.long_name = "time"
@@ -218,14 +218,14 @@ class Netcdf(Output):
          file.createDimension("x", parameters.lats.shape[1])
 
          # Time
-         var_time = file.createVariable("time", "i8", ("time"))
+         var_time = file.createVariable("time", "f8", ("time"))
          var_time[:] = np.arange(0, database.length)*86400 + database.inittimes[0]
          var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
          var_time.standard_name = "time"
          var_time.long_name = "time"
 
          # Forecast reference time
-         var_frt = file.createVariable("forecast_reference_time", "i4")
+         var_frt = file.createVariable("forecast_reference_time", "f8")
          var_frt[:] = database.inittimes[0]
          var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
          var_frt.standard_name = "forecast_reference_time"
