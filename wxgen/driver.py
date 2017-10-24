@@ -3,11 +3,13 @@ import argparse
 import numpy as np
 import wxgen.climate_model
 import wxgen.database
+import wxgen.downscaler
 import wxgen.trajectory
 import wxgen.generator
 import wxgen.metric
 import wxgen.output
 import wxgen.plot
+import wxgen.parameters
 import wxgen.version
 
 
@@ -55,6 +57,13 @@ def main(argv):
       output.lon = args.lon
       output.write_indices = args.write_indices
       output.write(trajectories, db, args.scale)
+
+   elif args.command == "downscale":
+      db = get_db(args)
+      output = wxgen.output.Netcdf(args.filename)
+      method = wxgen.downscaler.get(args.method)
+      parameters = wxgen.parameters.Parameters(args.parameters)
+      output.write_downscaled(db, parameters, method, args.vars, args.member)
 
    elif args.command == "truth":
       db = get_db(args)
@@ -192,6 +201,18 @@ def get_parsers():
    sp["sim"].add_argument('-g', help="Randomly truncate the first segment so that potential jumps are staggered", dest="stagger", action="store_true")
 
    """
+   Downscaler driver
+   """
+   sp["downscale"] = subparsers.add_parser('downscale', help='Create downscaled scenarios')
+   sp["downscale"].add_argument('db', help="Filename of NetCDF scenarios")
+   sp["downscale"].add_argument('-m', default="qq", help="Method", dest="method", choices=get_module_names(wxgen.downscaler))
+   sp["downscale"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
+   sp["downscale"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
+   sp["downscale"].add_argument('-p', help="Parameter file", dest="parameters")
+   sp["downscale"].add_argument('-e', type=int, help="Which ensemble member?", dest="member", required=True)
+   # sp["downscale"].add_argument('-n', metavar="VARIABLE", help="Name of variable to downscale", required=True, dest="variable")
+
+   """
    Truth trajetory driver
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
@@ -264,7 +285,8 @@ def get_db(args):
    else:
       db = wxgen.database.Netcdf(args.db, args.vars, model=model, mem=args.mem)
 
-   db.wavelet_levels = args.wavelet_levels
+   if hasattr(args, "wavelet_levels"):
+      db.wavelet_levels = args.wavelet_levels
 
    if args.debug:
       db.info()
