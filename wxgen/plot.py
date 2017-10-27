@@ -634,16 +634,18 @@ class Jump(Plot):
                   q = sim.extract(traj)
                else:
                   q = sim.extract_grid(traj, variable)
-               for i in range(0, sim.length-1):
-                  I = i % (L)
+
+               for i in range(L):
+                  I = [II for II in range(sim.length - 1) if II % L == i]
                   if self.scale == "agg":
-                     curr = np.mean(np.abs(q[i, Ivar] - q[i+1, Ivar]))
+                     diff = np.abs(q[:-1, Ivar] - q[1:, Ivar])
                   elif use_single_gridpoint:
-                     curr = np.mean(np.abs(q[i, Xref, Yref] - q[i+1, Xref, Yref]))
+                     diff = np.abs(q[:-1, Xref, Yref] - q[1:, Xref, Yref])
                   else:
-                     curr = np.mean(np.abs(q[i, :, :] - q[i+1, :, :]))
-                  values[I] += curr
-                  counts[I] += 1
+                     diff = np.abs(q[:-1, :, :] - q[1:, :, :])
+                  values[i] += np.mean(diff[I, ...])
+                  counts[i] += 1
+
             values = values / counts
             col = self._get_color(s, len(sims))
             mpl.plot(np.arange(0.5, L + 0.5), values, '-o', color=col, label=sim.name)
