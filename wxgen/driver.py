@@ -43,6 +43,10 @@ def main(argv):
          if len(initial_state) != V:
             wxgen.util.error("Initial state must match the number of variables (%d)" % (V))
 
+      # Check that the number of weights equals the number of variables in the database
+      if args.weights is not None and len(args.weights) != V:
+         wxgen.util.error("Number of weights (-w) must match number of variables (-v)")
+
       # Generate trajectories
       metric = get_metric(args, db)
       generator = wxgen.generator.LargeScale(db, metric)
@@ -193,7 +197,7 @@ def get_parsers():
    sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
    sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states", dest="metric", choices=get_module_names(wxgen.metric))
    sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
-   sp["sim"].add_argument('-w', help="Weights for each variable when joining (comma-separated)", dest="weights")
+   sp["sim"].add_argument('-w', type=wxgen.util.parse_numbers, help="Weights for each variable when joining (comma-separated)", dest="weights")
    sp["sim"].add_argument('-i', help="Initial state", dest="initial")
    sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
    sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
@@ -296,7 +300,7 @@ def get_db(args):
 
 def get_metric(args, db):
    if args.weights is not None:
-      weights = np.array(wxgen.util.parse_numbers(args.weights))
+      weights = args.weights
       if args.wavelet_levels is not None:
          """
          If we are using wavelets, then the weights in the metric must be repeated such that each
