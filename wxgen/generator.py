@@ -81,10 +81,11 @@ class LargeScale(object):
 
             """
             Stagger the trajectories so that they don't all potentially have jumps at the same
-            leadtimes. This is done by truncating the first segment to a random length.
+            leadtimes. This is done by truncating the first segment to a random length. Note that
+            the upper end of randint is exclusive, hence the "+ 1".
             """
             if self.stagger and start == 0:
-               I = np.random.randint(2, segment_curr.indices.shape[0])
+               I = np.random.randint(1, segment_curr.indices.shape[0] + 1)
                segment_curr.indices = segment_curr.indices[0:I, :]
 
             indices_curr = segment_curr.indices
