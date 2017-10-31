@@ -59,6 +59,7 @@ class Parameters():
          np.array: 3D array with dimensions X, Y, N
       """
       if name not in self._field_cache:
-         values = self.file.variables[name][:]
+         values = self.file.variables[name][:].astype(float)
+         values = np.ma.filled(values, fill_value=np.nan)
          self._field_cache[name] = values
       return self._field_cache[name]

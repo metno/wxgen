@@ -49,13 +49,19 @@ class Qq(object):
    def __init__(self):
       self.cache_nn = None
 
+      """
+      Only apply QQ if there are at least this many quantiles available for the gridpoint.
+      Otherwise give a missing value.
+      """
+      self.min_quantiles = 10
+
    def generate(self, raw, lats, lons, parameters):
       # Where should the nearest neighbour stuff be done?
       X = parameters.lons.shape[1]
       Y = parameters.lons.shape[0]
       v0 = parameters.field("coarse_scale")
       v1 = parameters.field("fine_scale")
-      values = np.zeros([Y, X])
+      values = np.nan*np.zeros([Y, X])
       lats_d = parameters.lats
       lons_d = parameters.lons
 
@@ -72,8 +78,10 @@ class Qq(object):
                self.cache_nn[y, x] = index
       for y in range(Y):
          for x in range(X):
-            values[y, x] = np.interp(raw.flatten()[self.cache_nn[y, x]], v0[:, y, x], v1[:, y, x])
-      # values = np.random.rand(Y, X)
+            value = raw.flatten()[self.cache_nn[y, x]]
+            I = np.where(~np.isnan(v0[:, y, x]) & ~np.isnan(v1[:, y, x]))[0]
+            if len(I) >= self.min_quantiles:
+               values[y, x] = np.interp(value, v0[I, y, x], v1[I, y, x])
       return values
 
 
