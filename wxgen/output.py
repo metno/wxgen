@@ -232,10 +232,11 @@ class Netcdf(Output):
          var_frt.long_name = "forecast_reference_time"
 
          # Projection
-         var_proj = file.createVariable("projection_regular_ll", "i4")
+         var_proj = file.createVariable("projection", "i4")
          var_proj.grid_mapping_name = "latitude_longitude"
-         var_proj.earth_radius = 6367470
-         var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
+         # var_proj.earth_radius = 6367470
+         var_proj.proj4 = parameters.proj
+         # var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
 
          # Latitude
          var_lat = file.createVariable("latitude", "f4", ("y", "x"))
@@ -248,6 +249,18 @@ class Netcdf(Output):
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
          var_lon[:] = parameters.lons
+
+         # x
+         var_x = file.createVariable("x", "f4", ("x"))
+         var_x.standard_name = "projection_x_coordinate"
+         var_x.units = "m"
+         var_x[:] = parameters.x
+
+         # y
+         var_y = file.createVariable("y", "f4", ("y"))
+         var_y.standard_name = "projection_y_coordinate"
+         var_y.units = "m"
+         var_y[:] = parameters.y
 
       else:
          file = netCDF4.Dataset(self.filename, 'a')
@@ -263,7 +276,7 @@ class Netcdf(Output):
          var_var = file.createVariable(var.name, "f4", ("time", "y", "x"))
          if var.units is not None:
             var_var.units = var.units
-         var_var.grid_mapping = "projection_regular_ll"
+         var_var.grid_mapping = "projection"
          var_var.coordinates = "latitude longitude"
       else:
          var_var = file.variables[var.name]
