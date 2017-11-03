@@ -321,9 +321,11 @@ class Variance(Plot):
 
    def plot(self, sims):
       if self.thresholds is None:
-         scales = [1, 3, 7, 11, 31, 61, 181, 365]
+         scales = np.array([1, 3, 7, 11, 31, 61, 181, 365])
       else:
-         scales = self.thresholds
+         scales = np.array(self.thresholds)
+      if (scales % 2 == 0).any():
+         wxgen.util.error("All thresholds must be odd numbered")
 
       if self.vars is None:
          Ivars = range(len(sims[0].variables))
@@ -358,6 +360,7 @@ class Variance(Plot):
          mpl.gca().set_xticklabels(labels)
          mpl.xlabel("Time scale (days)")
          mpl.grid()
+         mpl.xlim([np.min(scales), np.max(scales)])
       mpl.legend()
       self._finish_plot()
 
