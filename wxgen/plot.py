@@ -244,7 +244,7 @@ class Timeseries(Plot):
                   else:
                      mpl.plot(values[:, Ivar], '-')
                   mpl.ylabel(variable.name)
-                  mpl.title(sim.name)
+                  mpl.title(sim.label)
                   mpl.xlabel("Time (days)")
                   mpl.grid()
 
@@ -293,7 +293,7 @@ class Histogram(Plot):
                   mpl.hist(agg, normed=1)
                mpl.ylabel("Density")
                mpl.xlabel(sim.variables[Ivar].name)
-               mpl.title(sim.name)
+               mpl.title(sim.label)
                if self.thresholds is not None:
                   dx = self.thresholds[1]-self.thresholds[0]
                   mpl.ylim([0, 1.0/dx])
@@ -334,7 +334,7 @@ class Variance(Plot):
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_sim_variance(sim_values, scales)
-            mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
+            mpl.plot(scales, sim_var, 'o-', label=sim.label, color=col)
             units = self.ens_aggregator.units(sim.variables[Ivar].units)
             mpl.ylabel("%s ($%s$)" % (self.ens_aggregator.name().capitalize(), units))
          ticks = np.array([1, 7, 30, 365])
@@ -413,7 +413,7 @@ class Distribution(Plot):
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
-            mpl.plot(x, y, '-o', label=sim.name, color=col)
+            mpl.plot(x, y, '-o', label=sim.label, color=col)
             mpl.ylabel("Quantile")
 
          mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
@@ -456,7 +456,7 @@ class Autocorr(Plot):
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_autocorr(sim_values, scales)
-            mpl.plot(scales, sim_var, 'o-', label=sim.name, color=col)
+            mpl.plot(scales, sim_var, 'o-', label=sim.label, color=col)
             mpl.ylabel("Autocorrelation ($%s^s$)" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
@@ -560,10 +560,11 @@ class Map(Plot):
 
             [x, y] = lons, lats
             if self.clim is not None:
-               cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11), label=sim.name, cmap=self.cmap,
-                                   vmin=self.clim[0], vmax=self.clim[1])
+               cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11),
+                     label=sim.label, cmap=self.cmap,
+                     vmin=self.clim[0], vmax=self.clim[1])
             else:
-               cont = map.contourf(x, y, agg, label=sim.name, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, label=sim.label, cmap=self.cmap)
             label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
             cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
             if self.clim is not None:
@@ -587,7 +588,7 @@ class Map(Plot):
                map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
                map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
 
-            mpl.title("%s" % (sim.name))
+            mpl.title("%s" % (sim.label))
       fig = mpl.gcf()
       fig.subplots_adjust(wspace=0.8)
       fig.subplots_adjust(bottom=0)
@@ -648,7 +649,7 @@ class Jump(Plot):
 
             values = values / counts
             col = self._get_color(s, len(sims))
-            mpl.plot(np.arange(0.5, L + 0.5), values, '-o', color=col, label=sim.name)
+            mpl.plot(np.arange(0.5, L + 0.5), values, '-o', color=col, label=sim.label)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
@@ -762,7 +763,7 @@ class TimeStat(Plot):
                # Remove the ends when a time convolution is used
                values_agg = values_agg[(self.timescale // 2):(-self.timescale // 2 + 1)]
                x = x[(self.timescale // 2):(-self.timescale // 2+1)]
-            mpl.plot(x, values_agg, '-o', color=col, label=sim.name)
+            mpl.plot(x, values_agg, '-o', color=col, label=sim.label)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
          mpl.legend(loc="best")
@@ -823,7 +824,7 @@ class SortStat(Plot):
                mpl.plot(x, y, style, color=col, label="Day %d" % i)
             mpl.xlabel(sim.variables[Ivar].name)
             mpl.ylabel("Quantile")
-            mpl.title(sim.name)
+            mpl.title(sim.label)
             mpl.legend(loc="best")
             mpl.grid()
       self._finish_plot()
@@ -906,9 +907,9 @@ class CovarMap(Plot):
             [x, y] = lons, lats
             if self.clim is not None:
                cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
-                     label=sim.name, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
+                     label=sim.label, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
             else:
-               cont = map.contourf(x, y, sim_values/count, label=sim.name, cmap=self.cmap, extend="both")
+               cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap, extend="both")
             mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
             cb = mpl.colorbar(cont, fraction=0.046, pad=0.04)
             if self.clim is not None:
@@ -932,7 +933,7 @@ class CovarMap(Plot):
                map.drawmeridians(np.arange(-180., 420., dx), labels=[0, 0, 0, 1])
                map.fillcontinents(color=[0.7, 0.7, 0.7], zorder=-1)
 
-            mpl.title("%s (%s)" % (sim.name, variable.name))
+            mpl.title("%s (%s)" % (sim.label, variable.name))
       fig = mpl.gcf()
       fig.subplots_adjust(wspace=0.6)
       fig.subplots_adjust(bottom=0)

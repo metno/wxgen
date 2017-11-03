@@ -144,6 +144,12 @@ class VerifTest(IntegrationTest):
       self.run_with_image("wxgen verif %s -m timestat -a mean -tm 9" % sim_filename)
       self.run_with_image("wxgen verif %s -m timestat -ea mean -tm 9" % sim_filename)
 
+   def test_legend(self):
+      sim_filename1 = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 365 -v 0")
+      sim_filename2 = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 365 -v 0")
+      for output in ["variance", "histogram", "timeseries", "timestat"]:
+         self.run_with_image("wxgen verif %s %s -m %s -leg 1,2" % (sim_filename1, sim_filename2, output))
+
 
 if __name__ == '__main__':
    unittest.main()

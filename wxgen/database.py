@@ -54,6 +54,22 @@ class Database(object):
       self._data_cache = dict()
       self._data_agg_cache = None
       self._climate_states_cache = None
+      self._label = None
+
+   @property
+   def label(self):
+      """
+      Use this to label diagrams. The label can overwritten by the application if needed, by default
+      the name of the database is used.
+      """
+      if self._label is not None:
+         return self._label
+      else:
+         return self.name
+
+   @label.setter
+   def label(self, value):
+      self._label = value
 
    def info(self):
       print("Database information:")

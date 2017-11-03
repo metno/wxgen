@@ -174,6 +174,12 @@ def main(argv):
             plot.time_aggregator = aggregator
 
       sims = [wxgen.database.Netcdf(file, None) for file in args.files]
+      if args.legend is not None:
+         labels = [lab.replace('_', ' ') for lab in args.legend.split(',')]
+         if len(labels) != len(sims):
+            wxgen.util.error("Number of legend labels (%d) does not equal number of simulations (%d)" % (len(labels), len(sims)))
+         for i in range(len(sims)):
+            sims[i].label = labels[i]
       plot.plot(sims)
 
 
@@ -255,6 +261,7 @@ def get_parsers():
    sp["verif"].add_argument('-cmap', help="Colormap (e.g. jet, RdBu, Blues_r)")
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
    sp["verif"].add_argument('-ts', type=int, help="Time scale (in days)", dest="timescale")
+   sp["verif"].add_argument('-leg', help="Replace labels with these names in the legend", dest="legend")
 
    """
    Common options
