@@ -137,6 +137,8 @@ def main(argv):
       plot.lat = args.lat
       plot.lon = args.lon
       plot.scale = args.scale
+      plot.line_styles = args.styles
+      plot.line_colors = args.colors
 
       if args.timescale is not None:
          if not plot.supports_timescale:
@@ -262,6 +264,8 @@ def get_parsers():
    sp["verif"].add_argument('-tm', type=int, help="Time modulus (in days)", dest="timemod")
    sp["verif"].add_argument('-ts', type=int, help="Time scale (in days)", dest="timescale")
    sp["verif"].add_argument('-leg', help="Replace labels with these names in the legend", dest="legend")
+   sp["verif"].add_argument('-ls', help="Line style for plots (comma separated, e.g. -,o-,--)", dest="styles")
+   sp["verif"].add_argument('-lc', help="Line colors for plots (comma separated, e.g.  red,[1,0.7,0.3],blue)", dest="colors")
 
    """
    Common options
