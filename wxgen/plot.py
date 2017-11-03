@@ -58,9 +58,11 @@ class Plot(object):
       self.thresholds = None
       self.line_colors = None
       self.line_styles = None
+      self.line_widths = None
       self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
       self.default_lines = ['-'] * 5 + ['-'] * 5 + ['--'] * 5
       self.default_markers = ['o'] * 5 + ['']*5 + ['s'] * 5
+      self.default_widths = [1]
       self.transform = wxgen.transform.Nothing()
       self.time_aggregator = wxgen.aggregator.Mean()
       self.ens_aggregator = wxgen.aggregator.Mean()
@@ -184,12 +186,10 @@ class Plot(object):
       """
       if self.line_styles is not None:
          listStyles = self.line_styles.split(",")
-         # loop through input linestyles (independent of colors)
          I = i % len(listStyles)
          return listStyles[I]
 
-      else:  # default linestyles
-         # I = (i // len(self.line_colors)) % len(self.default_lines)
+      else:
          I = i % len(self.default_lines)
          line = self.default_lines[I]
          marker = self.default_markers[I]
@@ -198,6 +198,16 @@ class Plot(object):
          if connectingLine:
             return line + marker
          return marker
+
+   def _get_width(self, i, total):
+      if self.line_widths is not None:
+         I = i % len(self.line_widths)
+         return self.line_widths[I]
+
+      else:
+         I = i % len(self.default_widths)
+         width = self.default_widths[I]
+         return width
 
    def _plot_truth(self, x, y, isCont=True, zorder=0, label="Truth"):
       if isCont:
@@ -221,6 +231,7 @@ class Timeseries(Plot):
       # Use the same color/style for all subplots
       style = self._get_style(0, len(sims), line_only=True)
       col = self._get_color(0, len(sims))
+      lw = self._get_width(0, len(sims))
       for s in range(len(sims)):
          sim = sims[s]
          if use_single_gridpoint:
@@ -238,9 +249,9 @@ class Timeseries(Plot):
                variable = sims[0].variables[Ivar]
                if use_single_gridpoint:
                   values = sim.extract_grid(traj, variable)[:, Xref, Yref]
-                  mpl.plot(values, '-', color=col)
+                  mpl.plot(values, style, color=col, lw=lw)
                else:
-                  mpl.plot(values[:, Ivar], style, color=col)
+                  mpl.plot(values[:, Ivar], style, color=col, lw=lw)
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
                mpl.xlabel("Time (days)")
@@ -327,12 +338,13 @@ class Variance(Plot):
             sim_values = np.zeros([sim.length, sim.num])
             style = self._get_style(s, len(sims))
             col = self._get_color(s, len(sims))
+            lw = self._get_width(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_sim_variance(sim_values, scales)
-            mpl.plot(scales, sim_var, style, label=sim.label, color=col)
+            mpl.plot(scales, sim_var, style, label=sim.label, color=col, lw=lw)
             units = self.ens_aggregator.units(sim.variables[Ivar].units)
             mpl.ylabel("%s ($%s$)" % (self.ens_aggregator.name().capitalize(), units))
          ticks = np.array([1, 7, 30, 365])
@@ -405,6 +417,7 @@ class Distribution(Plot):
             sim_values = np.zeros([sim.num])
             style = self._get_style(s, len(sims))
             col = self._get_color(s, len(sims))
+            lw = self._get_width(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
@@ -412,7 +425,7 @@ class Distribution(Plot):
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
-            mpl.plot(x, y, style, label=sim.label, color=col)
+            mpl.plot(x, y, style, color=col, lw=lw, label=sim.label)
             mpl.ylabel("Quantile")
 
          mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
@@ -451,12 +464,13 @@ class Autocorr(Plot):
             sim_values = np.zeros([sim.length, sim.num])
             style = self._get_style(s, len(sims))
             col = self._get_color(s, len(sims))
+            lw = self._get_width(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_autocorr(sim_values, scales)
-            mpl.plot(scales, sim_var, style, label=sim.label, color=col)
+            mpl.plot(scales, sim_var, style, color=col, lw=lw, label=sim.label)
             mpl.ylabel("Autocorrelation" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
@@ -650,7 +664,8 @@ class Jump(Plot):
             values = values / counts
             style = self._get_style(s, len(sims))
             col = self._get_color(s, len(sims))
-            mpl.plot(np.arange(0.5, L + 0.5), values, style, color=col, label=sim.label)
+            lw = self._get_width(s, len(sims))
+            mpl.plot(np.arange(0.5, L + 0.5), values, style, color=col, lw=lw, label=sim.label)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
@@ -759,13 +774,14 @@ class TimeStat(Plot):
                values_agg[i] = self.ens_aggregator(values[i])
             style = self._get_style(s, len(sims))
             col = self._get_color(s, len(sims))
+            lw = self._get_width(s, len(sims))
             x = np.arange(L)
 
             if self.timemod is None and self.timescale > 1:
                # Remove the ends when a time convolution is used
                values_agg = values_agg[(self.timescale // 2):(-self.timescale // 2 + 1)]
                x = x[(self.timescale // 2):(-self.timescale // 2+1)]
-            mpl.plot(x, values_agg, style, color=col, label=sim.label)
+            mpl.plot(x, values_agg, style, color=col, lw=lw, label=sim.label)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
          mpl.legend(loc="best")
@@ -816,6 +832,7 @@ class SortStat(Plot):
             for i in range(L):
                style = self._get_style(s, len(sims))
                col = self._get_color(i, L)
+               lw = self._get_width(i, len(sims))
                style = self._get_style(i, L)
                x = np.sort(values[i])
                y = np.linspace(0, 1, len(values[i]))
@@ -824,7 +841,7 @@ class SortStat(Plot):
                   n = int(len(x) / 1000)
                   x = x[range(0, len(x), n)]
                   y = y[range(0, len(y), n)]
-               mpl.plot(x, y, style, color=col, label="Day %d" % i)
+               mpl.plot(x, y, style, color=col, lw=lw, label="Day %d" % i)
             mpl.xlabel(sim.variables[Ivar].name)
             mpl.ylabel("Quantile")
             mpl.title(sim.label)

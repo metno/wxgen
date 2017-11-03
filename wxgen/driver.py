@@ -139,6 +139,7 @@ def main(argv):
       plot.scale = args.scale
       plot.line_styles = args.styles
       plot.line_colors = args.colors
+      plot.line_widths = args.widths
 
       if args.timescale is not None:
          if not plot.supports_timescale:
@@ -266,6 +267,7 @@ def get_parsers():
    sp["verif"].add_argument('-leg', help="Replace labels with these names in the legend", dest="legend")
    sp["verif"].add_argument('-ls', help="Line style for plots (comma separated, e.g. -,o-,--)", dest="styles")
    sp["verif"].add_argument('-lc', help="Line colors for plots (comma separated, e.g.  red,[1,0.7,0.3],blue)", dest="colors")
+   sp["verif"].add_argument('-lw', type=wxgen.util.parse_numbers, help="Line widths for plots (comma separated, e.g.  2,2,1)", dest="widths")
 
    """
    Common options
