@@ -457,7 +457,7 @@ class Autocorr(Plot):
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_autocorr(sim_values, scales)
             mpl.plot(scales, sim_var, 'o-', label=sim.label, color=col)
-            mpl.ylabel("Autocorrelation ($%s^s$)" % sim.variables[Ivar].units)
+            mpl.ylabel("Autocorrelation" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
          I = np.where(ticks < mpl.xlim()[1])[0]
