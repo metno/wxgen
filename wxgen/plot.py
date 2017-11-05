@@ -139,6 +139,7 @@ class Plot(object):
       styles['lw'] = self._get_width(i, total)
       styles['mfc'] = self._get_mfc(i, total)
       styles['ms'] = self._get_ms(i, total)
+      styles['mew'] = styles["lw"]
       if include_line:
          styles['ls'] = self._get_ls(i, total)
       if include_marker:
