@@ -60,10 +60,12 @@ class Plot(object):
       self.line_styles = None
       self.line_widths = None
       self.marker_face_colors = None
+      self.marker_sizes = None
       self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
       self.default_ls = ['-'] * 5 + ['-'] * 5 + ['--'] * 5
       self.default_markers = ['o'] * 5 + ['']*5 + ['s'] * 5
       self.default_widths = [1]
+      self.default_ms = [6]
       self.transform = wxgen.transform.Nothing()
       self.time_aggregator = wxgen.aggregator.Mean()
       self.ens_aggregator = wxgen.aggregator.Mean()
@@ -136,6 +138,7 @@ class Plot(object):
       styles['color'] = self._get_color(i, total)
       styles['lw'] = self._get_width(i, total)
       styles['mfc'] = self._get_mfc(i, total)
+      styles['ms'] = self._get_ms(i, total)
       if include_line:
          styles['ls'] = self._get_ls(i, total)
       if include_marker:
@@ -226,6 +229,12 @@ class Plot(object):
          I = i % len(self.default_widths)
          width = self.default_widths[I]
          return width
+
+   def _get_ms(self, i, total):
+      if self.marker_sizes is not None:
+         return self.marker_sizes[i % len(self.marker_sizes)]
+      else:
+         return self.default_ms[i % len(self.default_ms)]
 
    def _get_mfc(self, i, total):
       if self.marker_face_colors is not None:
