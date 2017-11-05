@@ -59,8 +59,9 @@ class Plot(object):
       self.line_colors = None
       self.line_styles = None
       self.line_widths = None
+      self.marker_face_colors = None
       self.default_colors = ['r', 'b', 'g', [1, 0.73, 0.2], 'k']
-      self.default_lines = ['-'] * 5 + ['-'] * 5 + ['--'] * 5
+      self.default_ls = ['-'] * 5 + ['-'] * 5 + ['--'] * 5
       self.default_markers = ['o'] * 5 + ['']*5 + ['s'] * 5
       self.default_widths = [1]
       self.transform = wxgen.transform.Nothing()
@@ -119,6 +120,28 @@ class Plot(object):
          mpl.gcf().set_size_inches(self.fig_size[0], self.fig_size[1])
          mpl.savefig(self.filename, bbox_inches='tight', dpi=self.dpi)
 
+   def _get_plot_options(self, i, total, include_line=True, include_marker=True):
+      """
+      Returns a dictionary of plot options that can be used in mpl to specify line
+      style. Returns the style for the i'th line in a plot of 'total' number of lines.
+
+      Arguments:
+         i (int): Which line is this?
+         total (int): Total number of lines in plot
+         include_line: If True, add a connecting line (e.g. -o) between the
+            markers.  Otherwise only a marker will be used (e.g. o)
+         include_marker: If False, don't include the marker (e.g. -)
+      """
+      styles = dict()
+      styles['color'] = self._get_color(i, total)
+      styles['lw'] = self._get_width(i, total)
+      styles['mfc'] = self._get_mfc(i, total)
+      if include_line:
+         styles['ls'] = self._get_ls(i, total)
+      if include_marker:
+         styles['marker'] = self._get_marker(i, total)
+      return styles
+
    def _get_color(self, i, total):
       """
       Returns a color specification (e.g. 0.3,0.3,1) that can be used in mpl to specify line color.
@@ -172,31 +195,26 @@ class Plot(object):
       else:
          return self.default_colors[i % len(self.default_colors)]
 
-   def _get_style(self, i, total, connectingLine=True, line_only=False):
-      """ Returns a string (e.g. -o) that can be used in mpl to specify line
-      style. Determined by looping through a database (self.line_styles).
-      Returns the style for the i'th line in a plot of 'total' number of lines.
-
-      Arguments:
-         i (int): Which line is this?
-         total (int): Total number of lines in plot
-         connectingLine: If True, add a connecting line (e.g. -o) between the
-            markers.  Otherwise only a marker will be used (e.g. o)
-         line_only: If True, don't include the marker (e.g. -)
-      """
+   def _get_ls(self, i, total):
       if self.line_styles is not None:
          listStyles = self.line_styles.split(",")
          I = i % len(listStyles)
          return listStyles[I]
 
       else:
-         I = i % len(self.default_lines)
-         line = self.default_lines[I]
+         I = i % len(self.default_ls)
+         line = self.default_ls[I]
+         return line
+
+   def _get_marker(self, i, total):
+      if self.markers is not None:
+         markers = self.markers.split(",")
+         I = i % len(markers)
+         return markers[I]
+
+      else:
+         I = i % len(self.default_markers)
          marker = self.default_markers[I]
-         if line_only:
-            return line
-         if connectingLine:
-            return line + marker
          return marker
 
    def _get_width(self, i, total):
@@ -208,6 +226,15 @@ class Plot(object):
          I = i % len(self.default_widths)
          width = self.default_widths[I]
          return width
+
+   def _get_mfc(self, i, total):
+      if self.marker_face_colors is not None:
+         marker_face_colors = self.marker_face_colors.split(",")
+         I = i % len(marker_face_colors)
+         return marker_face_colors[I]
+
+      else:
+         return self._get_color(i, total)
 
    def _plot_truth(self, x, y, isCont=True, zorder=0, label="Truth"):
       if isCont:
@@ -229,9 +256,7 @@ class Timeseries(Plot):
       use_single_gridpoint = self.lat is not None and self.lon is not None
 
       # Use the same color/style for all subplots
-      style = self._get_style(0, len(sims), line_only=True)
-      col = self._get_color(0, len(sims))
-      lw = self._get_width(0, len(sims))
+      plot_options = self._get_plot_options(0, len(sims), include_marker=False)
       for s in range(len(sims)):
          sim = sims[s]
          if use_single_gridpoint:
@@ -249,9 +274,9 @@ class Timeseries(Plot):
                variable = sims[0].variables[Ivar]
                if use_single_gridpoint:
                   values = sim.extract_grid(traj, variable)[:, Xref, Yref]
-                  mpl.plot(values, style, color=col, lw=lw)
+                  mpl.plot(values, **plot_options)
                else:
-                  mpl.plot(values[:, Ivar], style, color=col, lw=lw)
+                  mpl.plot(values[:, Ivar], **plot_options)
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
                mpl.xlabel("Time (days)")
@@ -338,15 +363,13 @@ class Variance(Plot):
          for s in range(len(sims)):
             sim = sims[s]
             sim_values = np.zeros([sim.length, sim.num])
-            style = self._get_style(s, len(sims))
-            col = self._get_color(s, len(sims))
-            lw = self._get_width(s, len(sims))
+            plot_options = self._get_plot_options(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_sim_variance(sim_values, scales)
-            mpl.plot(scales, sim_var, style, label=sim.label, color=col, lw=lw)
+            mpl.plot(scales, sim_var, label=sim.label, **plot_options)
             units = self.ens_aggregator.units(sim.variables[Ivar].units)
             mpl.ylabel("%s ($%s$)" % (self.ens_aggregator.name().capitalize(), units))
          ticks = np.array([1, 7, 30, 365])
@@ -418,9 +441,7 @@ class Distribution(Plot):
          for s in range(len(sims)):
             sim = sims[s]
             sim_values = np.zeros([sim.num])
-            style = self._get_style(s, len(sims))
-            col = self._get_color(s, len(sims))
-            lw = self._get_width(s, len(sims))
+            plot_options = self._get_plot_options(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
@@ -428,7 +449,7 @@ class Distribution(Plot):
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
-            mpl.plot(x, y, style, color=col, lw=lw, label=sim.label)
+            mpl.plot(x, y, label=sim.label, **plot_options)
             mpl.ylabel("Quantile")
 
          mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
@@ -465,15 +486,13 @@ class Autocorr(Plot):
          for s in range(len(sims)):
             sim = sims[s]
             sim_values = np.zeros([sim.length, sim.num])
-            style = self._get_style(s, len(sims))
-            col = self._get_color(s, len(sims))
-            lw = self._get_width(s, len(sims))
+            plot_options = self._get_plot_options(s, len(sims))
             for m in range(sim.num):
                traj = sim.get(m)
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
             sim_var = self.compute_autocorr(sim_values, scales)
-            mpl.plot(scales, sim_var, style, color=col, lw=lw, label=sim.label)
+            mpl.plot(scales, sim_var, label=sim.label, **plot_options)
             mpl.ylabel("Autocorrelation" % sim.variables[Ivar].units)
          ticks = np.array([1, 7, 30, 365])
          labels = ["day", "week", "month", "year"]
@@ -665,10 +684,8 @@ class Jump(Plot):
                   counts[i] += 1
 
             values = values / counts
-            style = self._get_style(s, len(sims))
-            col = self._get_color(s, len(sims))
-            lw = self._get_width(s, len(sims))
-            mpl.plot(np.arange(0.5, L + 0.5), values, style, color=col, lw=lw, label=sim.label)
+            plot_options = self._get_plot_options(s, len(sims))
+            mpl.plot(np.arange(0.5, L + 0.5), values, label=sim.label, **plot_options)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
@@ -775,16 +792,14 @@ class TimeStat(Plot):
             values_agg = np.zeros(L)
             for i in range(L):
                values_agg[i] = self.ens_aggregator(values[i])
-            style = self._get_style(s, len(sims))
-            col = self._get_color(s, len(sims))
-            lw = self._get_width(s, len(sims))
+            plot_options = self._get_plot_options(s, len(sims))
             x = np.arange(L)
 
             if self.timemod is None and self.timescale > 1:
                # Remove the ends when a time convolution is used
                values_agg = values_agg[(self.timescale // 2):(-self.timescale // 2 + 1)]
                x = x[(self.timescale // 2):(-self.timescale // 2+1)]
-            mpl.plot(x, values_agg, style, color=col, lw=lw, label=sim.label)
+            mpl.plot(x, values_agg, label=sim.label, **plot_options)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
          mpl.legend(loc="best")
@@ -833,10 +848,7 @@ class SortStat(Plot):
                   else:
                      values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
             for i in range(L):
-               style = self._get_style(s, len(sims))
-               col = self._get_color(i, L)
-               lw = self._get_width(i, len(sims))
-               style = self._get_style(i, L)
+               plot_options = self._get_plot_options(i, L)
                x = np.sort(values[i])
                y = np.linspace(0, 1, len(values[i]))
                if len(x) > 1000:
@@ -844,7 +856,7 @@ class SortStat(Plot):
                   n = int(len(x) / 1000)
                   x = x[range(0, len(x), n)]
                   y = y[range(0, len(y), n)]
-               mpl.plot(x, y, style, color=col, lw=lw, label="Day %d" % i)
+               mpl.plot(x, y, label="Day %d" % i, **plot_options)
             mpl.xlabel(sim.variables[Ivar].name)
             mpl.ylabel("Quantile")
             mpl.title(sim.label)

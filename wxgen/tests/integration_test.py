@@ -154,7 +154,7 @@ class VerifTest(IntegrationTest):
       sim_filename1 = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 365 -v 0")
       sim_filename2 = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 365 -v 0")
       for output in ["variance", "histogram", "timeseries", "timestat"]:
-         self.run_with_image("wxgen verif %s %s -m %s -lc red,[1,0.7,0.3] -ls s-,--,-" % (sim_filename1, sim_filename2, output))
+         self.run_with_image("wxgen verif %s %s -m %s -lc red,[1,0.7,0.3] -mfc w,y,k -ls=-,--,- -marker s,None,None" % (sim_filename1, sim_filename2, output))
 
 
 if __name__ == '__main__':

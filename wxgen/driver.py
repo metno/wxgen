@@ -140,6 +140,8 @@ def main(argv):
       plot.line_styles = args.styles
       plot.line_colors = args.colors
       plot.line_widths = args.widths
+      plot.marker_face_colors = args.mfc
+      plot.markers = args.markers
 
       if args.timescale is not None:
          if not plot.supports_timescale:
@@ -268,6 +270,8 @@ def get_parsers():
    sp["verif"].add_argument('-ls', help="Line style for plots (comma separated, e.g. -,o-,--)", dest="styles")
    sp["verif"].add_argument('-lc', help="Line colors for plots (comma separated, e.g.  red,[1,0.7,0.3],blue)", dest="colors")
    sp["verif"].add_argument('-lw', type=wxgen.util.parse_numbers, help="Line widths for plots (comma separated, e.g.  2,2,1)", dest="widths")
+   sp["verif"].add_argument('-mfc', help="Marker face colors", dest="mfc")
+   sp["verif"].add_argument('-marker', help="Markers (e.g. o,None,.", dest="markers")
 
    """
    Common options
