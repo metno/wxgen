@@ -76,6 +76,7 @@ class Plot(object):
       self.timescale = 1
       self.scale = "large"
       self.timemod = None
+      self.grid = True
 
    def plot(self, sims):
       """
@@ -243,7 +244,8 @@ class Timeseries(Plot):
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
                mpl.xlabel("Time (days)")
-               mpl.grid()
+               if self.grid:
+                  mpl.grid()
 
       self._finish_plot()
 
@@ -345,7 +347,8 @@ class Variance(Plot):
          mpl.gca().set_xticks(ticks[I])
          mpl.gca().set_xticklabels(labels)
          mpl.xlabel("Time scale (days)")
-         mpl.grid()
+         if self.grid:
+            mpl.grid()
          mpl.xlim([np.min(scales), np.max(scales)])
       mpl.legend()
       self._finish_plot()
@@ -417,7 +420,8 @@ class Distribution(Plot):
 
          mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
             sim.variables[Ivar].units))
-         mpl.grid()
+         if self.grid:
+            mpl.grid()
       mpl.legend()
       self._finish_plot()
 
@@ -467,7 +471,8 @@ class Autocorr(Plot):
          mpl.gca().set_xticks(ticks[I])
          mpl.gca().set_xticklabels(labels)
          mpl.xlabel("Time scale (days)")
-         mpl.grid()
+         if self.grid:
+            mpl.grid()
       mpl.legend()
       self._finish_plot()
 
@@ -652,7 +657,8 @@ class Jump(Plot):
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
-         mpl.grid()
+         if self.grid:
+            mpl.grid()
          mpl.ylim(ymin=0)
       self._finish_plot()
 
@@ -766,7 +772,8 @@ class TimeStat(Plot):
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
          mpl.legend(loc="best")
-         mpl.grid()
+         if self.grid:
+            mpl.grid()
       self._finish_plot()
 
 
@@ -824,7 +831,8 @@ class SortStat(Plot):
             mpl.ylabel("Quantile")
             mpl.title(sim.label)
             mpl.legend(loc="best")
-            mpl.grid()
+            if self.grid:
+               mpl.grid()
       self._finish_plot()
 
 

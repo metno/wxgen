@@ -143,6 +143,7 @@ def main(argv):
       plot.marker_face_colors = args.mfc
       plot.markers = args.markers
       plot.marker_sizes = args.ms
+      plot.grid = not args.nogrid
 
       if args.timescale is not None:
          if not plot.supports_timescale:
@@ -274,6 +275,7 @@ def get_parsers():
    sp["verif"].add_argument('-mfc', type=wxgen.util.parse_colors, help="Marker face colors", dest="mfc")
    sp["verif"].add_argument('-marker', help="Markers (e.g. o,None,.)", dest="markers")
    sp["verif"].add_argument('-ms', type=wxgen.util.parse_numbers, help="Marker sizes (e.g. 1,1,3)", dest="ms")
+   sp["verif"].add_argument('-nogrid', help="Turn grid in figure off", action="store_true", dest="nogrid")
 
    """
    Common options
