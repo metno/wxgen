@@ -147,54 +147,8 @@ class Plot(object):
       return styles
 
    def _get_color(self, i, total):
-      """
-      Returns a color specification (e.g. 0.3,0.3,1) that can be used in mpl to specify line color.
-      Determined by looping through a database (self.line_colors). Returns the color for the i'th
-      line in a plot of 'total' number of lines.
-
-      Arguments:
-         i (int): Which line is this?
-         total (int): Total number of lines in plot
-
-      Returns:
-         list: A list of RGB values
-      """
       if self.line_colors is not None:
-         firstList = self.line_colors.split(",")
-         numList = []
-         finalList = []
-
-         for string in firstList:
-            if "[" in string:   # for rgba args
-               if not numList:
-                  string = string.replace("[", "")
-                  numList.append(float(string))
-               else:
-                  wxgen.util.error("Invalid rgba arg \"{}\"".format(string))
-
-            elif "]" in string:
-               if numList:
-                  string = string.replace("]", "")
-                  numList.append(float(string))
-                  finalList.append(numList)
-                  numList = []
-               else:
-                  wxgen.util.error("Invalid rgba arg \"{}\"".format(string))
-
-            # append to rgba lists if present, otherwise grayscale intensity
-            elif wxgen.util.is_number(string):
-               if numList:
-                  numList.append(float(string))
-               else:
-                  finalList.append(string)
-
-            else:
-               if not numList:  # string args and hexcodes
-                  finalList.append(string)
-               else:
-                  wxgen.util.error("Cannot read color args.")
-         colors = finalList
-         return colors[i % len(colors)]
+         return self.line_colors[i % len(self.line_colors)]
 
       else:
          return self.default_colors[i % len(self.default_colors)]
@@ -239,9 +193,8 @@ class Plot(object):
 
    def _get_mfc(self, i, total):
       if self.marker_face_colors is not None:
-         marker_face_colors = self.marker_face_colors.split(",")
-         I = i % len(marker_face_colors)
-         return marker_face_colors[I]
+         I = i % len(self.marker_face_colors)
+         return self.marker_face_colors[I]
 
       else:
          return self._get_color(i, total)

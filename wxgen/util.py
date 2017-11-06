@@ -59,6 +59,48 @@ def debug(message, color="green"):
       print("\033[1;%imDebug: " % (col) + message + "\033[0m")
 
 
+def parse_colors(color_string):
+   """
+   Turns a comma-separated string of colors into a list. E.g.
+   "[0.6, 1, 0.3],k, red" turns into:
+   [[0.6, 1, 0.3], 'k', 'red']
+   """
+   firstList = color_string.split(',')
+   numList = []
+   colors = []
+
+   for string in firstList:
+      if "[" in string:   # for rgba args
+         if not numList:
+            string = string.replace("[", "")
+            numList.append(float(string))
+         else:
+            error("Invalid rgba arg \"{}\"".format(string))
+
+      elif "]" in string:
+         if numList:
+            string = string.replace("]", "")
+            numList.append(float(string))
+            colors.append(numList)
+            numList = []
+         else:
+            error("Invalid rgba arg \"{}\"".format(string))
+
+      # append to rgba lists if present, otherwise grayscale intensity
+      elif is_number(string):
+         if numList:
+            numList.append(float(string))
+         else:
+            colors.append(string)
+
+      else:
+         if not numList:  # string args and hexcodes
+            colors.append(string)
+         else:
+            error("Cannot read color args.")
+   return colors
+
+
 def parse_dates(dates):
    return [int(date) for date in parse_numbers(dates, True)]
 

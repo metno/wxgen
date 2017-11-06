@@ -77,5 +77,20 @@ class TestClimatology(unittest.TestCase):
       self.assertTrue(np.isclose(np.min(clim), 2.15))
 
 
+class TestParseColors(unittest.TestCase):
+   def test_vector(self):
+      colors = wxgen.util.parse_colors("[0.6,0.6,0.6],k,[0.3,1,1],red")
+      self.assertEqual(4, len(colors))
+      self.assertEqual([0.6, 0.6, 0.6], colors[0])
+      self.assertEqual('k', colors[1])
+      self.assertEqual([0.3, 1, 1], colors[2])
+      self.assertEqual('red', colors[3])
+
+   def test_single(self):
+      colors = wxgen.util.parse_colors("[0.6,0.6,0.6]")
+      self.assertEqual(1, len(colors))
+      self.assertEqual([0.6, 0.6, 0.6], colors[0])
+
+
 if __name__ == '__main__':
    unittest.main()
