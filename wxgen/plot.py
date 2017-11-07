@@ -518,8 +518,8 @@ class Map(Plot):
       else:
          Ivars = self.vars
 
-      X = len(sims)
-      Y = len(Ivars)
+      Y = len(sims)
+      X = len(Ivars)
 
       try:
          import cartopy
@@ -539,7 +539,7 @@ class Map(Plot):
             if sim.X <= 1 or sim.Y <= 1:
                wxgen.util.error("Cannot create map of aggregated scenarios")
 
-            index = s*Y+v+1
+            index = s*X+v+1
             lats = sim.lats
             lons = sim.lons
 
