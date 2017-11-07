@@ -221,6 +221,9 @@ class Timeseries(Plot):
 
       # Use the same color/style for all subplots
       plot_options = self._get_plot_options(0, len(sims), include_marker=False)
+
+      # Remove the color option, since we want different colors for each timeseries
+      plot_options.pop("color")
       for s in range(len(sims)):
          sim = sims[s]
          if use_single_gridpoint:
@@ -246,6 +249,7 @@ class Timeseries(Plot):
                mpl.xlabel("Time (days)")
                if self.grid:
                   mpl.grid()
+               mpl.xlim([0, len(values)])
 
       self._finish_plot()
 
