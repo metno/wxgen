@@ -354,7 +354,7 @@ class Variance(Plot):
          if self.grid:
             mpl.grid()
          mpl.xlim([np.min(scales), np.max(scales)])
-      mpl.legend()
+      mpl.legend(loc="best")
       self._finish_plot()
 
    def compute_sim_variance(self, array, scales):
@@ -426,7 +426,7 @@ class Distribution(Plot):
             sim.variables[Ivar].units))
          if self.grid:
             mpl.grid()
-      mpl.legend()
+      mpl.legend(loc="best")
       self._finish_plot()
 
 
@@ -477,7 +477,7 @@ class Autocorr(Plot):
          mpl.xlabel("Time scale (days)")
          if self.grid:
             mpl.grid()
-      mpl.legend()
+      mpl.legend(loc="best")
       self._finish_plot()
 
    def compute_autocorr(self, array, scales):
