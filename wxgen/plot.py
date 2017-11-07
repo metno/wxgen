@@ -570,9 +570,9 @@ class Map(Plot):
             if self.clim is not None:
                cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11),
                      label=sim.label, cmap=self.cmap,
-                     vmin=self.clim[0], vmax=self.clim[1])
+                     vmin=self.clim[0], vmax=self.clim[1], extend="both")
             else:
-               cont = map.contourf(x, y, agg, label=sim.label, cmap=self.cmap)
+               cont = map.contourf(x, y, agg, label=sim.label, cmap=self.cmap, extend="both")
             label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
             cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
             if self.clim is not None:
