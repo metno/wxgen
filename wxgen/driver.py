@@ -261,7 +261,7 @@ def get_parsers():
    sp["verif"].add_argument('-r', dest="thresholds", help="Thresholds for use in plots", required=False, type=wxgen.util.parse_numbers)
    sp["verif"].add_argument('-tr', dest="transform", help="Transform for use in plots", choices=get_module_names(wxgen.transform))
    aggregators = [mod for mod in get_module_names(wxgen.aggregator) if mod != "quantile"]
-   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for all dimensions (overrides -ta -te). One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
+   sp["verif"].add_argument('-a', dest="aggregator", help="Aggregator for all dimensions (overrides -ta -eia). One of: " + ', '.join(aggregators) + " or a number between 0 and 1 representing a quantile")
    sp["verif"].add_argument('-ta', dest="time_aggregator", help="Aggregator for time dimension")
    sp["verif"].add_argument('-ea', dest="ens_aggregator", help="Aggregator for ensemble dimension")
    sp["verif"].add_argument('-clim', type=wxgen.util.parse_numbers, help="Colorbar limits (lower,upper)")
