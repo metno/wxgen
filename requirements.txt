@@ -7,4 +7,3 @@ netCDF4
 PyWavelets
 astropy==1.3.2
 pyproj
-cartopy==0.15.1

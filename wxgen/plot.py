@@ -915,14 +915,18 @@ class CovarMap(Plot):
                sim_values += wxgen.util.correlation(val, ref, axis=0)
                count += 1
             [x, y] = lons, lats
-            if self.clim is not None:
-               cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
-                     label=sim.label, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
+            if cartopytest:
+               """ extend="both" and setting color limits doesn't work with cartopy """
+               cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap)
             else:
-               cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap, extend="both")
+               if self.clim is not None:
+                  cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
+                        label=sim.label, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
+               else:
+                  cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap, extend="both")
             mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
             cb = mpl.colorbar(cont, fraction=0.046, pad=0.04)
-            if self.clim is not None:
+            if self.clim is not None and not cartopytest:
                cb.set_clim(self.clim)
             if cartopytest:
                map.coastlines(resolution='10m')
