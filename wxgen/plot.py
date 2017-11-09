@@ -598,7 +598,8 @@ class Map(Plot):
 
             mpl.title("%s" % (sim.label))
       fig = mpl.gcf()
-      fig.subplots_adjust(wspace=0.8)
+      fig.subplots_adjust(wspace=0.5)
+      fig.subplots_adjust(hspace=0.5)
       fig.subplots_adjust(bottom=0)
       fig.subplots_adjust(top=1)
       fig.subplots_adjust(right=0.97)
