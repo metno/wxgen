@@ -42,7 +42,7 @@ class Plot(object):
 
    def __init__(self):
       self.filename = None
-      self.dpi = 100
+      self.dpi = 200
       self.fig_size = [10, 5]
       self.xlim = None
       self.ylim = None

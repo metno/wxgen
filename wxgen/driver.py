@@ -144,6 +144,7 @@ def main(argv):
       plot.markers = args.markers
       plot.marker_sizes = args.ms
       plot.grid = not args.nogrid
+      plot.dpi = args.dpi
 
       if args.timescale is not None:
          if not plot.supports_timescale:
@@ -276,6 +277,7 @@ def get_parsers():
    sp["verif"].add_argument('-marker', help="Markers (e.g. o,None,.)", dest="markers")
    sp["verif"].add_argument('-ms', type=wxgen.util.parse_numbers, help="Marker sizes (e.g. 1,1,3)", dest="ms")
    sp["verif"].add_argument('-nogrid', help="Turn grid in figure off", action="store_true", dest="nogrid")
+   sp["verif"].add_argument('-dpi', default=200, type=int, help="Dots per inch in output image", dest="dpi")
 
    """
    Common options
