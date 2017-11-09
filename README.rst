@@ -54,6 +54,14 @@ If you do not have sudo privileges do:
 This will create the executable ``~/.local/bin/wxgen``. Add this to your PATH environment
 variable if necessary (i.e add ``export PATH=$PATH:~/.local/bin`` to ``~/.bashrc``).
 
+If at a later time you wish to update to a newer release, do:
+
+.. code-block:: bash
+
+   pip install wxgen --upgrade
+
+(adding ``--user`` if appropriate)
+
 **Installing from source**
 
 Alternatively, to install from source, download the source code of the latest version:
@@ -79,7 +87,8 @@ and python commands.
 Example use
 -----------
 
-Wxgen has three commands. The first simulates sequences of weather as follows:
+Checkout the wiki page at https://github.com/metno/wxgen/wiki for a complete tutorial on how to run
+the program. Wxgen has three commands. The first simulates sequences of weather as follows:
 
 .. code-block:: bash
 
@@ -100,8 +109,8 @@ Finally, the generated sequences can be evaluated using th verif command:
 
 .. code-block:: bash
 
-   wxgen verif -truth truth.nc output.nc -m timeseries
-   wxgen verif -truth truth.nc output.nc -m variance
+   wxgen verif truth.nc output.nc -m timeseries
+   wxgen verif truth.nc output.nc -m variance
 
 The -m switch selects the verification metric, in this case a timeseries.
 
