@@ -173,8 +173,10 @@ class LargeScale(object):
       I = Itime[I_v]
 
       # Do a weighted random choice of the weights
+      wxgen.util.debug("Num candidates:  %d" % len(weights_v))
+      wxgen.util.debug("Date range:  %d %d" % (wxgen.util.unixtime_to_date(np.min(self._database.inittimes[Itime])), wxgen.util.unixtime_to_date(np.max(self._database.inittimes[Itime]))))
       wxgen.util.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[0, :, I]]))
-      wxgen.util.debug("Date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
+      wxgen.util.debug("Found date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
       wxgen.util.debug("Climate: %s" % (climate_state))
       wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
       return self._database.get(I)
