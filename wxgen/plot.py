@@ -518,8 +518,8 @@ class Map(Plot):
       else:
          Ivars = self.vars
 
-      Y = len(sims)
-      X = len(Ivars)
+      X = len(sims)
+      Y = len(Ivars)
 
       try:
          import cartopy
@@ -539,14 +539,14 @@ class Map(Plot):
             if sim.X <= 1 or sim.Y <= 1:
                wxgen.util.error("Cannot create map of aggregated scenarios")
 
-            index = s*X+v+1
+            index = v*X+s+1
             lats = sim.lats
             lons = sim.lons
 
             if cartopytest:
-               map = mpl.subplot(X, Y, index, projection=ccrs.PlateCarree())
+               map = mpl.subplot(Y, X, index, projection=ccrs.PlateCarree())
             else:
-               mpl.subplot(X, Y, index)
+               mpl.subplot(Y, X, index)
                dlat = 1.0
                dlon = 1.0
                llcrnrlat = max(-90, np.min(lats) - dlat / 10)
