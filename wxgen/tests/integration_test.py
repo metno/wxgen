@@ -104,12 +104,22 @@ class SimTest(IntegrationTest):
    def test_stagger(self):
       sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -g")
 
+   def test_start_date(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -n 2 -t 730 -d 20160601")
+      input = wxgen.database.Netcdf(sim_filename)
+      self.assertTrue(input.inittimes[0], wxgen.util.date_to_unixtime(20160601))
+
 
 class TruthTest(IntegrationTest):
    def test_basic(self):
       self.run_with_output("wxgen truth -db examples/database.nc")
       self.run_with_output("wxgen truth -db examples/database.nc -n 1 -t 365")
       self.run_with_output("wxgen truth -db examples/database.nc -n 2 -t 10")
+
+   def test_start_date(self):
+      sim_filename = self.run_with_output("wxgen truth -db examples/database.nc -n 2 -t 365 -d 20160601")
+      input = wxgen.database.Netcdf(sim_filename)
+      self.assertTrue(input.inittimes[0], wxgen.util.date_to_unixtime(20160601))
 
 
 class VerifTest(IntegrationTest):

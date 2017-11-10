@@ -15,6 +15,7 @@ class LargeScale(object):
       self.prejoin = None
       self.policy = "random"
       self.stagger = False
+      self.start_date = 20170101
 
    def get(self, N, T, initial_state=None):
       """
@@ -39,7 +40,7 @@ class LargeScale(object):
          wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
          trajectory_indices = -1+np.zeros([T, 2], int)
 
-         time = wxgen.util.date_to_unixtime(20170101)
+         time = wxgen.util.date_to_unixtime(self.start_date)
          climate_state = self._database.model.get([time])[0]
          if initial_state is None:
             wxgen.util.debug("Finding random starting state", color="yellow")

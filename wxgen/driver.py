@@ -53,6 +53,7 @@ def main(argv):
       generator.prejoin = args.prejoin
       generator.policy = args.policy
       generator.stagger = args.stagger
+      generator.start_date = args.init_date
       trajectories = generator.get(args.n, args.t, initial_state)
 
       # Create output
@@ -60,7 +61,7 @@ def main(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, args.scale)
+      output.write(trajectories, db, args.scale, start_date=args.init_date)
 
    elif args.command == "downscale":
       db = get_db(args)
@@ -99,8 +100,8 @@ def main(argv):
          # same day of year as the first date of the allowable dates
          months = dates / 100 % 100
          days = dates % 100
-         start_day = start_date % 100
-         start_month = start_date / 100 % 100
+         start_day = args.init_date % 100
+         start_month = args.init_date / 100 % 100
          Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
          if args.n > len(Ipossible_start_days):
             wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
@@ -115,12 +116,14 @@ def main(argv):
                trajectories += [trajectory]
             else:
                wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
+      if len(trajectories) == 0:
+         wxgen.util.error("Could not create any trajectories that are long enough")
 
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, args.scale)
+      output.write(trajectories, db, args.scale, start_date=args.init_date)
 
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
@@ -241,6 +244,7 @@ def get_parsers():
    sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
 
    for driver in ["sim", "truth"]:
+      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
       sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If -db is provided, then -dbtype is automatically set to 'netcdf'. If neither -db nor -dbtype is set, then -dbtype is automatically set to 'random'.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
