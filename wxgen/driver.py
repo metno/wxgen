@@ -238,7 +238,7 @@ def get_parsers():
    sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
    sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
    sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
-   sp["truth"].add_argument('-d', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
+   sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
 
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
