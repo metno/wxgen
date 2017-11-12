@@ -210,7 +210,7 @@ class Netcdf(Output):
       Create the file if it does not exist, otherwise reuse the file, overwriting the variable.
       Check that the dimensions match if not a new file.
       """
-      if 1 or not os.path.exists(self.filename):
+      if not os.path.exists(self.filename):
          file = netCDF4.Dataset(self.filename, 'w')
 
          file.createDimension("time")
@@ -263,8 +263,21 @@ class Netcdf(Output):
          var_y[:] = parameters.y
 
       else:
+         """
+         Reuse existing file and overwrite the variable. Check that the grid is as expected.
+         """
          file = netCDF4.Dataset(self.filename, 'a')
+         lats0 = file.variables["latitude"][:]
+         lons0 = file.variables["longitude"][:]
+         lats1 = parameters.lats
+         lons1 = parameters.lons
 
+         grid_missmatch = lats0.shape != lats1.shape or lons0.shape != lons1.shape
+         if not grid_missmatch:
+            grid_missmatch = (np.max(np.abs(lats0 - lats1)) > 1e-5) or (np.max(np.abs(lons0 - lons1) > 1e-5))
+
+         if grid_missmatch:
+            wxgen.util.error("Lat/lon in parameter file does not match those in the output file.  Consider removing the output file and try again.")
          X = parameters.lons.shape[1]
          Y = parameters.lons.shape[0]
          # Dimension check
