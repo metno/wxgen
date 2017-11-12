@@ -213,7 +213,6 @@ def get_parsers():
    sp["sim"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories", required=True)
    sp["sim"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory", required=True)
    sp["sim"].add_argument('-m', default="rmsd", help="Metric for matching states", dest="metric", choices=get_module_names(wxgen.metric))
-   sp["sim"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
    sp["sim"].add_argument('-w', type=wxgen.util.parse_numbers, help="Weights for each variable when joining (comma-separated)", dest="weights")
    sp["sim"].add_argument('-i', help="Initial state (aggregated values for each variable). If unspecified, choose random starting states.", dest="initial")
    sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
@@ -228,10 +227,10 @@ def get_parsers():
    sp["downscale"].add_argument('db', help="NetCDF file with large scale scenarios (i.e. output of wxgen sim)")
    sp["downscale"].add_argument('-m', default="qq", help="Downscaling method", dest="method", choices=get_module_names(wxgen.downscaler))
    sp["downscale"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-   sp["downscale"].add_argument('-rs', type=int, help="Random number seed", dest="seed")
    sp["downscale"].add_argument('-p', help="Parameter file used by downscaling method", dest="parameters")
    sp["downscale"].add_argument('-e', type=int, help="Which ensemble member to output?", dest="member", required=True)
    # sp["downscale"].add_argument('-n', metavar="VARIABLE", help="Name of variable to downscale", required=True, dest="variable")
+   sp["downscale"].add_argument('-v', metavar="INDEX", help="Which variable to downscale? Use index, starting at 0.", required=False, dest="var")
 
    """
    Truth trajetory driver
@@ -242,14 +241,6 @@ def get_parsers():
    sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
    sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
    sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
-
-   for driver in ["sim", "truth"]:
-      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
-      sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
-      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If -db is provided, then -dbtype is automatically set to 'netcdf'. If neither -db nor -dbtype is set, then -dbtype is automatically set to 'random'.")
-      sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
-      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
-      sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
 
    """
    Verification driver
@@ -283,17 +274,29 @@ def get_parsers():
    sp["verif"].add_argument('-nogrid', help="Turn grid in figure off", action="store_true", dest="nogrid")
    sp["verif"].add_argument('-dpi', default=200, type=int, help="Dots per inch in output image", dest="dpi")
 
-   """
-   Common options
-   """
-   for driver in sp.keys():
-      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
-      sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
+   for driver in ["sim", "truth", "downscale"]:
+      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
+
+   for driver in ["sim", "truth", "verif"]:
       sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
-      sp[driver].add_argument('-mem', type=float, help="Maximum memory allocation when reading from database (GB)")
+      # Note, a different definition of -v for downscale
+      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
 
+   for driver in ["sim", "downscale"]:
+       sp[driver].add_argument('-rs', type=int, help="Random number seed", dest="seed")
+
+   for driver in ["sim", "truth"]:
+      sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
+      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If -db is provided, then -dbtype is automatically set to 'netcdf'. If neither -db nor -dbtype is set, then -dbtype is automatically set to 'random'.")
+      sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
+      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
+      sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
+
+   for driver in sp.keys():
+      sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
+      sp[driver].add_argument('-mem', type=float, help="Maximum memory allocation when reading from database (GB)")
    return parser, sp
 
 
