@@ -33,13 +33,16 @@ def get(name):
 
 class Aggregator(object):
    """
-   Base class for aggregating an array (i.e. computing a single value from an
-   array)
+   Base class for aggregating an array (i.e. computing a single value from an array)
 
    Usage:
    mean = wxgen.aggregator.Mean()
    mean(np.array([1,2,3]))
    """
+   def __call__(self, array, axis=None):
+      """ Implement this function to return the scalar value """
+      raise NotImplementedError()
+
    def __hash__(self):
       # TODO
       return 1
@@ -52,12 +55,11 @@ class Aggregator(object):
       """ Returns a string representing the name of the aggregator """
       return cls.__name__.lower()
 
-   def __call__(self, array, axis=None):
-      """ Implement this function to return the scalar value """
-      raise NotImplementedError()
-
    def units(self, units):
-      """ Returns the units of this aggregator given the base variable's units """
+      """
+      Returns the units of this aggregator given the base variable's units. Some aggregators
+      change the units of the input (e.g. Variance)
+      """
       return units
 
 
@@ -125,6 +127,7 @@ class Consecutive(Aggregator):
                acc[i] = 0
             else:
                acc[i] = acc[i] - last_acc
+         return np.max(acc, axis=axis)
       elif axis == 0:
          shape = np.array(array.shape)
          shape = np.delete(shape, 0)
@@ -147,35 +150,6 @@ class Consecutive(Aggregator):
          return max
       else:
          raise NotImplementedError()
-
-      if 1:
-         pass
-      elif axis == 0:
-         if len(acc.shape) == 1:
-            acc = np.expand_dims(acc, 1)
-            array = np.expand_dims(array, 1)
-         for j in range(acc.shape[1]):
-            last_acc = 0
-            for i in range(1, acc.shape[0]):
-               if array[i, j] != self.threshold:
-                  last_acc = acc[i, j]
-                  acc[i, j] = 0
-               else:
-                  acc[i, j] = acc[i, j] - last_acc
-      elif axis == 1:
-         if len(acc.shape) == 1:
-            acc = np.expand_dims(acc, 1)
-            array = np.expand_dims(array, 1)
-         for i in range(acc.shape[0]):
-            last_acc = 0
-            for j in range(1, acc.shape[1]):
-               if array[i, j] != self.threshold:
-                  last_acc = acc[i, j]
-                  acc[i, j] = 0
-               else:
-                  acc[i, j] = acc[i, j] - last_acc
-
-      return np.max(acc, axis=axis)
 
    def units(self, units):
       return "Days"
