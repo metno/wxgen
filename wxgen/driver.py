@@ -68,7 +68,7 @@ def main(argv):
       output = wxgen.output.Netcdf(args.filename)
       method = wxgen.downscaler.get(args.method)
       parameters = wxgen.parameters.Parameters(args.parameters)
-      output.write_downscaled(db, parameters, method, args.vars, args.member)
+      output.write_downscaled(db, parameters, method, args.vars, args.member, args.init_date)
 
    elif args.command == "truth":
       db = get_db(args)
