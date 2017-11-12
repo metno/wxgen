@@ -36,36 +36,16 @@ class Output(object):
       self.lon = None
       self.write_indices = False
 
-   def write(self, trajectories, database, scale):
+   def write(self, trajectories, database, scale, start_date=20170101):
       """ Writes trajectories to file
 
       Arguments:
          trajectories (list): List of wxgen.trajectory
          database (wxgen.database): Database belonging to trajectories
          scale (str): One of "agg", "large", or "small"
+         start_date (int): Starting date for the output timeseries (YYYYMMDD)
       """
       raise NotImplementedError()
-
-
-class Text(Output):
-   """
-   Writes the trajectories to a text file. One variable in each column and each day on a separate
-   line. Trajectories are separated by a blank line.
-   """
-   def write(self, trajectories, database, scale):
-      fid = open(self.filename, "w")
-      N = len(trajectories)
-      T = trajectories[0].length
-      V = len(trajectories[0].variables)
-      for n in range(0, N):
-         values = database.extract(trajectories[n])
-         for t in range(0, T):
-            for v in range(0, V):
-               fid.write("%f " % values[t, v])
-            fid.write("\n")
-         if n < N-1:
-            fid.write("\n")
-      fid.close()
 
 
 class Netcdf(Output):
