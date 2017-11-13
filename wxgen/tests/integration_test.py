@@ -109,6 +109,18 @@ class SimTest(IntegrationTest):
       input = wxgen.database.Netcdf(sim_filename)
       self.assertTrue(input.inittimes[0], wxgen.util.date_to_unixtime(20160601))
 
+   def test_dbtype(self):
+      sim_filename = self.run_with_output("wxgen sim -db examples/database.nc -v 0 -n 2 -t 20 -dbtype netcdf")
+      sim_filename = self.run_with_output("wxgen sim -n 2 -t 20 -dbtype random")
+      sim_filename = self.run_with_output("wxgen sim -n 2 -t 20 -dbtype lorenz63")
+
+   def test_invalid_dbtype(self):
+      """ Test that when -db is not provided with -dbtype netcdf, then an error occurs """
+      with self.assertRaises(SystemExit):
+         sim_filename = self.run_with_output("wxgen sim -v 0 -n 2 -t 20")
+      with self.assertRaises(SystemExit):
+         sim_filename = self.run_with_output("wxgen sim -v 0 -n 2 -t 20 -dbtype netcdf")
+
 
 class TruthTest(IntegrationTest):
    def test_basic(self):

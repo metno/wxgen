@@ -290,7 +290,7 @@ def get_parsers():
 
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
-      sp[driver].add_argument('-dbtype', metavar="TYPE", help="Database type (netcdf, random, lorenz63). If -db is provided, then -dbtype is automatically set to 'netcdf'. If neither -db nor -dbtype is set, then -dbtype is automatically set to 'random'.")
+      sp[driver].add_argument('-dbtype', metavar="TYPE", default="netcdf", help="Database type (netcdf, random, lorenz63). Either specify database name with -db, or set -dbtype to one of 'random' or 'lorenz63' to test idealized weather scenarios.")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
       sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
@@ -307,17 +307,13 @@ def get_db(args):
       np.random.seed(args.seed)
 
    model = get_climate_model(args)
+   dbtype = "netcdf"
+   if hasattr(args, "dbtype"):
+      dbtype = args.dbtype
 
-   if args.db is None:
-      # Don't use args.t as the segment length, because then you never get to join
-      # Don't use args.n as the number of segments, because then you never get to join
-      if args.dbtype is None or args.dbtype == "random":
-         db = wxgen.database.Random(model=model)
-      elif args.dbtype == "lorenz63":
-         db = wxgen.database.Lorenz63(10, 50, model=wxgen.climate_model.Zero())
-      else:
-         wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
-   else:
+   if dbtype == "netcdf":
+      if args.db is None:
+         wxgen.util.error("Missing -db")
       if hasattr(args, "vars"):
          vars = args.vars
       else:
@@ -328,6 +324,15 @@ def get_db(args):
       else:
           dbname = args.db
       db = wxgen.database.Netcdf(dbname, vars, model=model, mem=args.mem)
+   else:
+      # Don't use args.t as the segment length, because then you never get to join
+      # Don't use args.n as the number of segments, because then you never get to join
+      if dbtype is None or dbtype == "random":
+         db = wxgen.database.Random(model=model)
+      elif dbtype == "lorenz63":
+         db = wxgen.database.Lorenz63(10, 50, model=wxgen.climate_model.Zero())
+      else:
+         wxgen.util.error("Cannot understand -dbtype %s" % dbtype)
 
    if hasattr(args, "wavelet_levels"):
       db.wavelet_levels = args.wavelet_levels
