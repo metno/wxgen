@@ -85,7 +85,7 @@ class Qq(object):
       return values
 
 
-class NearestNeighbour(object):
+class Nn(object):
    """
    Nearest neighbour
    """
