@@ -183,9 +183,8 @@ class Netcdf(Output):
       file.close()
 
    def write_downscaled(self, database, parameters, method, var_index, member_index, start_date=20170101):
-      assert(len(var_index) == 1)
       # var = database.variables[var_index[0]]
-      var = database.variables[0]
+      var = database.variables[var_index]
       """
       Create the file if it does not exist, otherwise reuse the file, overwriting the variable.
       Check that the dimensions match if not a new file.

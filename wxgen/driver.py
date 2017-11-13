@@ -68,7 +68,7 @@ def main(argv):
       output = wxgen.output.Netcdf(args.filename)
       method = wxgen.downscaler.get(args.method)
       parameters = wxgen.parameters.Parameters(args.parameters)
-      output.write_downscaled(db, parameters, method, args.vars, args.member, args.init_date)
+      output.write_downscaled(db, parameters, method, args.var, args.member, args.init_date)
 
    elif args.command == "truth":
       db = get_db(args)
@@ -224,13 +224,14 @@ def get_parsers():
    Downscaler driver
    """
    sp["downscale"] = subparsers.add_parser('downscale', help='Create downscaled scenarios')
-   sp["downscale"].add_argument('db', help="NetCDF file with large scale scenarios (i.e. output of wxgen sim)")
+   sp["downscale"].add_argument('db', help="NetCDF file with large scale scenarios (i.e. output of wxgen sim)", nargs=1)
    sp["downscale"].add_argument('-m', default="qq", help="Downscaling method", dest="method", choices=get_module_names(wxgen.downscaler))
    sp["downscale"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-   sp["downscale"].add_argument('-p', help="Parameter file used by downscaling method", dest="parameters")
+   # Parameters are required (even for nearest neighbour) because they contain the grid definition
+   sp["downscale"].add_argument('-p', help="Parameter file used by downscaling method", required=True, dest="parameters")
    sp["downscale"].add_argument('-e', type=int, help="Which ensemble member to output?", dest="member", required=True)
    # sp["downscale"].add_argument('-n', metavar="VARIABLE", help="Name of variable to downscale", required=True, dest="variable")
-   sp["downscale"].add_argument('-v', metavar="INDEX", help="Which variable to downscale? Use index, starting at 0.", required=False, dest="var")
+   sp["downscale"].add_argument('-v', type=int, metavar="INDEX", help="Which variable to downscale?  Use index, starting at 0.", required=True, dest="var")
 
    """
    Truth trajetory driver
@@ -317,7 +318,16 @@ def get_db(args):
       else:
          wxgen.util.error("Cannot understand --dbtype %s" % args.dbtype)
    else:
-      db = wxgen.database.Netcdf(args.db, args.vars, model=model, mem=args.mem)
+      if hasattr(args, "vars"):
+         vars = args.vars
+      else:
+         vars = None
+      if isinstance(args.db, list):
+          assert(len(args.db) == 1)
+          dbname = args.db[0]
+      else:
+          dbname = args.db
+      db = wxgen.database.Netcdf(dbname, vars, model=model, mem=args.mem)
 
    if hasattr(args, "wavelet_levels"):
       db.wavelet_levels = args.wavelet_levels
