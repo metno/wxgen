@@ -64,7 +64,7 @@ class Bin(ClimateModel):
          # Find all times that are in the highest bin and put it in the previous bin
          max_bin = np.floor(365 / self._num_days)
          last_bin_start = self._num_days * max_bin
-         I = day > last_bin_start
+         I = day >= last_bin_start
          if max_bin == 0:
             # This should never happen, but lets just be safe just in case
             bin[I] = 0
