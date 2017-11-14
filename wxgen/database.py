@@ -480,7 +480,7 @@ class Lorenz63(Database):
          self._data[var] = np.zeros([self.length, self.X, self.Y, self.num])
          self._data[var][0, 0, 0, :] = self._initial_state[var] + np.random.randn(self.num) * self._std_initial_state
 
-      TT = int(1 / self._dt)/10
+      TT = int(1 / self._dt / 10)
       # Iterate
       for t in range(1, self.length):
          x0 = copy.deepcopy(self._data[var_x][t-1, 0, 0, :])
