@@ -402,20 +402,29 @@ class Distribution(Plot):
       else:
          Ivars = self.vars
 
+      use_single_gridpoint = self.lat is not None and self.lon is not None
       for i in range(len(Ivars)):
          Ivar = Ivars[i]
          mpl.subplot(1, len(Ivars), i+1)
          min_length = np.inf
+         variable = sims[0].variables[Ivar]
          for s in range(len(sims)):
             min_length = min(min_length, sims[s].length)
          for s in range(len(sims)):
             sim = sims[s]
             sim_values = np.zeros([sim.num])
             plot_options = self._get_plot_options(s, len(sims))
+            if use_single_gridpoint:
+               # Find nearest neighbour
+               Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
+               wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
             for m in range(sim.num):
                traj = sim.get(m)
-               q = sim.extract(traj)
-               sim_values[m] = self.time_aggregator(self.transform(q[range(min_length), Ivar]))
+               if use_single_gridpoint:
+                  q = sim.extract_grid(traj, variable)[:, Xref, Yref]
+               else:
+                  q = sim.extract(traj)[:, Ivar]
+               sim_values[m] = self.time_aggregator(self.transform(q[range(min_length)]))
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
