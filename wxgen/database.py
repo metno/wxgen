@@ -338,7 +338,7 @@ class Netcdf(Database):
       self._file = netCDF4.Dataset(filename)
 
       # Set dimensions
-      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll", "segment_leadtime", "segment_member", "segment_time"]]
+      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "altitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll", "segment_leadtime", "segment_member", "segment_time"]]
       if vars is None:
          vars = range(len(var_names))
 
