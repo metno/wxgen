@@ -185,6 +185,12 @@ def main(argv):
             plot.time_aggregator = aggregator
 
       sims = [wxgen.database.Netcdf(file, None) for file in args.files]
+
+      # Check that we aren't trying to use a variable out of range
+      sim_num_variables = [len(sim.variables) for sim in sims]
+      if args.vars is not None and max(args.vars) >= max(sim_num_variables):
+         wxgen.util.error("One or more inputs has only %d variables. Variable %d is outside range." % (max(sim_num_variables), max(args.vars)))
+
       if args.legend is not None:
          labels = [lab.replace('_', ' ') for lab in args.legend.split(',')]
          if len(labels) != len(sims):

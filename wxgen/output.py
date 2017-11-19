@@ -183,7 +183,9 @@ class Netcdf(Output):
       file.close()
 
    def write_downscaled(self, database, parameters, method, var_index, member_index):
-      # var = database.variables[var_index[0]]
+      if var_index >= len(database.variables):
+         wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(database.variables), var_index))
+
       var = database.variables[var_index]
       """
       Create the file if it does not exist, otherwise reuse the file, overwriting the variable.

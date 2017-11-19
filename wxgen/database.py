@@ -343,7 +343,7 @@ class Netcdf(Database):
          vars = range(len(var_names))
 
       if vars is not None and max(vars) >= len(var_names):
-         wxgen.util.error("Index in --vars (%d) is >= number of variables (%d)" % (max(vars), len(var_names)))
+         wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
 
       self.variables = list()
       for i in vars:
