@@ -47,8 +47,6 @@ class Qq(object):
    Quantile mapping between a fine-scale model and a coarse-scale model
    """
    def __init__(self):
-      self.cache_nn = None
-
       """
       Only apply QQ if there are at least this many quantiles available for the gridpoint.
       Otherwise give a missing value.
@@ -70,19 +68,12 @@ class Qq(object):
       coords = np.zeros([len(lats.flatten()), 2])
       coords[:, 0] = lats.flatten()
       coords[:, 1] = lons.flatten()
-      if self.cache_nn is None:
-         tree = scipy.spatial.KDTree(coords)
-         self.cache_nn_0 = np.zeros([Y, X], 'int')
-         self.cache_nn_1 = np.zeros([Y, X], 'int')
-         for y in range(Y):
-            for x in range(X):
-               dist, index = tree.query([lats_d[y, x], lons_d[y, x]])
-               indices = np.unravel_index(index, lats.shape)
-               self.cache_nn_0[y, x] = indices[0]
-               self.cache_nn_1[y, x] = indices[1]
+      tree = scipy.spatial.KDTree(coords)
       for y in range(Y):
          for x in range(X):
-            curr_values = raw[:, self.cache_nn_0[y, x], self.cache_nn_1[y, x]]
+            dist, index = tree.query([lats_d[y, x], lons_d[y, x]])
+            indices = np.unravel_index(index, lats.shape)
+            curr_values = raw[:, indices[0], indices[1]]
             I = np.where(~np.isnan(v0[:, y, x]) & ~np.isnan(v1[:, y, x]))[0]
             if len(I) >= self.min_quantiles:
                values[:, y, x] = np.interp(curr_values, v0[I, y, x], v1[I, y, x])
@@ -94,10 +85,11 @@ class Nn(object):
    Nearest neighbour
    """
    def __init__(self):
-      self.cache_nn = None
+      pass
 
    def generate(self, raw, lats, lons, parameters):
       # Where should the nearest neighbour stuff be done?
+      T = raw.shape[0]
       X = parameters.lons.shape[1]
       Y = parameters.lons.shape[0]
       v0 = parameters.field("coarse_scale")
@@ -110,14 +102,11 @@ class Nn(object):
       coords = np.zeros([len(lats.flatten()), 2])
       coords[:, 0] = lats.flatten()
       coords[:, 1] = lons.flatten()
-      if self.cache_nn is None:
-         tree = scipy.spatial.KDTree(coords)
-         self.cache_nn = np.zeros([Y, X], 'int')
-         for y in range(Y):
-            for x in range(X):
-               dist, index = tree.query([lats_d[y, x], lons_d[y, x]])
-               self.cache_nn[y, x] = index
+      tree = scipy.spatial.KDTree(coords)
       for y in range(Y):
          for x in range(X):
-            values[y, x] = raw.flatten()[self.cache_nn[y, x]]
+            dist, index = tree.query([lats_d[y, x], lons_d[y, x]])
+            indices = np.unravel_index(index, lats.shape)
+            curr_values = raw[:, indices[0], indices[1]]
+            values[:, y, x] = curr_values
       return values

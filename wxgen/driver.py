@@ -68,7 +68,7 @@ def main(argv):
       output = wxgen.output.Netcdf(args.filename)
       method = wxgen.downscaler.get(args.method)
       parameters = wxgen.parameters.Parameters(args.parameters)
-      output.write_downscaled(db, parameters, method, args.var, args.member, args.init_date)
+      output.write_downscaled(db, parameters, method, args.var, args.member)
 
    elif args.command == "truth":
       db = get_db(args)
@@ -276,7 +276,7 @@ def get_parsers():
    sp["verif"].add_argument('-dpi', default=200, type=int, help="Dots per inch in output image", dest="dpi")
 
    for driver in ["sim", "truth", "downscale"]:
-      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
+      pass
 
    for driver in ["sim", "truth", "verif"]:
       sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
@@ -294,6 +294,7 @@ def get_parsers():
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
       sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
+      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
 
    for driver in sp.keys():
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
