@@ -57,11 +57,12 @@ class Qq(object):
 
    def generate(self, raw, lats, lons, parameters):
       # Where should the nearest neighbour stuff be done?
+      T = raw.shape[0]
       X = parameters.lons.shape[1]
       Y = parameters.lons.shape[0]
       v0 = parameters.field("coarse_scale")
       v1 = parameters.field("fine_scale")
-      values = np.nan*np.zeros([Y, X])
+      values = np.nan*np.zeros([T, Y, X])
       lats_d = parameters.lats
       lons_d = parameters.lons
 
@@ -71,17 +72,20 @@ class Qq(object):
       coords[:, 1] = lons.flatten()
       if self.cache_nn is None:
          tree = scipy.spatial.KDTree(coords)
-         self.cache_nn = np.zeros([Y, X], 'int')
+         self.cache_nn_0 = np.zeros([Y, X], 'int')
+         self.cache_nn_1 = np.zeros([Y, X], 'int')
          for y in range(Y):
             for x in range(X):
                dist, index = tree.query([lats_d[y, x], lons_d[y, x]])
-               self.cache_nn[y, x] = index
+               indices = np.unravel_index(index, lats.shape)
+               self.cache_nn_0[y, x] = indices[0]
+               self.cache_nn_1[y, x] = indices[1]
       for y in range(Y):
          for x in range(X):
-            value = raw.flatten()[self.cache_nn[y, x]]
+            curr_values = raw[:, self.cache_nn_0[y, x], self.cache_nn_1[y, x]]
             I = np.where(~np.isnan(v0[:, y, x]) & ~np.isnan(v1[:, y, x]))[0]
             if len(I) >= self.min_quantiles:
-               values[y, x] = np.interp(value, v0[I, y, x], v1[I, y, x])
+               values[:, y, x] = np.interp(curr_values, v0[I, y, x], v1[I, y, x])
       return values
 
 

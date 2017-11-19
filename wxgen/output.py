@@ -275,11 +275,13 @@ class Netcdf(Output):
 
       # Write forecast variables
       values = database.extract_grid(database.get(member_index), var)
-      for t in range(database.length):
-         print(t)
-         temp = method.generate(values[t, :, :], database.lats, database.lons, parameters)
-         assert(temp.shape == var_var[t, :, :].shape)
-         var_var[t, :, :] = temp
+      temp = method.generate(values, database.lats, database.lons, parameters)
+      print temp.shape
+      print var_var.shape
+      print values.shape
+      print database.length
+      assert(temp.shape == var_var.shape)
+      var_var[:, :, :] = temp
 
       # Global attributes
       file.Conventions = "CF-1.0"
