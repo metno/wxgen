@@ -38,6 +38,7 @@ class Database(object):
       self.inittimes
       self.lats
       self.lons
+      self.timestep (Number of seconds between timesteps, e.g. 86400 or 6 * 3600)
       _load(self, variable)
 
    """
@@ -134,7 +135,7 @@ class Database(object):
       """
       start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
       end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
-      times = np.arange(start, end, 86400)
+      times = np.arange(start, end, self.timestep)
       indices = -1*np.ones([len(times), 2], int)
       wxgen.util.debug("Start: %d End: %d" % (start, end))
       for i in range(0, len(times)):
@@ -145,10 +146,10 @@ class Database(object):
                   (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(
                      np.min(self.inittimes))))
          """ Find the inittime and leadtime that is closest to the desired date and 'which_leadtime' """
-         curr_times = self.inittimes[I] + 86400 * which_leadtime
+         curr_times = self.inittimes[I] + self.timestep * which_leadtime
          Ibest = np.argmin(np.abs(curr_times - time))
          inittime = self.inittimes[I][Ibest]
-         lt = int((time - inittime)/86400)
+         lt = int((time - inittime)/self.timestep)
          if lt < self.length:
             indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
             indices[i, 1] = lt
@@ -362,6 +363,15 @@ class Netcdf(Database):
 
       # Load data
       self.length = len(self._file.dimensions["time"])
+      timevar = self._file.variables["time"]
+
+      # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
+      self.timestep = 86400
+      if hasattr(timevar, "units"):
+         if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
+            self.timestep = self._file.variables["time"][1] - self._file.variables["time"][0]
+         elif timevar.units == "days":
+            self.timestep = (self._file.variables["time"][1] - self._file.variables["time"][0]) * 86400
 
       self.has_frt = True
       if "forecast_reference_time" in self._file.dimensions:
@@ -412,6 +422,7 @@ class Netcdf(Database):
    def _load(self, variable):
       if variable.name not in self._file.variables:
          wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
+      # print "Allocating %d GB" % np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9
       temp = self._file.variables[variable.name][:]
 
       data = np.nan*np.zeros([self.length, self.Y, self.X, self.num], np.float32)

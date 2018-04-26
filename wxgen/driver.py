@@ -35,6 +35,7 @@ def main(argv):
    wxgen.util.DEBUG = args.debug
    if args.command == "sim":
       db = get_db(args)
+
       V = len(db.variables)
       if args.initial is None:
          initial_state = None
@@ -54,7 +55,13 @@ def main(argv):
       generator.policy = args.policy
       generator.stagger = args.stagger
       generator.start_date = args.init_date
-      trajectories = generator.get(args.n, args.t, initial_state)
+
+      # Allowable dates from database
+      generator.db_start_date = args.start_date
+      generator.db_end_date = args.end_date
+
+      Ntimesteps = int(np.ceil(args.t * 1.0 / db.timestep * 86400))
+      trajectories = generator.get(args.n, Ntimesteps, initial_state)
 
       # Create output
       output = wxgen.output.Netcdf(args.filename)
@@ -95,6 +102,7 @@ def main(argv):
          if args.end_date is None:
             end_date = wxgen.util.unixtime_to_date(np.max(db.inittimes))
          dates = np.array(wxgen.util.parse_dates("%d:%d" % (start_date, end_date)))
+         print start_date, end_date
 
          # Figure out which time indices are possible starting dates, by finding dates that have the
          # same day of year as the first date of the allowable dates
@@ -243,8 +251,6 @@ def get_parsers():
    Truth trajetory driver
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
-   sp["truth"].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
-   sp["truth"].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
    sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
    sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
    sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
@@ -297,6 +303,8 @@ def get_parsers():
    for driver in ["sim", "truth"]:
       sp[driver].add_argument('-db', metavar="FILENAME", help="Filename of NetCDF database")
       sp[driver].add_argument('-dbtype', metavar="TYPE", default="netcdf", help="Database type (netcdf, random, lorenz63). Either specify database name with -db, or set -dbtype to one of 'random' or 'lorenz63' to test idealized weather scenarios.")
+      sp[driver].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
+      sp[driver].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
       sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")

@@ -16,6 +16,8 @@ class LargeScale(object):
       self.policy = "random"
       self.stagger = False
       self.start_date = 20170101
+      self.db_start_date = None
+      self.db_end_date = None
 
    def get(self, N, T, initial_state=None):
       """
@@ -74,7 +76,7 @@ class LargeScale(object):
             """
             search_times = None
             if join > 0:
-               end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*86400
+               end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*self._database.timestep
                search_times = [end_times - 5*86400, end_times + 5*86400]
             wxgen.util.debug("Found random segment", color="yellow")
             wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
@@ -107,7 +109,7 @@ class LargeScale(object):
             # wxgen.util.debug("Segment indices: %s" % Iin)
             state_curr = self._database.extract_matching(segment_curr)[-1, :]
             start = start + Tsegment-1
-            time = time + (Tsegment-1)*86400
+            time = time + (Tsegment-1)*self._database.timestep
             if self.prejoin is not None and self.prejoin > 0:
                join = (join + 1) % self.prejoin
 
@@ -140,8 +142,12 @@ class LargeScale(object):
 
       # Find valid segments
       do_prejoin = False
-      if time_range is None:
+      if time_range is None and self.db_start_date is None and self.db_end_date is None:
          Itime = np.where(np.isnan(weights) == 0)[0]
+      elif self.db_start_date is not None and self.db_end_date is not None:
+         db_start_date = wxgen.util.date_to_unixtime(self.db_start_date)
+         db_end_date = wxgen.util.date_to_unixtime(self.db_end_date)
+         Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > db_start_date) & (self._database.inittimes < db_end_date))[0]
       else:
          do_prejoin = True
          Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) & (self._database.inittimes < time_range[1]))[0]

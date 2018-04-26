@@ -243,7 +243,8 @@ class Timeseries(Plot):
                   values = sim.extract_grid(traj, variable)[:, Xref, Yref]
                   mpl.plot(values, **plot_options)
                else:
-                  mpl.plot(values[:, Ivar], **plot_options)
+                  x = values[:, Ivar]
+                  mpl.plot(x, **plot_options)
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
                mpl.xlabel("Time (days)")
@@ -309,13 +310,13 @@ class Variance(Plot):
    def __init__(self):
       Plot. __init__(self)
       self._sets_xticks = True
-      self._normalize_variance = True
+      self._normalize_variance = False
       self._normalization_window = 11
       self.ens_aggregator = wxgen.aggregator.Variance()
 
    def plot(self, sims):
       if self.thresholds is None:
-         scales = np.array([1, 3, 7, 11, 31, 61, 181, 365])
+         scales = np.array([1, 3, 7, 11, 31, 61, 181, 365, 365*2 + 1, 365*4 + 1])
       else:
          scales = np.array(self.thresholds)
       if (scales % 2 == 0).any():
@@ -358,6 +359,7 @@ class Variance(Plot):
       self._finish_plot()
 
    def compute_sim_variance(self, array, scales):
+      print array.shape
       """
       Arguments:
          array (np.array): 2D array (time, member)
@@ -428,7 +430,9 @@ class Distribution(Plot):
                N = len(sim_values)
             x = np.sort(sim_values)
             y = np.linspace(1.0 / N, 1 - 1.0 / N, len(sim_values))
-            mpl.plot(x, y, label=sim.label, **plot_options)
+            from scipy.stats import norm
+
+            mpl.plot(x, norm.ppf(y), label=sim.label, **plot_options)
             mpl.ylabel("Quantile")
 
          mpl.xlabel("%s %s ($%s$)" % (self.time_aggregator.name().capitalize(), sim.variables[Ivar].name,
@@ -667,7 +671,9 @@ class Jump(Plot):
 
             values = values / counts
             plot_options = self._get_plot_options(s, len(sims))
-            mpl.plot(np.arange(0.5, L + 0.5), values, label=sim.label, **plot_options)
+            dt = 1.0 * sim.timestep  / 86400
+            x = np.arange(0.5, L + 0.5) * dt
+            mpl.plot(x, values, label=sim.label, **plot_options)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
@@ -776,7 +782,8 @@ class TimeStat(Plot):
             for i in range(L):
                values_agg[i] = self.ens_aggregator(values[i])
             plot_options = self._get_plot_options(s, len(sims))
-            x = np.arange(L)
+            x = np.arange(L) * 1.0 * sim.timestep / 86400
+            print sim.timestep
 
             if self.timemod is None and self.timescale > 1:
                # Remove the ends when a time convolution is used
@@ -869,6 +876,7 @@ class CovarMap(Plot):
 
       import astropy.convolution
       try:
+         raise ImportError
          import cartopy
          import cartopy.crs as ccrs
          from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER

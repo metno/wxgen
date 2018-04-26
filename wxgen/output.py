@@ -80,8 +80,8 @@ class Netcdf(Output):
       # Time
       var_time = file.createVariable("time", "f8", ("time"))
       start_unixtime = wxgen.util.date_to_unixtime(start_date)
-      end_unixtime = start_unixtime + 86400 * trajectories[0].length
-      var_time[:] = np.arange(start_unixtime, end_unixtime, 86400)
+      end_unixtime = start_unixtime + database.timestep * trajectories[0].length
+      var_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
       var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
       var_time.standard_name = "time"
       var_time.long_name = "time"
@@ -166,15 +166,16 @@ class Netcdf(Output):
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
          var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
-         var_segment_leadtime.units = "day"
+         var_segment_leadtime.units = "seconds"
          var_segment_time = file.createVariable("segment_time", "f8", ("time", "ensemble_member"))
          var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
          var_segment_time.standard_name = "time"
          var_segment_time.long_name = "time"
+         dt = database.timestep
          for m in range(0, len(trajectories)):
             trajectory = trajectories[m]
             var_segment_member[:, m] = trajectory.indices[:, 0]
-            var_segment_leadtime[:, m] = trajectory.indices[:, 1]
+            var_segment_leadtime[:, m] = trajectory.indices[:, 1] * dt
             var_segment_time[:, m] = database.inittimes[trajectory.indices[:, 0]]
 
       # Global attributes
