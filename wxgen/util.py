@@ -376,5 +376,31 @@ def normalize(array, window=11, normalize_variance=True):
    return values
 
 
+def clean(variable, dtype=None):
+   """
+   Changes masked values to np.nan. Converts to float if input is integer, since
+   integers cannot represent nan values.
+
+   Arguments:
+      variable: NetCDF4 variable
+      dtype: output type
+
+   Return:
+      np.array: masked values are converted to np.nan
+   """
+   if dtype is None:
+      if variable.dtype == "int64":
+         print 1
+         values = np.ma.filled(variable[:].astype(float), np.nan)
+      else:
+         values = np.ma.filled(variable[:], np.nan)
+   else:
+      if variable.dtype == dtype:
+         values = np.ma.filled(variable[:], np.nan)
+      else:
+         values = np.ma.filled(variable[:].astype(dtype), np.nan)
+   return values
+
+
 def nprange(data, axis):
    return np.max(data, axis=axis) - np.min(data, axis=axis)

@@ -367,11 +367,14 @@ class Netcdf(Database):
 
       # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
       self.timestep = 86400
+      leadtimes = wxgen.util.clean(self._file.variables["time"][:])
       if hasattr(timevar, "units"):
          if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
-            self.timestep = self._file.variables["time"][1] - self._file.variables["time"][0]
+            self.timestep = leadtimes[1] - leadtimes[0]
          elif timevar.units == "days":
-            self.timestep = (self._file.variables["time"][1] - self._file.variables["time"][0]) * 86400
+            self.timestep = (leadtimes[1] - leadtimes[0]) * 86400
+      if np.isnan(self.timestep):
+         wxgen.util.error("Cannot determine timestep from database")
 
       self.has_frt = True
       if "forecast_reference_time" in self._file.dimensions:
