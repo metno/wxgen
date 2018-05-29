@@ -490,6 +490,7 @@ class Lorenz63(Database):
       self._initial_state = {var_x: -10, var_y: -10, var_z: -25}
       self._std_initial_state = 10  # Standard deviation of initial condition error
       self.inittimes = np.ones(self.num) + wxgen.util.date_to_unixtime(20150101)
+      self.timestep = 86400
 
       # Initialize
       self._data = dict()
@@ -544,6 +545,7 @@ class Random(Database):
       self.lats, self.lons = np.meshgrid(range(50, 50 + Y), range(X))
 
       self._variance = 1
+      self.timestep = 86400
 
    def _load(self, variable):
       values = np.random.randn(self.length, self.Y, self.X, self.num) * np.sqrt(self._variance)
