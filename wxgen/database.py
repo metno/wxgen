@@ -77,6 +77,9 @@ class Database(object):
       print("  Length of segments: %d" % self.length)
       print("  Number of segments: %d" % self.num)
       print("  Number of variables: %d" % len(self.variables))
+      unique_states = np.sort(np.unique(self.climate_states))
+      print("  Climate states: " + ', '.join([str(s) for s in unique_states]))
+
 
    def load(self, variable):
       """

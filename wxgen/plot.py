@@ -783,7 +783,6 @@ class TimeStat(Plot):
                values_agg[i] = self.ens_aggregator(values[i])
             plot_options = self._get_plot_options(s, len(sims))
             x = np.arange(L) * 1.0 * sim.timestep / 86400
-            print sim.timestep
 
             if self.timemod is None and self.timescale > 1:
                # Remove the ends when a time convolution is used
