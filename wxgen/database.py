@@ -80,7 +80,6 @@ class Database(object):
       unique_states = np.sort(np.unique(self.climate_states))
       print("  Climate states: " + ', '.join([str(s) for s in unique_states]))
 
-
    def load(self, variable):
       """
       Loads the variable
