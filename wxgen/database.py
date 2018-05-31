@@ -2,6 +2,7 @@ import numpy as np
 import wxgen.util
 import pywt
 import os
+import sys
 import datetime
 import wxgen.variable
 import wxgen.climate_model
@@ -423,6 +424,15 @@ class Netcdf(Database):
          if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
             wxgen.util.debug("Meshing latitudes and longitudes")
             self.lons, self.lats = np.meshgrid(self.lons, self.lats)
+      # Read elev variables
+      # TODO: Check dimensions
+      if self.is_spatial:
+         if "altitude" in self._file.variables:
+            self.elevs = np.squeeze(self._copy(self._file.variables["altitude"]))
+            assert(self.elevs.shape == self.lons.shape)
+         elif "surface_geopotential" in self._file.variables:
+            self.elevs = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
+            assert(self.elevs.shape == self.lons.shape)
 
    def _load(self, variable):
       if variable.name not in self._file.variables:

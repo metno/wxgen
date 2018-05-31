@@ -118,6 +118,14 @@ class Netcdf(Output):
             var_lon[:] = self.lon
          else:
             var_lon[:] = database.lons[0, :]
+
+         var_elev = file.createVariable("altitude", "f4", (yname, xname))
+         var_elev.units = "m"
+         var_elev.standard_name = "altitude"
+         if use_single_gridpoint:
+            var_elev[:] = self.elev
+         else:
+            var_elev[:] = database.elevs[:]
       elif scale == "small":
          # Assume a projected grid
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
@@ -130,6 +138,12 @@ class Netcdf(Output):
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
          var_lon[:] = database.lons
+
+         # Altitude
+         var_elev = file.createVariable("altitude", "f4", (yname, xname))
+         var_elev.units = "m"
+         var_elev.standard_name = "altitude"
+         var_elev[:] = database.elevs[:]
 
       # Define forecast variables
       variables = database.variables
@@ -231,6 +245,13 @@ class Netcdf(Output):
          var_lon.units = "degrees_east"
          var_lon.standard_name = "longitude"
          var_lon[:] = parameters.lons
+
+         # TODO:
+         # Altitude
+         #var_elev = file.createVariable("altitude", "f4", ("y", "x"))
+         #var_elev.units = "m"
+         #var_elev.standard_name = "altitude"
+         #var_elev[:] = parameters.elevs
 
          # x
          var_x = file.createVariable("x", "f4", ("x"))
