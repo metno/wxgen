@@ -34,6 +34,7 @@ class Output(object):
       self.which_vars = None
       self.lat = None
       self.lon = None
+      self.altitude = None
       self.write_indices = False
 
    def write(self, trajectories, database, scale, start_date=20170101):
@@ -119,13 +120,14 @@ class Netcdf(Output):
          else:
             var_lon[:] = database.lons[0, :]
 
-         var_elev = file.createVariable("altitude", "f4", (yname, xname))
-         var_elev.units = "m"
-         var_elev.standard_name = "altitude"
+         var_altitude = file.createVariable("altitude", "f4", (yname, xname))
+         var_altitude.units = "m"
+         var_altitude.standard_name = "altitude"
          if use_single_gridpoint:
-            var_elev[:] = self.elev
+            if self.altitude is not None:
+               var_altitude[:] = self.altitude
          else:
-            var_elev[:] = database.elevs[:]
+            var_altitude[:] = database.altitudes[:]
       elif scale == "small":
          # Assume a projected grid
          var_lat = file.createVariable("latitude", "f4", (yname, xname))
@@ -140,10 +142,10 @@ class Netcdf(Output):
          var_lon[:] = database.lons
 
          # Altitude
-         var_elev = file.createVariable("altitude", "f4", (yname, xname))
-         var_elev.units = "m"
-         var_elev.standard_name = "altitude"
-         var_elev[:] = database.elevs[:]
+         var_altitude = file.createVariable("altitude", "f4", (yname, xname))
+         var_altitude.units = "m"
+         var_altitude.standard_name = "altitude"
+         var_altitude[:] = database.altitudes[:]
 
       # Define forecast variables
       variables = database.variables
@@ -248,10 +250,10 @@ class Netcdf(Output):
 
          # TODO:
          # Altitude
-         #var_elev = file.createVariable("altitude", "f4", ("y", "x"))
-         #var_elev.units = "m"
-         #var_elev.standard_name = "altitude"
-         #var_elev[:] = parameters.elevs
+         # var_altitude = file.createVariable("altitude", "f4", ("y", "x"))
+         # var_altitude.units = "m"
+         # var_altitude.standard_name = "altitude"
+         # var_altitude[:] = parameters.altitudes
 
          # x
          var_x = file.createVariable("x", "f4", ("x"))

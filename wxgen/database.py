@@ -25,6 +25,7 @@ class Database(object):
       num (int): Number of trajectories
       lats (np.array): 2D grid of latitudes
       lons (np.array): 2D grid of longitudes
+      altitudes (np.array): 2D grid of altitudes
       X (int): Number of X-axis points
       Y (int): Number of Y-axis points
       inittimes (np.array): array with initialization time corresponding to each member
@@ -39,6 +40,7 @@ class Database(object):
       self.inittimes
       self.lats
       self.lons
+      self.altitudes
       self.timestep (Number of seconds between timesteps, e.g. 86400 or 6 * 3600)
       _load(self, variable)
 
@@ -412,8 +414,9 @@ class Netcdf(Database):
          Y = 1
          self.lats = np.zeros([1, 1])
          self.lons = np.zeros([1, 1])
+         self.altitudes = np.zeros([1, 1])
 
-      # Read lat/lon variables
+      # Read lat/lon/elev variables
       if self.is_spatial:
          if "lat" in self._file.variables:
             self.lats = self._copy(self._file.variables["lat"])
@@ -424,15 +427,19 @@ class Netcdf(Database):
          if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
             wxgen.util.debug("Meshing latitudes and longitudes")
             self.lons, self.lats = np.meshgrid(self.lons, self.lats)
-      # Read elev variables
-      # TODO: Check dimensions
-      if self.is_spatial:
          if "altitude" in self._file.variables:
-            self.elevs = np.squeeze(self._copy(self._file.variables["altitude"]))
-            assert(self.elevs.shape == self.lons.shape)
+            self.altitudes = self._copy(self._file.variables["altitude"])
+            if self.altitudes.shape != self.lats.shape:
+               # Try to remove singleton dimensions
+               self.altitudes = np.squeeze(self.altitudes)
          elif "surface_geopotential" in self._file.variables:
-            self.elevs = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
-            assert(self.elevs.shape == self.lons.shape)
+            self.altitudes = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
+            if self.altitudes.shape != self.lats.shape:
+               self.altitudes = np.squeeze(self.altitudes)
+         else:
+            self.altitudes = np.nan * self.lats
+         if self.altitudes.shape != self.lons.shape:
+            wxgen.util.error("Altitude dimensions do not match those of lat/lon")
 
    def _load(self, variable):
       if variable.name not in self._file.variables:
@@ -492,6 +499,7 @@ class Lorenz63(Database):
       self._dt = dt
       self.lats = np.zeros([1, 1])
       self.lons = np.zeros([1, 1])
+      self.altitudes = np.zeros([1, 1])
       var_x = wxgen.variable.Variable("X")
       var_y = wxgen.variable.Variable("Y")
       var_z = wxgen.variable.Variable("Z")
@@ -552,6 +560,7 @@ class Random(Database):
       X = 10
       Y = 8
       self.lats, self.lons = np.meshgrid(range(50, 50 + Y), range(X))
+      self.altitudes = np.nan * self.lats
 
       self._variance = 1
       self.timestep = 86400
