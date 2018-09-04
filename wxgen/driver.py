@@ -124,7 +124,9 @@ def main(argv):
             else:
                wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
       if len(trajectories) == 0:
-         wxgen.util.error("Could not create any trajectories that are long enough")
+         earliest_start_date = wxgen.util.date_to_unixtime(np.min(dates[Ipossible_start_days]))
+         max_length = np.floor((wxgen.util.date_to_unixtime(end_date) - earliest_start_date - 1)/86400.0)
+         wxgen.util.error("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
