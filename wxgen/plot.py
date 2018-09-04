@@ -670,10 +670,9 @@ class Jump(Plot):
 
             values = values / counts
             col = self._get_color(s, len(sims))
-            mpl.plot(np.arange(0.5, L + 0.5), values, '-o', color=col, label=sim.name)
-            plot_options = self._get_plot_options(s, len(sims))
             dt = 1.0 * sim.timestep / 86400
             x = np.arange(0.5, L + 0.5) * dt
+            plot_options = self._get_plot_options(s, len(sims))
             mpl.plot(x, values, label=sim.label, **plot_options)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
