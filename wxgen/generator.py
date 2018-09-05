@@ -96,9 +96,19 @@ class LargeScale(object):
             """
             Account for the fact that the desired trajectory length is not a whole multiple of the
             segment length: Only take the first part of the segment if needed.
+
+            Also account for the fact that the last timestep in the segment must be at the same time
+            of day as the first timestep in the segment so that matching occurrs with the same time
+            of day.
             """
             Tsegment = len(indices_curr)
-            end = min(start + Tsegment, T)  # Ending index
+            end = start + Tsegment  # Ending index
+            time_of_day = time % 86400
+            timesteps_per_day = int(86400 / self._database.timestep)
+            num_days = int(Tsegment / timesteps_per_day)
+            use_length = (num_days-1) * timesteps_per_day + 1
+            end = start + use_length
+            end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
@@ -107,9 +117,11 @@ class LargeScale(object):
             # wxgen.util.debug("Chosen segment: %s" % segment_curr)
             # wxgen.util.debug("Trajectory indices: %s" % Iout)
             # wxgen.util.debug("Segment indices: %s" % Iin)
-            state_curr = self._database.extract_matching(segment_curr)[-1, :]
-            start = start + Tsegment-1
-            time = time + (Tsegment-1)*self._database.timestep
+            state_curr = self._database.extract_matching(segment_curr)[use_length, :]
+            start = start + use_length - 1
+            new_time = time + (use_length - 1)*self._database.timestep
+            assert(time % 86400 == new_time % 86400)
+            time = new_time
             if self.prejoin is not None and self.prejoin > 0:
                join = (join + 1) % self.prejoin
 
