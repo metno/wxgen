@@ -316,7 +316,7 @@ class Variance(Plot):
 
    def plot(self, sims):
       if self.thresholds is None:
-         scales = np.array([1, 3, 7, 11, 31, 61, 181, 365, 365*2 + 1, 365*4 + 1])
+         scales = np.array([1, 3, 7, 11, 31, 61, 181, 365])
       else:
          scales = np.array(self.thresholds)
       if (scales % 2 == 0).any():
