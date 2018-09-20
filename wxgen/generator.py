@@ -81,14 +81,19 @@ class LargeScale(object):
             wxgen.util.debug("Found random segment", color="yellow")
             wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
             segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
+            timesteps_per_day = int(86400 / self._database.timestep)
 
             """
             Stagger the trajectories so that they don't all potentially have jumps at the same
             leadtimes. This is done by truncating the first segment to a random length. Note that
             the upper end of randint is exclusive, hence the "+ 1".
+
+            For subdaily timesteps, this must cut whole days
             """
             if self.stagger and start == 0:
-               I = np.random.randint(1, segment_curr.indices.shape[0] + 1)
+               I = np.random.randint(1, segment_curr.indices.shape[0]/timesteps_per_day + 1) * timesteps_per_day
+               if I > segment_curr.indices.shape[0] + 1:
+                  I = segment_curr.indices.shape[0] + 1
                segment_curr.indices = segment_curr.indices[0:I, :]
 
             indices_curr = segment_curr.indices
@@ -104,7 +109,6 @@ class LargeScale(object):
             Tsegment = len(indices_curr)
             end = start + Tsegment  # Ending index
             time_of_day = time % 86400
-            timesteps_per_day = int(86400 / self._database.timestep)
             num_days = int(Tsegment / timesteps_per_day)
             use_length = (num_days-1) * timesteps_per_day + 1
             end = start + use_length
@@ -117,10 +121,9 @@ class LargeScale(object):
             # wxgen.util.debug("Chosen segment: %s" % segment_curr)
             # wxgen.util.debug("Trajectory indices: %s" % Iout)
             # wxgen.util.debug("Segment indices: %s" % Iin)
-            state_curr = self._database.extract_matching(segment_curr)[use_length, :]
+            state_curr = self._database.extract_matching(segment_curr)[Iin[-1], :]
             start = start + use_length - 1
             new_time = time + (use_length - 1)*self._database.timestep
-            assert(time % 86400 == new_time % 86400)
             time = new_time
             if self.prejoin is not None and self.prejoin > 0:
                join = (join + 1) % self.prejoin
