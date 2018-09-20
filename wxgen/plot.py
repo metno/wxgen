@@ -338,6 +338,7 @@ class Variance(Plot):
                traj = sim.get(m)
                q = sim.extract(traj)
                sim_values[:, m] = q[:, Ivar]
+            sim_values = self.compute_daily(sim_values, sim.timestep)
             sim_var = self.compute_sim_variance(sim_values, scales)
             mpl.plot(scales, sim_var, label=sim.label, **plot_options)
             units = self.ens_aggregator.units(sim.variables[Ivar].units)
@@ -388,6 +389,11 @@ class Variance(Plot):
                sim_c = sim_c[(s//2):(-s//2+1), :]
             variance[i] = self.ens_aggregator(sim_c.flatten())
       return variance
+
+   def compute_daily(self, array, timestep):
+      timesteps_per_day = int(86400 / timestep)
+      shape = [int(array.shape[0]/timesteps_per_day), timesteps_per_day, array.shape[1]]
+      return np.mean(np.reshape(array, shape), axis=1)
 
 
 class Distribution(Plot):
