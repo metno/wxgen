@@ -444,10 +444,10 @@ class Netcdf(Database):
    def _load(self, variable):
       if variable.name not in self._file.variables:
          wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
-      # print "Allocating %d GB" % np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9
+      wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
       temp = self._file.variables[variable.name][:]
 
-      data = np.nan*np.zeros([self.length, self.Y, self.X, self.num], np.float32)
+      data = np.nan * np.zeros([self.length, self.Y, self.X, self.num], np.float32)
 
       index = 0
       for d in range(len(self._Itimes)):
