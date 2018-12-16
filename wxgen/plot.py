@@ -243,14 +243,14 @@ class Timeseries(Plot):
                   values = sim.extract_grid(traj, variable)[:, Xref, Yref]
                   mpl.plot(values, **plot_options)
                else:
-                  x = values[:, Ivar]
-                  mpl.plot(x, **plot_options)
+                  y = values[:, Ivar]
+                  x = np.arange(len(y)) * 1.0 * sim.timestep / 86400
+                  mpl.plot(x, y, **plot_options)
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
                mpl.xlabel("Time (days)")
                if self.grid:
                   mpl.grid()
-               mpl.xlim([0, len(values)])
 
       self._finish_plot()
 
