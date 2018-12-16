@@ -389,7 +389,10 @@ class Netcdf(Database):
          self.inittimes = np.repeat(times, self.ens)
       else:
          self.has_frt = False
-         times = np.array([self._file.variables["forecast_reference_time"][:]])
+         if "forecast_reference_time" in self._file.variables:
+            times = np.array([self._file.variables["forecast_reference_time"][:]])
+         else:
+            times = np.array([self._file.variables["time"][0]])
          self.num = len(self._file.dimensions["ensemble_member"])
          self.inittimes = times
          self.ens = self.num
@@ -472,6 +475,8 @@ class Netcdf(Database):
       if variable.name == "precipitation_amount":
          data[data < 0] = 0
 
+      # data[data == netCDF4.default_fillvals['f4']] = np.nan
+
       return data
 
    def _copy(self, data):
@@ -481,6 +486,7 @@ class Netcdf(Database):
       # warning messages when doing <, >, and == comparisons with nan.
       q[np.isnan(q)] = -999
       q[(q == -999) | (q < -1000000) | (q > 1e30)] = np.nan
+      # q[q == netCDF4.default_fillvals["f4"]] = np.nan
       return q
 
 
