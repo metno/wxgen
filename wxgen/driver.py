@@ -3,7 +3,6 @@ import argparse
 import numpy as np
 import wxgen.climate_model
 import wxgen.database
-import wxgen.downscaler
 import wxgen.trajectory
 import wxgen.generator
 import wxgen.metric
@@ -69,13 +68,6 @@ def main(argv):
       output.lon = args.lon
       output.write_indices = args.write_indices
       output.write(trajectories, db, args.scale, start_date=args.init_date)
-
-   elif args.command == "downscale":
-      db = get_db(args)
-      output = wxgen.output.Netcdf(args.filename)
-      method = wxgen.downscaler.get(args.method)
-      parameters = wxgen.parameters.Parameters(args.parameters)
-      output.write_downscaled(db, parameters, method, args.var, args.member)
 
    elif args.command == "truth":
       db = get_db(args)
@@ -236,19 +228,6 @@ def get_parsers():
    sp["sim"].add_argument('-g', help="Randomly truncate the first segment so that potential jumps are staggered", dest="stagger", action="store_true")
 
    """
-   Downscaler driver
-   """
-   sp["downscale"] = subparsers.add_parser('downscale', help='Create downscaled scenarios')
-   sp["downscale"].add_argument('db', help="NetCDF file with large scale scenarios (i.e. output of wxgen sim)", nargs=1)
-   sp["downscale"].add_argument('-m', default="qq", help="Downscaling method", dest="method", choices=get_module_names(wxgen.downscaler))
-   sp["downscale"].add_argument('-o', metavar="FILENAME", help="Output filename", dest="filename", required=True)
-   # Parameters are required (even for nearest neighbour) because they contain the grid definition
-   sp["downscale"].add_argument('-p', help="Parameter file used by downscaling method", required=True, dest="parameters")
-   sp["downscale"].add_argument('-e', type=int, help="Which ensemble member to output?", dest="member", required=True)
-   # sp["downscale"].add_argument('-n', metavar="VARIABLE", help="Name of variable to downscale", required=True, dest="variable")
-   sp["downscale"].add_argument('-v', type=int, metavar="INDEX", help="Which variable to downscale?  Use index, starting at 0.", required=True, dest="var")
-
-   """
    Truth trajetory driver
    """
    sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
@@ -288,17 +267,16 @@ def get_parsers():
    sp["verif"].add_argument('-nogrid', help="Turn grid in figure off", action="store_true", dest="nogrid")
    sp["verif"].add_argument('-dpi', default=200, type=int, help="Dots per inch in output image", dest="dpi")
 
-   for driver in ["sim", "truth", "downscale"]:
+   for driver in ["sim", "truth"]:
       pass
 
    for driver in ["sim", "truth", "verif"]:
       sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
-      # Note, a different definition of -v for downscale
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
 
-   for driver in ["sim", "downscale"]:
+   for driver in ["sim"]:
        sp[driver].add_argument('-rs', type=int, help="Random number seed", dest="seed")
 
    for driver in ["sim", "truth"]:

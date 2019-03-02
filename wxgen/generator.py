@@ -202,35 +202,3 @@ class LargeScale(object):
       wxgen.util.debug("Climate: %s" % (climate_state))
       wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
       return self._database.get(I)
-
-
-class SmallScale(object):
-   """
-   Generates high-resolution gridded fields from a large-scale trajectory
-   """
-   def __init__(self, downscalers):
-      self.downscalers = downscalers
-
-   def extract(self, trajectory, database):
-      """
-      Creates a high resolution gridded array
-
-      Returns:
-         data (np.array): A 4D array (T, X, Y, V)
-      """
-      values = self.downscale(trajectory, database)
-
-      for downscaler in self.downscalers:
-         values = downscaler.generate(values)
-
-      return values
-
-   def write(self, output):
-      raise NotImplementedError()
-
-   def downscale(self, trajectory, database, grid):
-      """
-      Downscale grid to higher resolution
-      """
-      large_scale = database.extract_grid(trajectory)
-      raise NotImplementedError()
