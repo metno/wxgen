@@ -451,6 +451,8 @@ class Netcdf(Database):
             self.altitudes = np.squeeze(self.altitudes)
       else:
          self.altitudes = np.nan * self.lats
+      if self.has_single_spatial_dim:
+         self.altitudes = np.expand_dims(self.altitudes, 1)
       if self.altitudes.shape != self.lons.shape:
          wxgen.util.error("Altitude dimensions do not match those of lat/lon")
 
