@@ -401,7 +401,6 @@ class Netcdf(Database):
       times = times[self._Itimes]
 
       # Read lat/lon dimensions
-      self.is_spatial = True
       if "lon" in self._file.dimensions:
          X = len(self._file.dimensions["lon"])
          Y = len(self._file.dimensions["lat"])
@@ -412,37 +411,31 @@ class Netcdf(Database):
          X = len(self._file.dimensions["x"])
          Y = len(self._file.dimensions["y"])
       else:
-         self.is_spatial = False
-         X = 1
-         Y = 1
-         self.lats = np.zeros([1, 1])
-         self.lons = np.zeros([1, 1])
-         self.altitudes = np.zeros([1, 1])
+         raise NotImplementedError
 
       # Read lat/lon/elev variables
-      if self.is_spatial:
-         if "lat" in self._file.variables:
-            self.lats = self._copy(self._file.variables["lat"])
-            self.lons = self._copy(self._file.variables["lon"])
-         elif "latitude" in self._file.variables:
-            self.lats = self._copy(self._file.variables["latitude"])
-            self.lons = self._copy(self._file.variables["longitude"])
-         if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
-            wxgen.util.debug("Meshing latitudes and longitudes")
-            self.lons, self.lats = np.meshgrid(self.lons, self.lats)
-         if "altitude" in self._file.variables:
-            self.altitudes = self._copy(self._file.variables["altitude"])
-            if self.altitudes.shape != self.lats.shape:
-               # Try to remove singleton dimensions
-               self.altitudes = np.squeeze(self.altitudes)
-         elif "surface_geopotential" in self._file.variables:
-            self.altitudes = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
-            if self.altitudes.shape != self.lats.shape:
-               self.altitudes = np.squeeze(self.altitudes)
-         else:
-            self.altitudes = np.nan * self.lats
-         if self.altitudes.shape != self.lons.shape:
-            wxgen.util.error("Altitude dimensions do not match those of lat/lon")
+      if "lat" in self._file.variables:
+         self.lats = self._copy(self._file.variables["lat"])
+         self.lons = self._copy(self._file.variables["lon"])
+      elif "latitude" in self._file.variables:
+         self.lats = self._copy(self._file.variables["latitude"])
+         self.lons = self._copy(self._file.variables["longitude"])
+      if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
+         wxgen.util.debug("Meshing latitudes and longitudes")
+         self.lons, self.lats = np.meshgrid(self.lons, self.lats)
+      if "altitude" in self._file.variables:
+         self.altitudes = self._copy(self._file.variables["altitude"])
+         if self.altitudes.shape != self.lats.shape:
+            # Try to remove singleton dimensions
+            self.altitudes = np.squeeze(self.altitudes)
+      elif "surface_geopotential" in self._file.variables:
+         self.altitudes = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
+         if self.altitudes.shape != self.lats.shape:
+            self.altitudes = np.squeeze(self.altitudes)
+      else:
+         self.altitudes = np.nan * self.lats
+      if self.altitudes.shape != self.lons.shape:
+         wxgen.util.error("Altitude dimensions do not match those of lat/lon")
 
    def _load(self, variable):
       if variable.name not in self._file.variables:
@@ -455,16 +448,10 @@ class Netcdf(Database):
       index = 0
       for d in range(len(self._Itimes)):
          for m in range(0, self.ens):
-            if self.is_spatial:
-               if self.has_frt:
-                  data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
-               else:
-                  data[:, :, :, index] = temp[:, m, :, :]
+            if self.has_frt:
+               data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
             else:
-               if self.has_frt:
-                  data[:, :, :, index] = np.reshape(temp[self._Itimes[d], :, m], [self.length, self.Y, self.X])
-               else:
-                  data[:, :, :, index] = np.reshape(temp[:, m], [self.length, self.Y, self.X])
+               data[:, :, :, index] = temp[:, m, :, :]
             # If one or more values are missing for a member, set all values to nan
             NM = np.sum(np.isnan(data[:, :, :, index]))
             if NM > 0:
