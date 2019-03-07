@@ -382,6 +382,7 @@ class Netcdf(Database):
          wxgen.util.error("Cannot determine timestep from database")
 
       self.has_frt = True
+      self.has_single_spatial_dim = False
       if "forecast_reference_time" in self._file.dimensions:
          times = self._file.variables["forecast_reference_time"][:]
          self.ens = len(self._file.dimensions["ensemble_member"])
@@ -410,19 +411,35 @@ class Netcdf(Database):
       elif "x" in self._file.dimensions:
          X = len(self._file.dimensions["x"])
          Y = len(self._file.dimensions["y"])
+      elif "location" in self._file.dimensions:
+         X = len(self._file.dimensions["location"])
+         Y = 1
+         self.has_single_spatial_dim = True
       else:
          raise NotImplementedError
 
-      # Read lat/lon/elev variables
-      if "lat" in self._file.variables:
-         self.lats = self._copy(self._file.variables["lat"])
-         self.lons = self._copy(self._file.variables["lon"])
-      elif "latitude" in self._file.variables:
+      """
+      Read lat/lon/elev variables
+      """
+      if self.has_single_spatial_dim:
          self.lats = self._copy(self._file.variables["latitude"])
          self.lons = self._copy(self._file.variables["longitude"])
-      if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
-         wxgen.util.debug("Meshing latitudes and longitudes")
-         self.lons, self.lats = np.meshgrid(self.lons, self.lats)
+         self.lats = np.expand_dims(self.lats, 1)
+         self.lons = np.expand_dims(self.lons, 1)
+      else:
+         if "lat" in self._file.variables:
+            self.lats = self._copy(self._file.variables["lat"])
+            self.lons = self._copy(self._file.variables["lon"])
+         elif "latitude" in self._file.variables:
+            self.lats = self._copy(self._file.variables["latitude"])
+            self.lons = self._copy(self._file.variables["longitude"])
+         if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
+            wxgen.util.debug("Meshing latitudes and longitudes")
+            self.lons, self.lats = np.meshgrid(self.lons, self.lats)
+
+      """
+      Read altitude information
+      """
       if "altitude" in self._file.variables:
          self.altitudes = self._copy(self._file.variables["altitude"])
          if self.altitudes.shape != self.lats.shape:
@@ -448,10 +465,16 @@ class Netcdf(Database):
       index = 0
       for d in range(len(self._Itimes)):
          for m in range(0, self.ens):
-            if self.has_frt:
-               data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
+            if self.has_single_spatial_dim:
+               if self.has_frt:
+                  data[:, :, 0, index] = temp[self._Itimes[d], :, m, :]
+               else:
+                  data[:, :, 0, index] = temp[:, m, :]
             else:
-               data[:, :, :, index] = temp[:, m, :, :]
+               if self.has_frt:
+                  data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
+               else:
+                  data[:, :, :, index] = temp[:, m, :, :]
             # If one or more values are missing for a member, set all values to nan
             NM = np.sum(np.isnan(data[:, :, :, index]))
             if NM > 0:
