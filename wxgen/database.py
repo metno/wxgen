@@ -9,6 +9,7 @@ import wxgen.climate_model
 import copy
 import netCDF4
 import time as timing
+import wxgen.config
 
 
 class Database(object):
@@ -48,6 +49,7 @@ class Database(object):
    def __init__(self, model=None):
       self._data_matching_cache = None
       self.wavelet_levels = 0
+      self.join_config = None
       self.mem = None
       if model is None:
          self.model = wxgen.climate_model.Bin(10)
@@ -279,7 +281,24 @@ class Database(object):
          np.array: Dimensions self.length, variable, self.num
       """
       if self._data_matching_cache is None:
-         if self.wavelet_levels == 0:
+         if self.join_config is not None:
+            config = wxgen.config.Config(self.join_config)
+
+            # Preload all required variables
+            Ivars = set([int(point['variable']) for point in config.points])
+            data = dict()
+            for Ivar in Ivars:
+               data[Ivar] = self.load(self.variables[Ivar])
+
+            self._data_matching_cache = np.zeros([self.length, len(config.points), self.num])
+            for p, point in enumerate(config.points):
+               # Find nearest neighbour
+               dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
+               indices = np.unravel_index(dist.argmin(), dist.shape)
+               Ivar = point['variable']
+               weight = point['weight']
+               self._data_matching_cache[:, p, :] = data[Ivar][:, indices[0], indices[1], :] * weight
+         elif self.wavelet_levels == 0:
             self._data_matching_cache = self._data_agg
          else:
             """

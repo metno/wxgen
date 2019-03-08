@@ -286,6 +286,7 @@ def get_parsers():
       sp[driver].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
       sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
+      sp[driver].add_argument('-jc', metavar="CONFIG", help="Configuration file for joining", dest="join_config")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
       sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
 
@@ -330,6 +331,9 @@ def get_db(args):
 
    if hasattr(args, "wavelet_levels"):
       db.wavelet_levels = args.wavelet_levels
+
+   if hasattr(args, "join_config"):
+      db.join_config = args.join_config
 
    if args.debug:
       db.info()
