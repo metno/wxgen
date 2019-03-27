@@ -335,14 +335,14 @@ class Netcdf(Database):
    Segments stored in a netcdf database. This can either be an aggregated or a gridded database.
 
    Aggregated database has the following format:
-      dims: forecast_reference_time, time, ensemble_member
-      vars: forecast_reference_time(forecast_reference_time), time(time)
-            variable_name(forecast_reference_time, time, ensemble_member)
+      dims: time, lead_time, ensemble_member
+      vars: time(time), lead_time(lead_time)
+            variable_name(time, lead_time, ensemble_member)
 
    Gridded database has the following format:
-      dims: forecast_reference_time, lat(itude), lon(gitude), time, ensemble_member
-      vars: forecast_reference_time(forecast_reference_time), time(time)
-            variable_name(forecast_reference_time, time, member, latitude, longitude)
+      dims: time, lat(itude), lon(gitude), lead_time, ensemble_member
+      vars: time(time), lead_time(lead_time)
+            variable_name(time, lead_time, member, latitude, longitude)
 
    where variable_name is one or more names of weather variables. Forecast_reference_time is
    optional, i.e. both the variable and dimension could be missing.
@@ -363,7 +363,9 @@ class Netcdf(Database):
       self._file = netCDF4.Dataset(filename)
 
       # Set dimensions
-      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude", "longitude", "altitude", "x", "y", "ensemble_member", "time", "dummy", "longitude_latitude", "forecast_reference_time", "projection_regular_ll", "segment_leadtime", "segment_member", "segment_time"]]
+      var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude",
+      "longitude", "altitude", "x", "y", "ensemble_member", "lead_time", "dummy",
+      "longitude_latitude", "time", "projection_regular_ll", "segment_lead_time", "segment_member", "segment_time"]]
       if vars is None:
          vars = range(len(var_names))
 
@@ -376,7 +378,7 @@ class Netcdf(Database):
          units = None
          label = None
          dims = self._file.variables[var_name].dimensions
-         if "time" in dims:
+         if "lead_time" in dims:
             if hasattr(self._file.variables[var_name], "units"):
                units = self._file.variables[var_name].units
             if hasattr(self._file.variables[var_name], "standard_name"):
@@ -386,33 +388,35 @@ class Netcdf(Database):
             wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
-      self.length = len(self._file.dimensions["time"])
-      timevar = self._file.variables["time"]
+      self.length = len(self._file.dimensions["lead_time"])
+      timevar = self._file.variables["lead_time"]
 
       # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
       self.timestep = 86400
-      leadtimes = wxgen.util.clean(self._file.variables["time"][:])
+      leadtimes = wxgen.util.clean(self._file.variables["lead_time"][:])
       if hasattr(timevar, "units"):
          if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
             self.timestep = leadtimes[1] - leadtimes[0]
          elif timevar.units == "days":
             self.timestep = (leadtimes[1] - leadtimes[0]) * 86400
+         elif timevar.units == "hours":
+            self.timestep = (leadtimes[1] - leadtimes[0]) * 3600
       if np.isnan(self.timestep):
          wxgen.util.error("Cannot determine timestep from database")
 
-      self.has_frt = True
+      self.has_time = True
       self.has_single_spatial_dim = False
-      if "forecast_reference_time" in self._file.dimensions:
-         times = self._file.variables["forecast_reference_time"][:]
+      if "time" in self._file.dimensions:
+         times = self._file.variables["time"][:]
          self.ens = len(self._file.dimensions["ensemble_member"])
-         self.num = len(self._file.dimensions["forecast_reference_time"]) * self.ens
+         self.num = len(self._file.dimensions["time"]) * self.ens
          self.inittimes = np.repeat(times, self.ens)
       else:
-         self.has_frt = False
-         if "forecast_reference_time" in self._file.variables:
-            times = np.array([self._file.variables["forecast_reference_time"][:]])
+         self.has_time = False
+         if "time" in self._file.variables:
+            times = np.array([self._file.variables["time"][:]])
          else:
-            times = np.array([self._file.variables["time"][0]])
+            times = np.array([self._file.variables["lead_time"][0]])
          self.num = len(self._file.dimensions["ensemble_member"])
          self.inittimes = times
          self.ens = self.num
@@ -430,8 +434,8 @@ class Netcdf(Database):
       elif "x" in self._file.dimensions:
          X = len(self._file.dimensions["x"])
          Y = len(self._file.dimensions["y"])
-      elif "location" in self._file.dimensions:
-         X = len(self._file.dimensions["location"])
+      elif "grid_point" in self._file.dimensions:
+         X = len(self._file.dimensions["grid_point"])
          Y = 1
          self.has_single_spatial_dim = True
       else:
@@ -487,12 +491,12 @@ class Netcdf(Database):
       for d in range(len(self._Itimes)):
          for m in range(0, self.ens):
             if self.has_single_spatial_dim:
-               if self.has_frt:
+               if self.has_time:
                   data[:, :, 0, index] = temp[self._Itimes[d], :, m, :]
                else:
                   data[:, :, 0, index] = temp[:, m, :]
             else:
-               if self.has_frt:
+               if self.has_time:
                   data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
                else:
                   data[:, :, :, index] = temp[:, m, :, :]

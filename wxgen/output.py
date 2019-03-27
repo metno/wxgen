@@ -58,9 +58,10 @@ class Netcdf(Output):
          wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
 
-      file.createDimension("time")
+      file.createDimension("lead_time")
       file.createDimension("ensemble_member", len(trajectories))
       use_single_gridpoint = self.lat is not None and self.lon is not None
+      has_single_spatial_dim = database.X == 1
       if scale != "agg":
          if scale == "large":
             xname = "longitude"
@@ -71,28 +72,33 @@ class Netcdf(Output):
          else:
             wxgen.util.error("Cannot understand scale '%s'" % scale)
 
-         if use_single_gridpoint:
+         if has_single_spatial_dim:
+            file.createDimension('grid_point', database.Y)
+            spatial_dims = ['grid_point']
+         elif use_single_gridpoint:
             file.createDimension(yname, 1)
             file.createDimension(xname, 1)
+            spatial_dims = [yname, xname]
          else:
             file.createDimension(yname, database.Y)
             file.createDimension(xname, database.X)
+            spatial_dims = [yname, xname]
 
       # Time
-      var_time = file.createVariable("time", "f8", ("time"))
+      var_lead_time = file.createVariable("lead_time", "f8", ("lead_time"))
       start_unixtime = wxgen.util.date_to_unixtime(start_date)
       end_unixtime = start_unixtime + database.timestep * trajectories[0].length
-      var_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
-      var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-      var_time.standard_name = "time"
-      var_time.long_name = "time"
+      var_lead_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
+      var_lead_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+      var_lead_time.standard_name = "lead_time"
+      var_lead_time.long_name = "lead_time"
 
       # Forecast reference time
-      var_frt = file.createVariable("forecast_reference_time", "f8")
+      var_frt = file.createVariable("time", "f8")
       var_frt[:] = start_unixtime
       var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
-      var_frt.standard_name = "forecast_reference_time"
-      var_frt.long_name = "forecast_reference_time"
+      var_frt.standard_name = "time"
+      var_frt.long_name = "time"
 
       # Projection
       var_proj = file.createVariable("projection_regular_ll", "i4")
@@ -101,7 +107,34 @@ class Netcdf(Output):
       var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
 
       # Latitude
-      if scale == "large":
+      if has_single_spatial_dim:
+         # Assume a lat/lon grid
+         var_lat = file.createVariable("latitude", "f4", ('grid_point',))
+         var_lat.units = "degrees_north"
+         var_lat.standard_name = "latitude"
+         if use_single_gridpoint:
+            var_lat[:] = self.lat
+         else:
+            var_lat[:] = database.lats[:]
+
+         # Longitude
+         var_lon = file.createVariable("longitude", "f4", ('grid_point',))
+         var_lon.units = "degrees_east"
+         var_lon.standard_name = "longitude"
+         if use_single_gridpoint:
+            var_lon[:] = self.lon
+         else:
+            var_lon[:] = database.lons[:]
+
+         var_altitude = file.createVariable("altitude", "f4", ('grid_point',))
+         var_altitude.units = "m"
+         var_altitude.standard_name = "altitude"
+         if use_single_gridpoint:
+            if self.altitude is not None:
+               var_altitude[:] = self.altitude
+         else:
+            var_altitude[:] = database.altitudes[:]
+      elif scale == "large":
          # Assume a lat/lon grid
          var_lat = file.createVariable("latitude", "f4", (yname))
          var_lat.units = "degrees_north"
@@ -152,9 +185,11 @@ class Netcdf(Output):
       vars = dict()
       for var in variables:
          if scale == "agg":
-            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member"))
+            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member"))
+         elif has_single_spatial_dim:
+            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", 'grid_point'))
          else:
-            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", yname, xname))
+            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
@@ -175,18 +210,20 @@ class Netcdf(Output):
                # Insert a singleton dimension at dimension index 1
                values = np.expand_dims(values, 1)
                if use_single_gridpoint:
-                  vars[variables[v].name][:, m, :, :] = values[:, :, Xref, Yref]
+                  vars[variables[v].name][:, m, :] = values[:, :, Xref, Yref]
+               elif has_single_spatial_dim:
+                  vars[variables[v].name][:, m, :] = values[:, :, :, :]
                else:
                   vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
 
       if self.write_indices:
-         var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
-         var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("time", "ensemble_member"))
+         var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
+         var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("lead_time", "ensemble_member"))
          var_segment_leadtime.units = "seconds"
-         var_segment_time = file.createVariable("segment_time", "f8", ("time", "ensemble_member"))
+         var_segment_time = file.createVariable("segment_time", "f8", ("lead_time", "ensemble_member"))
          var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-         var_segment_time.standard_name = "time"
-         var_segment_time.long_name = "time"
+         var_segment_time.standard_name = "lead_time"
+         var_segment_time.long_name = "lead_time"
          dt = database.timestep
          for m in range(0, len(trajectories)):
             trajectory = trajectories[m]
@@ -211,23 +248,23 @@ class Netcdf(Output):
       if not os.path.exists(self.filename):
          file = netCDF4.Dataset(self.filename, 'w')
 
-         file.createDimension("time")
+         file.createDimension("lead_time")
          file.createDimension("y", parameters.lats.shape[0])
          file.createDimension("x", parameters.lats.shape[1])
 
          # Time
-         var_time = file.createVariable("time", "f8", ("time"))
-         var_time[:] = np.arange(0, database.length)*86400 + database.inittimes[0]
-         var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-         var_time.standard_name = "time"
-         var_time.long_name = "time"
+         var_lead_time = file.createVariable("lead_time", "f8", ("lead_time"))
+         var_lead_time[:] = np.arange(0, database.length)*86400 + database.inittimes[0]
+         var_lead_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+         var_lead_time.standard_name = "lead_time"
+         var_lead_time.long_name = "lead_time"
 
          # Forecast reference time
-         var_frt = file.createVariable("forecast_reference_time", "f8")
+         var_frt = file.createVariable("time", "f8")
          var_frt[:] = database.inittimes
          var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
-         var_frt.standard_name = "forecast_reference_time"
-         var_frt.long_name = "forecast_reference_time"
+         var_frt.standard_name = "time"
+         var_frt.long_name = "time"
 
          # Projection
          var_proj = file.createVariable("projection", "i4")
@@ -285,8 +322,9 @@ class Netcdf(Output):
          if grid_missmatch:
             wxgen.util.error("Lat/lon in parameter file does not match those in the output file. Consider removing the output file and try again.")
 
-         if database.length != len(file.dimensions["time"]):
-            wxgen.util.error("Time dimension of input (%d) is not the same size as in the output (%d). Consider removing the output file and try again." % (database.length, len(file.dimensions["time"])))
+         if database.length != len(file.dimensions["lead_time"]):
+            wxgen.util.error("Time dimension of input (%d) is not the same size as in the output (%d). Consider removing the output file and try again." % (database.length,
+                  len(file.dimensions["lead_time"])))
 
          X = parameters.lons.shape[1]
          Y = parameters.lons.shape[0]
@@ -296,7 +334,7 @@ class Netcdf(Output):
 
       # Define forecast variables
       if var.name not in file.variables:
-         var_var = file.createVariable(var.name, "f4", ("time", "y", "x"))
+         var_var = file.createVariable(var.name, "f4", ("lead_time", "y", "x"))
          if var.units is not None:
             var_var.units = var.units
          var_var.grid_mapping = "projection"
