@@ -239,12 +239,12 @@ class Timeseries(Plot):
                mpl.subplot(X, Y, index)
                Ivar = Ivars[v]
                variable = sims[0].variables[Ivar]
+               x = np.arange(sim.length) * 1.0 * sim.timestep / 86400
                if use_single_gridpoint:
                   values = sim.extract_grid(traj, variable)[:, Xref, Yref]
-                  mpl.plot(values, **plot_options)
+                  mpl.plot(x, values, **plot_options)
                else:
                   y = values[:, Ivar]
-                  x = np.arange(len(y)) * 1.0 * sim.timestep / 86400
                   mpl.plot(x, y, **plot_options)
                mpl.ylabel(variable.name)
                mpl.title(sim.label)
@@ -554,8 +554,8 @@ class Map(Plot):
          variable = variables[Ivar]
          for s in range(len(sims)):
             sim = sims[s]
-            if sim.X <= 1 or sim.Y <= 1:
-               wxgen.util.error("Cannot create map of aggregated scenarios")
+            #if sim.X <= 1 or sim.Y <= 1:
+            #   wxgen.util.error("Cannot create map of aggregated scenarios")
 
             index = v*X+s+1
             lats = sim.lats
@@ -585,14 +585,17 @@ class Map(Plot):
             agg = self.ens_aggregator(sim_values, axis=0)
 
             [x, y] = lons, lats
-            if self.clim is not None:
-               cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11),
-                     label=sim.label, cmap=self.cmap,
-                     vmin=self.clim[0], vmax=self.clim[1], extend="both")
+            if lons.shape[1] == 1:
+               map.scatter(x, y, c=agg)
             else:
-               cont = map.contourf(x, y, agg, label=sim.label, cmap=self.cmap, extend="both")
-            label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
-            cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
+               if self.clim is not None:
+                  cont = map.contourf(x, y, agg, np.linspace(self.clim[0], self.clim[1], 11),
+                        label=sim.label, cmap=self.cmap,
+                        vmin=self.clim[0], vmax=self.clim[1], extend="both")
+               else:
+                  cont = map.contourf(x, y, agg, label=sim.label, cmap=self.cmap, extend="both")
+               label = "%s %s (%s)" % (self.ens_aggregator.name().capitalize(), variable.name, self.ens_aggregator.units(variable.units))
+               cb = mpl.colorbar(cont, label=label, fraction=0.046, pad=0.04)
             if self.clim is not None:
                cb.set_clim(self.clim)
             if cartopytest:
@@ -732,7 +735,7 @@ class TimeStat(Plot):
             if self.timemod is None:
                L = sim.length
             else:
-               L = self.timemod
+               L = self.timemod * int(86400 / sim.timestep)
 
             """
             Take values from all gridpoints, leadtimes, and members and then aggregate at the end.
@@ -796,7 +799,7 @@ class TimeStat(Plot):
                x = x[(self.timescale // 2):(-self.timescale // 2+1)]
             mpl.plot(x, values_agg, label=sim.label, **plot_options)
          mpl.xlabel("Lead time (days)")
-         mpl.ylabel("%s" % (self.ens_aggregator.name().capitalize()))
+         mpl.ylabel("%s %s" % (self.ens_aggregator.name().capitalize(), variable.name))
          mpl.legend(loc="best")
          if self.grid:
             mpl.grid()
