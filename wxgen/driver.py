@@ -102,6 +102,9 @@ def main(argv):
          start_day = args.init_date % 100
          start_month = args.init_date / 100 % 100
          Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
+         print Ipossible_start_days
+         if len(Ipossible_start_days) == 0:
+            wxgen.util.error("Cannot use starting date %d, since there are not segments that start at this day of the year. Use -d to set a different starting date" % (args.init_date))
          if args.n > len(Ipossible_start_days):
             wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
 
