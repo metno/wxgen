@@ -74,7 +74,6 @@ class Plot(object):
       self.lat = None
       self.lon = None
       self.timescale = 1
-      self.scale = "large"
       self.timemod = None
       self.grid = True
 
@@ -661,16 +660,11 @@ class Jump(Plot):
             counts = np.zeros([L])
             for m in range(sim.num):
                traj = sim.get(m)
-               if self.scale == "agg":
-                  q = sim.extract(traj)
-               else:
-                  q = sim.extract_grid(traj, variable)
+               q = sim.extract_grid(traj, variable)
 
                for i in range(L):
                   I = [II for II in range(sim.length - 1) if II % L == i]
-                  if self.scale == "agg":
-                     diff = np.abs(q[:-1, Ivar] - q[1:, Ivar])
-                  elif use_single_gridpoint:
+                  if use_single_gridpoint:
                      diff = np.abs(q[:-1, Xref, Yref] - q[1:, Xref, Yref])
                   else:
                      diff = np.abs(q[:-1, :, :] - q[1:, :, :])
@@ -747,19 +741,13 @@ class TimeStat(Plot):
             for m in range(sim.num):
                traj = sim.get(m)
                """ Load the data and put it into a 3D array with time, X, Y """
-               if self.scale == "agg":
-                  q = sim.extract(traj)
-                  q = q[:, Ivar]
+               q = sim.extract_grid(traj, variable)
+               if use_single_gridpoint:
+                  q = q[:, Xref, Yref].flatten()
                   q = np.expand_dims(q, 1)
                   q = np.expand_dims(q, 2)
                else:
-                  q = sim.extract_grid(traj, variable)
-                  if use_single_gridpoint:
-                     q = q[:, Xref, Yref].flatten()
-                     q = np.expand_dims(q, 1)
-                     q = np.expand_dims(q, 2)
-                  else:
-                     q = q[:, :, :]
+                  q = q[:, :, :]
 
                q = self.transform(q)
 
@@ -779,13 +767,10 @@ class TimeStat(Plot):
                   the array
                   """
                   I = range(i, q.shape[0] // L * L, L)
-                  if self.scale == "agg":
+                  if use_single_gridpoint:
                      values[i] = np.append(values[i], q[I, :, :].flatten())
                   else:
-                     if use_single_gridpoint:
-                        values[i] = np.append(values[i], q[I, :, :].flatten())
-                     else:
-                        values[i] = np.append(values[i], q[I, :, :].flatten())
+                     values[i] = np.append(values[i], q[I, :, :].flatten())
 
             values_agg = np.zeros(L)
             for i in range(L):
@@ -836,16 +821,10 @@ class SortStat(Plot):
             values = [np.zeros([0])]*L
             for m in range(sim.num):
                traj = sim.get(m)
-               if self.scale == "agg":
-                  q = sim.extract(traj)
-               else:
-                  q = sim.extract_grid(traj, variable)
+               q = sim.extract_grid(traj, variable)
                for i in range(L):
                   I = range(i, q.shape[0] // L * L, L)
-                  if self.scale == "agg":
-                     values[i] = np.append(values[i], self.transform(q[I, Ivar]).flatten())
-                  else:
-                     values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
+                  values[i] = np.append(values[i], self.transform(q[I, :, :]).flatten())
             for i in range(L):
                plot_options = self._get_plot_options(i, L)
                x = np.sort(values[i])
@@ -941,19 +920,22 @@ class CovarMap(Plot):
                sim_values += wxgen.util.correlation(val, ref, axis=0)
                count += 1
             [x, y] = lons, lats
-            if cartopytest:
-               """ extend="both" and setting color limits doesn't work with cartopy """
-               cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap)
+            if lons.shape[1] == 1:
+               map.scatter(x, y, c=sim_values/count)
             else:
-               if self.clim is not None:
-                  cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
-                        label=sim.label, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
+               if cartopytest:
+                  """ extend="both" and setting color limits doesn't work with cartopy """
+                  cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap)
                else:
-                  cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap, extend="both")
-            mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
-            cb = mpl.colorbar(cont, fraction=0.046, pad=0.04)
-            if self.clim is not None and not cartopytest:
-               cb.set_clim(self.clim)
+                  if self.clim is not None:
+                     cont = map.contourf(x, y, sim_values/count, np.linspace(self.clim[0], self.clim[1], 11),
+                           label=sim.label, cmap=self.cmap, extend="both", vmin=self.clim[0], vmax=self.clim[1])
+                  else:
+                     cont = map.contourf(x, y, sim_values/count, label=sim.label, cmap=self.cmap, extend="both")
+               mpl.plot(x[Xref, Yref], y[Xref, Yref], '*', ms=15, mfc="yellow", mec="k")
+               cb = mpl.colorbar(cont, fraction=0.046, pad=0.04)
+               if self.clim is not None and not cartopytest:
+                  cb.set_clim(self.clim)
             if cartopytest:
                map.coastlines(resolution='10m')
                map.add_feature(cartopy.feature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land',

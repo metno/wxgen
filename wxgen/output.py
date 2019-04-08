@@ -37,13 +37,12 @@ class Output(object):
       self.altitude = None
       self.write_indices = False
 
-   def write(self, trajectories, database, scale, start_date=20170101):
+   def write(self, trajectories, database, start_date=20170101):
       """ Writes trajectories to file
 
       Arguments:
          trajectories (list): List of wxgen.trajectory
          database (wxgen.database): Database belonging to trajectories
-         scale (str): One of "agg", "large", or "small"
          start_date (int): Starting date for the output timeseries (YYYYMMDD)
       """
       raise NotImplementedError()
@@ -53,7 +52,7 @@ class Netcdf(Output):
    """
    Writes the trajectories to a netcdf file.
    """
-   def write(self, trajectories, database, scale, start_date=20170101):
+   def write(self, trajectories, database, start_date=20170101):
       if len(trajectories) == 0:
          wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
@@ -62,27 +61,20 @@ class Netcdf(Output):
       file.createDimension("ensemble_member", len(trajectories))
       use_single_gridpoint = self.lat is not None and self.lon is not None
       has_single_spatial_dim = database.X == 1
-      if scale != "agg":
-         if scale == "large":
-            xname = "longitude"
-            yname = "latitude"
-         elif scale == "small":
-            xname = "x"
-            yname = "y"
-         else:
-            wxgen.util.error("Cannot understand scale '%s'" % scale)
+      xname = "longitude"
+      yname = "latitude"
 
-         if has_single_spatial_dim:
-            file.createDimension('grid_point', database.Y)
-            spatial_dims = ['grid_point']
-         elif use_single_gridpoint:
-            file.createDimension(yname, 1)
-            file.createDimension(xname, 1)
-            spatial_dims = [yname, xname]
-         else:
-            file.createDimension(yname, database.Y)
-            file.createDimension(xname, database.X)
-            spatial_dims = [yname, xname]
+      if has_single_spatial_dim:
+         file.createDimension('grid_point', database.Y)
+         spatial_dims = ['grid_point']
+      elif use_single_gridpoint:
+         file.createDimension(yname, 1)
+         file.createDimension(xname, 1)
+         spatial_dims = [yname, xname]
+      else:
+         file.createDimension(yname, database.Y)
+         file.createDimension(xname, database.X)
+         spatial_dims = [yname, xname]
 
       # Time
       var_lead_time = file.createVariable("lead_time", "f8", ("lead_time"))
@@ -134,7 +126,7 @@ class Netcdf(Output):
                var_altitude[:] = self.altitude
          else:
             var_altitude[:] = database.altitudes[:]
-      elif scale == "large":
+      else:
          # Assume a lat/lon grid
          var_lat = file.createVariable("latitude", "f4", (yname))
          var_lat.units = "degrees_north"
@@ -161,40 +153,18 @@ class Netcdf(Output):
                var_altitude[:] = self.altitude
          else:
             var_altitude[:] = database.altitudes[:]
-      elif scale == "small":
-         # Assume a projected grid
-         var_lat = file.createVariable("latitude", "f4", (yname, xname))
-         var_lat.units = "degrees_north"
-         var_lat.standard_name = "latitude"
-         var_lat[:] = database.lats
-
-         # Longitude
-         var_lon = file.createVariable("longitude", "f4", (yname, xname))
-         var_lon.units = "degrees_east"
-         var_lon.standard_name = "longitude"
-         var_lon[:] = database.lons
-
-         # Altitude
-         var_altitude = file.createVariable("altitude", "f4", (yname, xname))
-         var_altitude.units = "m"
-         var_altitude.standard_name = "altitude"
-         var_altitude[:] = database.altitudes[:]
 
       # Define forecast variables
       variables = database.variables
       vars = dict()
       for var in variables:
-         if scale == "agg":
-            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member"))
-         elif has_single_spatial_dim:
+         if has_single_spatial_dim:
             vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", 'grid_point'))
          else:
             vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
-         if scale == "small":
-            vars[var.name].coordinates = "latitude longitude"
 
       # Write forecast variables
       if use_single_gridpoint:
@@ -202,19 +172,15 @@ class Netcdf(Output):
       for v in range(0, len(variables)):
          # Save variable after writing. Combine this loop with previous var loop.
          for m in range(0, len(trajectories)):
-            if scale == "agg":
-               values = database.extract(trajectories[m])
-               vars[variables[v].name][:, m] = values[:, v]
+            values = database.extract_grid(trajectories[m], variables[v])
+            # Insert a singleton dimension at dimension index 1
+            values = np.expand_dims(values, 1)
+            if use_single_gridpoint:
+               vars[variables[v].name][:, m, :] = values[:, :, Xref, Yref]
+            elif has_single_spatial_dim:
+               vars[variables[v].name][:, m, :] = values[:, :, :, :]
             else:
-               values = database.extract_grid(trajectories[m], variables[v])
-               # Insert a singleton dimension at dimension index 1
-               values = np.expand_dims(values, 1)
-               if use_single_gridpoint:
-                  vars[variables[v].name][:, m, :] = values[:, :, Xref, Yref]
-               elif has_single_spatial_dim:
-                  vars[variables[v].name][:, m, :] = values[:, :, :, :]
-               else:
-                  vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
+               vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
 
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
@@ -230,123 +196,6 @@ class Netcdf(Output):
             var_segment_member[:, m] = trajectory.indices[:, 0]
             var_segment_leadtime[:, m] = trajectory.indices[:, 1] * dt
             var_segment_time[:, m] = database.inittimes[trajectory.indices[:, 0]]
-
-      # Global attributes
-      file.Conventions = "CF-1.0"
-      file.history = "%s: Generated by wxgen" % datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S +00:00')
-      file.close()
-
-   def write_downscaled(self, database, parameters, method, var_index, member_index):
-      if var_index >= len(database.variables):
-         wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(database.variables), var_index))
-
-      var = database.variables[var_index]
-      """
-      Create the file if it does not exist, otherwise reuse the file, overwriting the variable.
-      Check that the dimensions match if not a new file.
-      """
-      if not os.path.exists(self.filename):
-         file = netCDF4.Dataset(self.filename, 'w')
-
-         file.createDimension("lead_time")
-         file.createDimension("y", parameters.lats.shape[0])
-         file.createDimension("x", parameters.lats.shape[1])
-
-         # Time
-         var_lead_time = file.createVariable("lead_time", "f8", ("lead_time"))
-         var_lead_time[:] = np.arange(0, database.length)*86400 + database.inittimes[0]
-         var_lead_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-         var_lead_time.standard_name = "lead_time"
-         var_lead_time.long_name = "lead_time"
-
-         # Forecast reference time
-         var_frt = file.createVariable("time", "f8")
-         var_frt[:] = database.inittimes
-         var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
-         var_frt.standard_name = "time"
-         var_frt.long_name = "time"
-
-         # Projection
-         var_proj = file.createVariable("projection", "i4")
-         var_proj.grid_mapping_name = "latitude_longitude"
-         # var_proj.earth_radius = 6367470
-         var_proj.proj4 = parameters.proj
-         # var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
-
-         # Latitude
-         var_lat = file.createVariable("latitude", "f4", ("y", "x"))
-         var_lat.units = "degrees_north"
-         var_lat.standard_name = "latitude"
-         var_lat[:] = parameters.lats
-
-         # Longitude
-         var_lon = file.createVariable("longitude", "f4", ("y", "x"))
-         var_lon.units = "degrees_east"
-         var_lon.standard_name = "longitude"
-         var_lon[:] = parameters.lons
-
-         # TODO:
-         # Altitude
-         # var_altitude = file.createVariable("altitude", "f4", ("y", "x"))
-         # var_altitude.units = "m"
-         # var_altitude.standard_name = "altitude"
-         # var_altitude[:] = parameters.altitudes
-
-         # x
-         var_x = file.createVariable("x", "f4", ("x"))
-         var_x.standard_name = "projection_x_coordinate"
-         var_x.units = "m"
-         var_x[:] = parameters.x
-
-         # y
-         var_y = file.createVariable("y", "f4", ("y"))
-         var_y.standard_name = "projection_y_coordinate"
-         var_y.units = "m"
-         var_y[:] = parameters.y
-
-      else:
-         """
-         Reuse existing file and overwrite the variable. Check that the grid is as expected.
-         """
-         file = netCDF4.Dataset(self.filename, 'a')
-         lats0 = file.variables["latitude"][:]
-         lons0 = file.variables["longitude"][:]
-         lats1 = parameters.lats
-         lons1 = parameters.lons
-
-         grid_missmatch = lats0.shape != lats1.shape or lons0.shape != lons1.shape
-         if not grid_missmatch:
-            grid_missmatch = (np.max(np.abs(lats0 - lats1)) > 1e-5)
-            grid_missmatch = grid_missmatch or (np.max(np.abs(lons0 - lons1) > 1e-5))
-
-         if grid_missmatch:
-            wxgen.util.error("Lat/lon in parameter file does not match those in the output file. Consider removing the output file and try again.")
-
-         if database.length != len(file.dimensions["lead_time"]):
-            wxgen.util.error("Time dimension of input (%d) is not the same size as in the output (%d). Consider removing the output file and try again." % (database.length,
-                  len(file.dimensions["lead_time"])))
-
-         X = parameters.lons.shape[1]
-         Y = parameters.lons.shape[0]
-         # Dimension check
-         assert(len(file.dimensions["x"]) == X)
-         assert(len(file.dimensions["y"]) == Y)
-
-      # Define forecast variables
-      if var.name not in file.variables:
-         var_var = file.createVariable(var.name, "f4", ("lead_time", "y", "x"))
-         if var.units is not None:
-            var_var.units = var.units
-         var_var.grid_mapping = "projection"
-         var_var.coordinates = "latitude longitude"
-      else:
-         var_var = file.variables[var.name]
-
-      # Write forecast variables
-      values = database.extract_grid(database.get(member_index), var)
-      temp = method.generate(values, database.lats, database.lons, parameters)
-      assert(temp.shape == var_var.shape)
-      var_var[:, :, :] = temp
 
       # Global attributes
       file.Conventions = "CF-1.0"

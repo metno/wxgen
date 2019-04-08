@@ -67,7 +67,7 @@ def main(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, args.scale, start_date=args.init_date)
+      output.write(trajectories, db, start_date=args.init_date)
 
    elif args.command == "truth":
       db = get_db(args)
@@ -127,7 +127,7 @@ def main(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, args.scale, start_date=args.init_date)
+      output.write(trajectories, db, start_date=args.init_date)
 
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
@@ -143,7 +143,6 @@ def main(argv):
       plot.cmap = args.cmap
       plot.lat = args.lat
       plot.lon = args.lon
-      plot.scale = args.scale
       plot.line_styles = args.styles
       plot.line_colors = args.colors
       plot.line_widths = args.widths
@@ -274,7 +273,6 @@ def get_parsers():
       pass
 
    for driver in ["sim", "truth", "verif"]:
-      sp[driver].add_argument('-s', default="large", help="Output scale", choices=["agg", "large", "small"], dest="scale")
       sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
       sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
