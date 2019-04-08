@@ -237,6 +237,8 @@ class Database(object):
    def get_wavelet_size(self):
       if self.wavelet_levels == 0:
          return 1, 1
+      elif self.wavelet_levels == -1:
+         return self.X, self.Y
       NX = int(np.ceil(float(self.Y)/2**self.wavelet_levels))
       NY = int(np.ceil(float(self.X)/2**self.wavelet_levels))
       return NX, NY
@@ -300,6 +302,15 @@ class Database(object):
                self._data_matching_cache[:, p, :] = data[Ivar][:, indices[0], indices[1], :] * weight
          elif self.wavelet_levels == 0:
             self._data_matching_cache = self._data_agg
+         elif self.wavelet_levels == -1:
+            N = int(self.X * self.Y)
+            self._data_matching_cache = np.zeros([self.length, self.V*N, self.num])
+            for v in range(self.V):
+               data = self.load(self.variables[v])
+               data = data[:, :, 0, :]
+               # Write data into the right location in the cache
+               I = range(v*N, (v+1)*N)
+               self._data_matching_cache[:, I, :] = data
          else:
             """
             Decompose all gridded fields into wavelet components. Do this separately for each
@@ -334,15 +345,15 @@ class Netcdf(Database):
    """
    Segments stored in a netcdf database. This can either be an aggregated or a gridded database.
 
-   Aggregated database has the following format:
-      dims: time, lead_time, ensemble_member
+   Concatenated database has the following format:
+      dims: time, grid_point, lead_time, ensemble_member
       vars: time(time), lead_time(lead_time)
-            variable_name(time, lead_time, ensemble_member)
+            variable_name(time, lead_time, ensemble_member, grid_point)
 
    Gridded database has the following format:
       dims: time, lat(itude), lon(gitude), lead_time, ensemble_member
       vars: time(time), lead_time(lead_time)
-            variable_name(time, lead_time, member, latitude, longitude)
+            variable_name(time, lead_time, ensemble_member, latitude, longitude)
 
    where variable_name is one or more names of weather variables. Forecast_reference_time is
    optional, i.e. both the variable and dimension could be missing.
@@ -435,6 +446,7 @@ class Netcdf(Database):
          X = len(self._file.dimensions["x"])
          Y = len(self._file.dimensions["y"])
       elif "grid_point" in self._file.dimensions:
+         # Store concatinated spatial dimension in X dimension
          X = len(self._file.dimensions["grid_point"])
          Y = 1
          self.has_single_spatial_dim = True
