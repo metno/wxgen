@@ -553,9 +553,6 @@ class Map(Plot):
          variable = variables[Ivar]
          for s in range(len(sims)):
             sim = sims[s]
-            #if sim.X <= 1 or sim.Y <= 1:
-            #   wxgen.util.error("Cannot create map of aggregated scenarios")
-
             index = v*X+s+1
             lats = sim.lats
             lons = sim.lons
@@ -677,6 +674,7 @@ class Jump(Plot):
             x = np.arange(0.5, L + 0.5) * dt
             plot_options = self._get_plot_options(s, len(sims))
             mpl.plot(x, values, label=sim.label, **plot_options)
+            # mpl.plot(np.arange(0.5, L + 0.5), values, '-o', color=col, label=sim.name)
          mpl.xlabel("Lead time (days)")
          mpl.ylabel("Average absolute jump")
          mpl.legend(loc="best")
