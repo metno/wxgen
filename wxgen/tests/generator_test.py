@@ -10,7 +10,7 @@ class GeneratorTest(unittest.TestCase):
       N = 4
       T = 20
       db = wxgen.database.Random(N, T, V)
-      generator = wxgen.generator.LargeScale(db)
+      generator = wxgen.generator.Generator(db)
       traj = generator.get(N, T)
       self.assertEqual(N, len(traj))
       self.assertEqual(T, traj[0].length)

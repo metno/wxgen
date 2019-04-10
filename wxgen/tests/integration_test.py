@@ -3,15 +3,15 @@ import unittest
 import numpy as np
 import tempfile
 import netCDF4
-import wxgen.driver
 import time
+import wxgen
 np.seterr('raise')
 
 
 def run_command(command):
    """ Runs a wxgen command line """
    argv = command.split()
-   wxgen.driver.main(argv)
+   wxgen.run(argv)
 
 
 def remove(file):
