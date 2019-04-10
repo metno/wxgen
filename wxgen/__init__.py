@@ -272,8 +272,8 @@ def get_parsers():
       pass
 
    for driver in ["sim", "truth", "verif"]:
-      sp[driver].add_argument('-lat', type=float, help="Lookup latitude")
-      sp[driver].add_argument('-lon', type=float, help="Lookup longitude")
+      sp[driver].add_argument('-lat', type=float, help="Compute for this latitude only (also use -lon)")
+      sp[driver].add_argument('-lon', type=float, help="Compute for this longitude only (also use -lat)")
       sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
 
    for driver in ["sim"]:
