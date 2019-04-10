@@ -4,7 +4,7 @@ import wxgen.util
 import wxgen.climate_model
 
 
-class LargeScale(object):
+class Generator(object):
    """
    This class generates long trajectories from segments in a database
    """

@@ -49,7 +49,7 @@ def main(argv):
 
       # Generate trajectories
       metric = get_metric(args, db)
-      generator = wxgen.generator.LargeScale(db, metric)
+      generator = wxgen.generator.Generator(db, metric)
       generator.prejoin = args.prejoin
       generator.policy = args.policy
       generator.stagger = args.stagger
