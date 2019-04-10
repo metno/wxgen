@@ -48,7 +48,7 @@ class Database(object):
    """
    def __init__(self, model=None):
       self._data_matching_cache = None
-      self.wavelet_levels = 0
+      self.spatial_decomposition = 0
       self.join_config = None
       self.mem = None
       if model is None:
@@ -235,13 +235,14 @@ class Database(object):
       return values
 
    def get_wavelet_size(self):
-      if self.wavelet_levels == 0:
+      if self.spatial_decomposition == 0:
          return 1, 1
-      elif self.wavelet_levels == -1:
+      elif self.spatial_decomposition == 'all':
          return self.X, self.Y
-      NX = int(np.ceil(float(self.Y)/2**self.wavelet_levels))
-      NY = int(np.ceil(float(self.X)/2**self.wavelet_levels))
-      return NX, NY
+      else:
+         NX = int(np.ceil(float(self.Y)/2**self.spatial_decomposition))
+         NY = int(np.ceil(float(self.X)/2**self.spatial_decomposition))
+         return NX, NY
 
    @property
    def _data_agg(self):
@@ -300,9 +301,9 @@ class Database(object):
                Ivar = point['variable']
                weight = point['weight']
                self._data_matching_cache[:, p, :] = data[Ivar][:, indices[0], indices[1], :] * weight
-         elif self.wavelet_levels == 0:
+         elif self.spatial_decomposition == 0:
             self._data_matching_cache = self._data_agg
-         elif self.wavelet_levels == -1:
+         elif self.spatial_decomposition == 'all':
             N = int(self.X * self.Y)
             self._data_matching_cache = np.zeros([self.length, self.V*N, self.num])
             for v in range(self.V):
@@ -325,8 +326,8 @@ class Database(object):
             for v in range(self.V):
                data = self.load(self.variables[v])
                # Compute wavelet decomposition on axes 1 2
-               dec = pywt.wavedec2(data, 'haar', level=self.wavelet_levels, axes=(1, 2))[0]
-               dec = dec / 2**self.wavelet_levels
+               dec = pywt.wavedec2(data, 'haar', level=self.spatial_decomposition, axes=(1, 2))[0]
+               dec = dec / 2**self.spatial_decomposition
 
                # Collapse axes 1 and 2
                dec = np.reshape(dec, [self.length, N, self.num])

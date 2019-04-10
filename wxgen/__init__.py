@@ -285,7 +285,7 @@ def get_parsers():
       sp[driver].add_argument('-sd', metavar="YYYYMMDD", type=int, help="Earliest date to use from database", dest="start_date")
       sp[driver].add_argument('-ed', metavar="YYYYMMDD", type=int, help="Latest date to use from database", dest="end_date")
       sp[driver].add_argument('-o', metavar="FILENAME", help="Filename to write output to", dest="filename", required=True)
-      sp[driver].add_argument('-wl', type=int, default=0, metavar="NUM", help="Number of wavelet levels.  If 0 (default), don't use wavelets.", dest="wavelet_levels")
+      sp[driver].add_argument('-s', type=parse_spatial_decomposition, default=1, metavar="LEVEL", help="Spatial decomposition: =0 Aggregate all points; =1,=2,=3... decompose using wavelets; =all Use all points. Ignored if -jc specified.", dest="spatial_decomposition")
       sp[driver].add_argument('-jc', metavar="CONFIG", help="Configuration file for joining", dest="join_config")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
       sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
@@ -329,8 +329,8 @@ def get_db(args):
       else:
          wxgen.util.error("Cannot understand -dbtype %s" % dbtype)
 
-   if hasattr(args, "wavelet_levels"):
-      db.wavelet_levels = args.wavelet_levels
+   if hasattr(args, "spatial_decomposition"):
+      db.spatial_decomposition = args.spatial_decomposition
 
    if hasattr(args, "join_config"):
       db.join_config = args.join_config
@@ -344,7 +344,7 @@ def get_db(args):
 def get_metric(args, db):
    if args.weights is not None:
       weights = args.weights
-      if args.wavelet_levels is not None:
+      if args.spatial_decomposition is not None:
          """
          If we are using wavelets, then the weights in the metric must be repeated such that each
          wavelet component gets the same weight for a given variable.
@@ -397,6 +397,13 @@ def get_module_names(module):
    Returns a list of strings, one for each class in the module
    """
    return [x[0].lower() for x in module.get_all() if "wxgen." + x[0].lower() != module.__name__]
+
+
+def parse_spatial_decomposition(string):
+   if string == "all":
+      return "all"
+   else:
+      return int(string)
 
 
 def main():
