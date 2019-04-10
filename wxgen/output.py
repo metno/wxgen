@@ -184,7 +184,7 @@ class Netcdf(Output):
 
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
-         var_segment_leadtime = file.createVariable("segment_leadtime", "i4", ("lead_time", "ensemble_member"))
+         var_segment_leadtime = file.createVariable("segment_lead_time", "i4", ("lead_time", "ensemble_member"))
          var_segment_leadtime.units = "seconds"
          var_segment_time = file.createVariable("segment_time", "f8", ("lead_time", "ensemble_member"))
          var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
