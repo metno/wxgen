@@ -384,13 +384,23 @@ class Netcdf(Database):
       if vars is not None and max(vars) >= len(var_names):
          wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
 
+      if "lead_time" in self._file.dimensions and "time" in self._file.dimensions:
+         lead_time_dim = "lead_time"
+         time_dim = "time"
+         self.single_run = False
+      elif "time" in self._file.dimensions:
+         lead_time_dim = "time"
+         time_dim = None
+         self.single_run = True
+      else:
+         wxgen.util.error("Cannot read file. Missing 'time' and/or 'lead_time' dimensions")
       self.variables = list()
       for i in vars:
          var_name = var_names[i]
          units = None
          label = None
          dims = self._file.variables[var_name].dimensions
-         if "lead_time" in dims:
+         if "time" in dims:
             if hasattr(self._file.variables[var_name], "units"):
                units = self._file.variables[var_name].units
             if hasattr(self._file.variables[var_name], "standard_name"):
@@ -400,12 +410,12 @@ class Netcdf(Database):
             wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
-      self.length = len(self._file.dimensions["lead_time"])
-      timevar = self._file.variables["lead_time"]
+      self.length = len(self._file.dimensions[lead_time_dim])
+      timevar = self._file.variables[lead_time_dim]
 
       # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
       self.timestep = 86400
-      leadtimes = wxgen.util.clean(self._file.variables["lead_time"][:])
+      leadtimes = wxgen.util.clean(self._file.variables[lead_time_dim][:])
       if hasattr(timevar, "units"):
          if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
             self.timestep = leadtimes[1] - leadtimes[0]
@@ -416,22 +426,20 @@ class Netcdf(Database):
       if np.isnan(self.timestep):
          wxgen.util.error("Cannot determine timestep from database")
 
-      self.has_time = True
       self.has_single_spatial_dim = False
-      if "time" in self._file.dimensions:
+      if self.single_run:
+         if "forecast_reference_time" in self._file.variables:
+            times = np.array([self._file.variables["forecast_reference_time"][:]])
+         else:
+            times = np.array([self._file.variables["time"][0]])
+         self.num = len(self._file.dimensions["ensemble_member"])
+         self.inittimes = times
+         self.ens = self.num
+      else:
          times = self._file.variables["time"][:]
          self.ens = len(self._file.dimensions["ensemble_member"])
          self.num = len(self._file.dimensions["time"]) * self.ens
          self.inittimes = np.repeat(times, self.ens)
-      else:
-         self.has_time = False
-         if "time" in self._file.variables:
-            times = np.array([self._file.variables["time"][:]])
-         else:
-            times = np.array([self._file.variables["lead_time"][0]])
-         self.num = len(self._file.dimensions["ensemble_member"])
-         self.inittimes = times
-         self.ens = self.num
 
       self._Itimes = np.where(np.isnan(times) == 0)[0]
       times = times[self._Itimes]
@@ -504,15 +512,15 @@ class Netcdf(Database):
       for d in range(len(self._Itimes)):
          for m in range(0, self.ens):
             if self.has_single_spatial_dim:
-               if self.has_time:
-                  data[:, :, 0, index] = temp[self._Itimes[d], :, m, :]
-               else:
+               if self.single_run:
                   data[:, :, 0, index] = temp[:, m, :]
-            else:
-               if self.has_time:
-                  data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
                else:
+                  data[:, :, 0, index] = temp[self._Itimes[d], :, m, :]
+            else:
+               if self.single_run:
                   data[:, :, :, index] = temp[:, m, :, :]
+               else:
+                  data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
             # If one or more values are missing for a member, set all values to nan
             NM = np.sum(np.isnan(data[:, :, :, index]))
             if NM > 0:

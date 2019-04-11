@@ -57,7 +57,7 @@ class Netcdf(Output):
          wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
 
-      file.createDimension("lead_time")
+      file.createDimension("time")
       file.createDimension("ensemble_member", len(trajectories))
       use_single_gridpoint = self.lat is not None and self.lon is not None
       has_single_spatial_dim = database.X == 1
@@ -77,16 +77,17 @@ class Netcdf(Output):
          spatial_dims = [yname, xname]
 
       # Time
-      var_lead_time = file.createVariable("lead_time", "f8", ("lead_time"))
+      var_time = file.createVariable("time", "f8", ("time"))
       start_unixtime = wxgen.util.date_to_unixtime(start_date)
       end_unixtime = start_unixtime + database.timestep * trajectories[0].length
-      var_lead_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
-      var_lead_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-      var_lead_time.standard_name = "lead_time"
-      var_lead_time.long_name = "lead_time"
+      # TODO: This probably isn't right
+      var_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
+      var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+      var_time.standard_name = "time"
+      var_time.long_name = "time"
 
       # Forecast reference time
-      var_frt = file.createVariable("time", "f8")
+      var_frt = file.createVariable("forecast_reference_time", "f8")
       var_frt[:] = start_unixtime
       var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
       var_frt.standard_name = "time"
@@ -159,9 +160,9 @@ class Netcdf(Output):
       vars = dict()
       for var in variables:
          if has_single_spatial_dim:
-            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", 'grid_point'))
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", 'grid_point'))
          else:
-            vars[var.name] = file.createVariable(var.name, "f4", ("lead_time", "ensemble_member", yname, xname))
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
          vars[var.name].grid_mapping = "projection_regular_ll"
