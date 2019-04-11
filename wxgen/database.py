@@ -228,7 +228,7 @@ class Database(object):
          np.array: A 2D array (Time, variable) sequence of values
       """
       T = trajectory.indices.shape[0]
-      values = np.nan*np.zeros([T, self._data_matching.shape[1]], float)
+      values = np.nan*np.zeros([T, self._data_matching.shape[1]], 'float32')
       for i in range(0, trajectory.indices.shape[0]):
          if trajectory.indices[i, 1] >= 0:
             values[i, :] = self._data_matching[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
@@ -248,7 +248,7 @@ class Database(object):
    def _data_agg(self):
       # _data_agg (np.array): A 3D array of data with dimensions (lead_time, variable, member*time)
       if self._data_agg_cache is None:
-         self._data_agg_cache = np.zeros([self.length, self.V, self.num])
+         self._data_agg_cache = np.zeros([self.length, self.V, self.num], 'float32')
          for v in range(len(self.variables)):
             variable = self.variables[v]
             data = self.load(variable)
@@ -293,7 +293,7 @@ class Database(object):
             for Ivar in Ivars:
                data[Ivar] = self.load(self.variables[Ivar])
 
-            self._data_matching_cache = np.zeros([self.length, len(config.points), self.num])
+            self._data_matching_cache = np.zeros([self.length, len(config.points), self.num], 'float32')
             for p, point in enumerate(config.points):
                # Find nearest neighbour
                dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
@@ -305,7 +305,7 @@ class Database(object):
             self._data_matching_cache = self._data_agg
          elif self.spatial_decomposition == 'all':
             N = int(self.X * self.Y)
-            self._data_matching_cache = np.zeros([self.length, self.V*N, self.num])
+            self._data_matching_cache = np.zeros([self.length, self.V*N, self.num], 'float32')
             for v in range(self.V):
                data = self.load(self.variables[v])
                data = data[:, :, 0, :]
@@ -506,7 +506,7 @@ class Netcdf(Database):
       wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
       temp = self._file.variables[variable.name][:]
 
-      data = np.nan * np.zeros([self.length, self.Y, self.X, self.num], np.float32)
+      data = np.nan * np.zeros([self.length, self.Y, self.X, self.num], 'float32')
 
       index = 0
       for d in range(len(self._Itimes)):
@@ -574,7 +574,7 @@ class Lorenz63(Database):
       # Initialize
       self._data = dict()
       for var in self.variables:
-         self._data[var] = np.zeros([self.length, self.X, self.Y, self.num])
+         self._data[var] = np.zeros([self.length, self.X, self.Y, self.num], 'float32')
          self._data[var][0, 0, 0, :] = self._initial_state[var] + np.random.randn(self.num) * self._std_initial_state
 
       TT = int(1 / self._dt / 10)
