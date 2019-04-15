@@ -6,7 +6,7 @@ Weather generator software
 .. image:: https://coveralls.io/repos/metno/wxgen/badge.svg?branch=master&service=github
   :target: https://coveralls.io/github/metno/wxgen?branch=master
 
-``wxgen`` is a command-line tool for generating arbitrarily long weather time-series. The generator
+``wxgen`` is a command-line tool for generating **arbitrarily long** weather time-series. The generator
 produces **gridded** output for **multiple variables** (e.g. temperature, precipitation) and aims to
 have realistic covariances in space, time, and across variables.
 
@@ -17,8 +17,10 @@ beginning state of another. The matching is done using a specified metric, such 
 square differences between states (with some kind of normalization strategy as each atmospheric
 variable has different variances).
 
-Checkout the wiki page at https://github.com/metno/wxgen/wiki for more information about how to run
-the program.
+Documentation
+-------------
+
+For information about how to use wxgen, check out the wiki page at https://github.com/metno/wxgen/wiki
 
 Installating on Ubuntu
 ----------------------
