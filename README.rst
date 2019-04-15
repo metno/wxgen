@@ -22,6 +22,14 @@ Documentation
 
 For information about how to use wxgen, check out the wiki page at https://github.com/metno/wxgen/wiki
 
+Features
+--------
+
+.. image:: examples/example.gif
+    :alt: Example plot
+    :width: 400
+    :align: center
+
 Installating on Ubuntu
 ----------------------
 
@@ -85,41 +93,6 @@ time you make changes to the code:
 
 Again, if you do not have sudo privileges, remove ``sudo`` and append ``--user`` to the previous pip
 and python commands.
-
-Example use
------------
-
-Checkout the wiki page at https://github.com/metno/wxgen/wiki for a complete tutorial on how to run
-the program. Wxgen has three commands. The first simulates sequences of weather as follows:
-
-.. code-block:: bash
-
-   wxgen sim -db examples/database.nc -n 10 -t 1000 -o output.nc
-
-This command uses a NetCDF database file and creates 10 trajectories that are 100 days long. Results
-are stored in output.nc. In order to evaluate the performance of the generated data, a "truth" file
-can be created using the following command:
-
-.. code-block:: bash
-
-   wxgen truth -db examples/database.nc -o truth.nc
-
-This command uses the day 1 forecasts from the database as the truth, and joins these together into
-a sequence that spans the dates in the dataset.
-
-Finally, the generated sequences can be evaluated using th verif command:
-
-.. code-block:: bash
-
-   wxgen verif truth.nc output.nc -m timeseries
-   wxgen verif truth.nc output.nc -m variance
-
-The -m switch selects the verification metric, in this case a timeseries.
-
-.. image:: examples/example.gif
-    :alt: Example plot
-    :width: 400
-    :align: center
 
 Copyright and license
 ---------------------
