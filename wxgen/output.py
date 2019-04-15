@@ -37,13 +37,13 @@ class Output(object):
       self.altitude = None
       self.write_indices = False
 
-   def write(self, trajectories, database, start_date=20170101):
+   def write(self, trajectories, database, start_unixtime):
       """ Writes trajectories to file
 
       Arguments:
          trajectories (list): List of wxgen.trajectory
          database (wxgen.database): Database belonging to trajectories
-         start_date (int): Starting date for the output timeseries (YYYYMMDD)
+         start_unixtime (int): Starting date for the output timeseries (unixtime)
       """
       raise NotImplementedError()
 
@@ -52,7 +52,7 @@ class Netcdf(Output):
    """
    Writes the trajectories to a netcdf file.
    """
-   def write(self, trajectories, database, start_date=20170101):
+   def write(self, trajectories, database, start_unixtime=wxgen.util.date_to_unixtime(20170101)):
       if len(trajectories) == 0:
          wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
@@ -78,10 +78,9 @@ class Netcdf(Output):
 
       # Time
       var_time = file.createVariable("time", "f8", ("time"))
-      start_unixtime = wxgen.util.date_to_unixtime(start_date)
       end_unixtime = start_unixtime + database.timestep * trajectories[0].length
       # TODO: This probably isn't right
-      var_time[:] = np.arange(start_unixtime + database.timestep, end_unixtime + database.timestep, database.timestep)
+      var_time[:] = np.arange(start_unixtime, end_unixtime, database.timestep)
       var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
       var_time.standard_name = "time"
       var_time.long_name = "time"
@@ -195,7 +194,7 @@ class Netcdf(Output):
          for m in range(0, len(trajectories)):
             trajectory = trajectories[m]
             var_segment_member[:, m] = trajectory.indices[:, 0]
-            var_segment_leadtime[:, m] = trajectory.indices[:, 1] * dt
+            var_segment_leadtime[:, m] = database.leadtimes[trajectory.indices[:, 1]]
             var_segment_time[:, m] = database.inittimes[trajectory.indices[:, 0]]
 
       # Global attributes

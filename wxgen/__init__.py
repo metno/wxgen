@@ -47,13 +47,16 @@ def run(argv):
       if args.weights is not None and len(args.weights) != V:
          wxgen.util.error("Number of weights (-w) must match number of variables (-v)")
 
+      start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
+
       # Generate trajectories
       metric = get_metric(args, db)
       generator = wxgen.generator.Generator(db, metric)
       generator.prejoin = args.prejoin
       generator.policy = args.policy
       generator.stagger = args.stagger
-      generator.start_date = args.init_date
+      generator.start_unixtime = start_unixtime
+      generator.start_hour = args.init_hour
 
       # Allowable dates from database
       generator.db_start_date = args.start_date
@@ -67,12 +70,13 @@ def run(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, start_date=args.init_date)
+      output.write(trajectories, db, start_unixtime=start_unixtime)
 
    elif args.command == "truth":
       db = get_db(args)
+      start_time_of_day = args.init_hour * 3600
       if args.n is None and args.t is None:
-        trajectories = [db.get_truth(args.start_date, args.end_date, args.which_leadtime)]
+         trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day, args.which_leadtime)]
       else:
          """
          Create a number of ensemble members, by sampling long timeseries from database (no
@@ -113,7 +117,7 @@ def run(argv):
             e = wxgen.util.get_date(s, args.t)
             if e < end_date:
                wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
-               trajectory = db.get_truth(s, e, args.which_leadtime)
+               trajectory = db.get_truth(s, e, start_time_of_day, args.which_leadtime)
                trajectories += [trajectory]
             else:
                wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
@@ -122,11 +126,13 @@ def run(argv):
          max_length = np.floor((wxgen.util.date_to_unixtime(end_date) - earliest_start_date - 1)/86400.0)
          wxgen.util.error("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
+      start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
+
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.write(trajectories, db, start_date=args.init_date)
+      output.write(trajectories, db, start_unixtime=start_unixtime)
 
    elif args.command == "verif":
       plot = wxgen.plot.get(args.metric)()
@@ -288,7 +294,8 @@ def get_parsers():
       sp[driver].add_argument('-s', type=parse_spatial_decomposition, default=1, metavar="LEVEL", help="Spatial decomposition: =0 Aggregate all points; =1,=2,=3... decompose using wavelets; =all Use all points. Ignored if -jc specified.", dest="spatial_decomposition")
       sp[driver].add_argument('-jc', metavar="CONFIG", help="Configuration file for joining", dest="join_config")
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
-      sp[driver].add_argument('-d', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
+      sp[driver].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
+      sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
 
    for driver in sp.keys():
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")

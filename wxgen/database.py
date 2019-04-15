@@ -30,6 +30,7 @@ class Database(object):
       X (int): Number of X-axis points
       Y (int): Number of Y-axis points
       inittimes (np.array): array with initialization time corresponding to each member
+      leadtimes (np.array): array with leadtimes in seconds
       climate_states (np.array): array of climate states (one for each ensemble member)
       name: Name of this database (e.g. filename)
 
@@ -39,6 +40,7 @@ class Database(object):
       self.num
       self.variables
       self.inittimes
+      self.leadtimes
       self.lats
       self.lons
       self.altitudes
@@ -128,7 +130,7 @@ class Database(object):
       assert(np.sum(np.isnan(indices)) == 0)
       return wxgen.trajectory.Trajectory(indices)
 
-   def get_truth(self, start_date=None, end_date=None, which_leadtime=0):
+   def get_truth(self, start_date=None, end_date=None, start_time_of_day=None, which_leadtime=0):
       """
       Concatenate the initialization state of all trajectories
 
@@ -165,6 +167,10 @@ class Database(object):
             assert(i > 0)
             indices[i, 0] = indices[i-1, 0]
             indices[i, 1] = indices[i-1, 1]
+      if start_time_of_day is not None:
+         Ileadtime_at_time_of_day = np.where(self.leadtimes % 86400 == start_time_of_day)[0][0]
+         Iindices = np.where(indices[:, 1] == Ileadtime_at_time_of_day)[0][0]
+         indices = indices[Iindices:, :]
 
       return wxgen.trajectory.Trajectory(indices)
 
@@ -418,11 +424,15 @@ class Netcdf(Database):
       leadtimes = wxgen.util.clean(self._file.variables[lead_time_dim][:])
       if hasattr(timevar, "units"):
          if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
-            self.timestep = leadtimes[1] - leadtimes[0]
+            pass
          elif timevar.units == "days":
-            self.timestep = (leadtimes[1] - leadtimes[0]) * 86400
+            leadtimes *= 86400
          elif timevar.units == "hours":
-            self.timestep = (leadtimes[1] - leadtimes[0]) * 3600
+            leadtimes *= 3600
+         else:
+            wxgen.error("Cannot parse time units")
+      self.timestep = leadtimes[1] - leadtimes[0]
+      self.leadtimes = leadtimes
       if np.isnan(self.timestep):
          wxgen.util.error("Cannot determine timestep from database")
 

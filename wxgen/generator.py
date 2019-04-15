@@ -15,7 +15,7 @@ class Generator(object):
       self.prejoin = None
       self.policy = "random"
       self.stagger = False
-      self.start_date = 20170101
+      self.start_unixtime = wxgen.util.date_to_unixtime(20170101)
       self.db_start_date = None
       self.db_end_date = None
 
@@ -38,21 +38,27 @@ class Generator(object):
       X = self._database.X
       Y = self._database.Y
 
+      time_of_day_end = self._database.leadtimes[-1] % 86400
       for n in range(0, N):
          wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
          trajectory_indices = -1+np.zeros([T, 2], int)
 
-         time = wxgen.util.date_to_unixtime(self.start_date)
-         climate_state = self._database.model.get([time])[0]
+         time = self.start_unixtime
+         time_of_day = self.start_unixtime % 86400
+         start_hour = self.start_unixtime // 3600 % 24
+         # Istart = start_hour / (self._database.timestep / 3600)
+         Istart = np.where(self._database.leadtimes % 86400 == start_hour * 3600)[0][0]
+
+         climate_state = self._database.model.get([self.start_unixtime])[0]
          if initial_state is None:
             wxgen.util.debug("Finding random starting state", color="yellow")
             I = np.random.randint(self._database.num)
             num_vars = self._database._data_matching.shape[1]
-            tr = self.get_random(np.zeros(num_vars), wxgen.metric.Exp(np.zeros(num_vars)), climate_state)
+            tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state)
             if 1:
-               state_curr = self._database.extract_matching(tr)[0, :]
+               state_curr = self._database.extract_matching(tr)[Istart, :]
             else:
-               state_curr = self._database.extract(tr)[0, :]
+               state_curr = self._database.extract(tr)[Istart, :]
          else:
             state_curr = initial_state
 
@@ -80,7 +86,7 @@ class Generator(object):
                search_times = [end_times - 5*86400, end_times + 5*86400]
             wxgen.util.debug("Found random segment", color="yellow")
             wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
-            segment_curr = self.get_random(state_curr, self._metric, climate_state, search_times)
+            segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state, search_times)
             timesteps_per_day = int(86400 / self._database.timestep)
 
             """
@@ -108,23 +114,23 @@ class Generator(object):
             """
             Tsegment = len(indices_curr)
             end = start + Tsegment  # Ending index
-            time_of_day = time % 86400
-            num_days = int(Tsegment / timesteps_per_day)
-            use_length = (num_days-1) * timesteps_per_day + 1
-            end = start + use_length
             end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
             Iout = range(start, end)  # Index into trajectory
             Iin = range(0, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
+            # print Tsegment, start, end, time_of_day//3600
+            # print Iin, Iout
 
             # wxgen.util.debug("Current state: %s" % state_curr)
             # wxgen.util.debug("Chosen segment: %s" % segment_curr)
             # wxgen.util.debug("Trajectory indices: %s" % Iout)
             # wxgen.util.debug("Segment indices: %s" % Iin)
+
+            # Get the last state of the segment, and corresponding time
             state_curr = self._database.extract_matching(segment_curr)[Iin[-1], :]
-            start = start + use_length - 1
-            new_time = time + (use_length - 1)*self._database.timestep
-            time = new_time
+            start = start + Tsegment - 1
+            time = time + (Tsegment - 1) * self._database.timestep
+            time_of_day = time % 86400
             if self.prejoin is not None and self.prejoin > 0:
                join = (join + 1) % self.prejoin
 
@@ -136,13 +142,14 @@ class Generator(object):
 
       return trajectories
 
-   def get_random(self, target_state, metric, climate_state=None, time_range=None):
+   def get_random(self, target_state, time_of_day, metric, climate_state=None, time_range=None):
       """
       Returns a pseudo-random segment from the database chosen based on weights computed by a metric
 
       Arguments:
          target_state (np.array): Try to match this state when finding the trajectory. One value
             for each variable in the database.
+         time_of_day (int):
          metric (wxgen.metric): Metric to use when finding matches
          climate_state (np.array): External state representing what state the climate is in
          time_range (list): Start and end unixtimes for the search. If None, then do not restrict.
@@ -152,7 +159,9 @@ class Generator(object):
       """
       assert(np.sum(np.isnan(target_state)) == 0)
 
-      weights = metric.compute(target_state, self._database._data_matching[0, :, :])
+      Istart = np.where(self._database.leadtimes % 86400 == time_of_day)[0][0]
+
+      weights = metric.compute(target_state, self._database._data_matching[Istart, :, :])
       use_climate_state = climate_state is not None
 
       # Find valid segments
@@ -201,4 +210,6 @@ class Generator(object):
       wxgen.util.debug("Found date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
       wxgen.util.debug("Climate: %s" % (climate_state))
       wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
-      return self._database.get(I)
+      tr = self._database.get(I)
+      tr.indices = tr.indices[Istart:]
+      return tr
