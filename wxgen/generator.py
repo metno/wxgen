@@ -137,7 +137,8 @@ class Generator(object):
          if len(np.where(trajectory_indices == -1)[0]) > 0:
             wxgen.util.error("Internal error. The trajectory was not properly filled")
          trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
-         wxgen.util.debug("Trajectory: %s" % trajectory)
+         if wxgen.util.DEBUG:
+            wxgen.util.debug("Trajectory: %s" % trajectory)
          trajectories.append(trajectory)
 
       return trajectories
