@@ -167,10 +167,12 @@ class Database(object):
             assert(i > 0)
             indices[i, 0] = indices[i-1, 0]
             indices[i, 1] = indices[i-1, 1]
+
       if start_time_of_day is not None:
-         Ileadtime_at_time_of_day = np.where(self.leadtimes % 86400 == start_time_of_day)[0][0]
-         Iindices = np.where(indices[:, 1] == Ileadtime_at_time_of_day)[0][0]
+         # Crop away the first few timesteps to make the trajectory start at the right time of day
+         Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][0]
          indices = indices[Iindices:, :]
+         # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
 
       return wxgen.trajectory.Trajectory(indices)
 
