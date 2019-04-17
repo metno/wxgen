@@ -349,6 +349,10 @@ class Database(object):
 
       return self._data_matching_cache
 
+   @property
+   def leadtimes(self):
+      return np.arange(0, (self.length+1) * self.timestep, step=self.timestep)
+
 
 class Netcdf(Database):
    """
@@ -433,8 +437,13 @@ class Netcdf(Database):
             leadtimes *= 3600
          else:
             wxgen.error("Cannot parse time units")
+
+      if len(np.unique(np.diff(leadtimes))) != 1:
+         wxgen.util.error("Cannot handle databases with leadtimes that are not spaced evenly: %s" %
+               (','.join(["%g" % leadtime for leadtime in leadtimes])))
+
       self.timestep = leadtimes[1] - leadtimes[0]
-      self.leadtimes = leadtimes
+
       if np.isnan(self.timestep):
          wxgen.util.error("Cannot determine timestep from database")
 
