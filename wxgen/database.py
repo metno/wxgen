@@ -172,6 +172,12 @@ class Database(object):
          # Crop away the first few timesteps to make the trajectory start at the right time of day
          Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][0]
          indices = indices[Iindices:, :]
+
+         # Crop away at the end
+         Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][-1]
+         indices = indices[:Iindices, :]
+
+         # Crop last few hours
          # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
 
       return wxgen.trajectory.Trajectory(indices)
