@@ -70,7 +70,7 @@ def run(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.command = ' '.join(argv)
+      output.command = 'wxgen ' + ' '.join(argv[1:])
       output.write(trajectories, db, start_unixtime=start_unixtime)
 
    elif args.command == "truth":
@@ -133,7 +133,7 @@ def run(argv):
       output.lat = args.lat
       output.lon = args.lon
       output.write_indices = args.write_indices
-      output.command = ' '.join(argv)
+      output.command = 'wxgen ' + ' '.join(argv[1:])
       output.write(trajectories, db, start_unixtime=start_unixtime)
 
    elif args.command == "verif":
