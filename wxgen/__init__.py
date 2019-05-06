@@ -69,6 +69,7 @@ def run(argv):
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
+      output.acc = args.acc
       output.write_indices = args.write_indices
       output.command = 'wxgen ' + ' '.join(argv[1:])
       output.write(trajectories, db, start_unixtime=start_unixtime)
@@ -132,6 +133,7 @@ def run(argv):
       output = wxgen.output.Netcdf(args.filename)
       output.lat = args.lat
       output.lon = args.lon
+      output.acc = args.acc
       output.write_indices = args.write_indices
       output.command = 'wxgen ' + ' '.join(argv[1:])
       output.write(trajectories, db, start_unixtime=start_unixtime)
@@ -298,6 +300,8 @@ def get_parsers():
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
       sp[driver].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
       sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
+      sp[driver].add_argument('--deacc', type=wxgen.util.parse_ints, help="Deaccumulate these variables before the generator", dest="deacc")
+      sp[driver].add_argument('--acc', type=wxgen.util.parse_ints, help="Accumulate these variables in the output", dest="acc")
 
    for driver in sp.keys():
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")
@@ -343,6 +347,9 @@ def get_db(args):
 
    if hasattr(args, "join_config"):
       db.join_config = args.join_config
+
+   if hasattr(args, 'deacc'):
+      db.deacc = args.deacc
 
    if args.debug:
       db.info()

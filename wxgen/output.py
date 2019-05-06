@@ -34,6 +34,7 @@ class Output(object):
       self.which_vars = None
       self.lat = None
       self.lon = None
+      self.acc = None
       self.altitude = None
       self.write_indices = False
       self.command = None
@@ -170,9 +171,9 @@ class Netcdf(Output):
       # Write forecast variables
       if use_single_gridpoint:
          Xref, Yref = wxgen.util.get_i_j(database.lats, database.lons, self.lat, self.lon)
-      for v in range(0, len(variables)):
+      for v in range(len(variables)):
          # Save variable after writing. Combine this loop with previous var loop.
-         for m in range(0, len(trajectories)):
+         for m in range(len(trajectories)):
             values = database.extract_grid(trajectories[m], variables[v])
             # Insert a singleton dimension at dimension index 1
             values = np.expand_dims(values, 1)
@@ -182,6 +183,8 @@ class Netcdf(Output):
                vars[variables[v].name][:, m, :] = values[:, :, :, :]
             else:
                vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
+         if self.acc is not None and v in self.acc:
+            vars[variables[v].name][:, ...] = np.cumsum(vars[variables[v].name], axis=0)
 
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))

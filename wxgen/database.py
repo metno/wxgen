@@ -63,6 +63,7 @@ class Database(object):
       self._data_agg_cache = None
       self._climate_states_cache = None
       self._label = None
+      self.deacc = None
 
    @property
    def label(self):
@@ -111,6 +112,10 @@ class Database(object):
 
          # Get data from subclass
          data = self._load(variable)
+         if self.deacc is not None and variable in [self.variables[i] for i in self.deacc]:
+            data[1:, ...] = np.diff(data, axis=0)
+            data[0, ...] = data[0, ...]
+            wxgen.util.debug("Deaccumulating variable: %s" % variable.name)
          self._data_cache[variable] = data
          e = timing.time()
          # print "Timing: %g" % (e - t)
