@@ -94,7 +94,7 @@ class Variance(Aggregator):
       return np.var(array, axis=axis, ddof=1)
 
    def units(self, units):
-      return "%s^2" % units
+      return "(%s)^2" % units
 
 
 class Iqr(Aggregator):
