@@ -151,9 +151,10 @@ class Netcdf(Output):
          else:
             var_lon[:] = database.lons[:]
 
-         var_altitude = file.createVariable("altitude", "f4", ('grid_point',))
+         # ATODO: Allow this to be called altitude, to conform to MET Norway standards
+         var_altitude = file.createVariable("z", "f4", ('grid_point',))
          var_altitude.units = "m"
-         var_altitude.standard_name = "altitude"
+         var_altitude.standard_name = "height"
          if use_single_gridpoint:
             if self.altitude is not None:
                var_altitude[:] = self.altitude
@@ -178,9 +179,9 @@ class Netcdf(Output):
          else:
             var_lon[:] = database.lons[0, :]
 
-         var_altitude = file.createVariable("altitude", "f4", (yname, xname))
+         var_altitude = file.createVariable("z", "f4", (yname, xname))
          var_altitude.units = "m"
-         var_altitude.standard_name = "altitude"
+         var_altitude.standard_name = "height"
          if use_single_gridpoint:
             if self.altitude is not None:
                var_altitude[:] = self.altitude
@@ -197,7 +198,9 @@ class Netcdf(Output):
             vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
-         vars[var.name].grid_mapping = "projection_regular_ll"
+         if database.crs is not None:
+            vars[var.name].grid_mapping = "crs"
+            vars[var.name].coordinates = "y x z"
 
       # Write forecast variables
       if use_single_gridpoint:
