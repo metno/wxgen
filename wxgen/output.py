@@ -59,7 +59,13 @@ class Netcdf(Output):
          wxgen.util.error("No trajectories to write")
       file = netCDF4.Dataset(self.filename, 'w')
 
-      file.createDimension("time")
+      dim_leadtime = 'lead_time'
+      dim_inittime = 'time'
+      file.createDimension(dim_inittime)
+      end_unixtime = start_unixtime + database.timestep * trajectories[0].length
+   # times = np.arange(start_unixtime, end_unixtime, database.timestep)
+      leadtimes = np.arange(0, trajectories[0].length * database.timestep / 3600, database.timestep/3600)
+      file.createDimension(dim_leadtime, len(leadtimes))
       file.createDimension("ensemble_member", len(trajectories))
       use_single_gridpoint = self.lat is not None and self.lon is not None
       has_single_spatial_dim = database.X == 1
@@ -78,17 +84,13 @@ class Netcdf(Output):
          file.createDimension(xname, database.X)
          spatial_dims = [yname, xname]
 
-      # Time
-      var_time = file.createVariable("time", "f8", ("time"))
-      end_unixtime = start_unixtime + database.timestep * trajectories[0].length
-      # TODO: This probably isn't right
-      var_time[:] = np.arange(start_unixtime, end_unixtime, database.timestep)
-      var_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
-      var_time.standard_name = "time"
-      var_time.long_name = "time"
+      # Lead time
+      var_leadtime = file.createVariable(dim_leadtime, "f8", (dim_leadtime))
+      var_leadtime[:] = leadtimes
+      var_leadtime.units = "hours"
 
-      # Forecast reference time
-      var_frt = file.createVariable("forecast_reference_time", "f8")
+      # Time (Forecast reference time)
+      var_frt = file.createVariable(dim_inittime, "f8", dim_inittime)
       var_frt[:] = start_unixtime
       var_frt.units = "seconds since 1970-01-01 00:00:00 +00:00"
       var_frt.standard_name = "time"
@@ -99,6 +101,9 @@ class Netcdf(Output):
       var_proj.grid_mapping_name = "latitude_longitude"
       var_proj.earth_radius = 6367470
       var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
+
+      var_is_complete = file.createVariable("forecast_is_complete", "i4", ["time"])
+      var_is_complete[:] = 1
 
       if database.x is not None and database.y is not None:
          if has_single_spatial_dim:
@@ -193,9 +198,9 @@ class Netcdf(Output):
       vars = dict()
       for var in variables:
          if has_single_spatial_dim:
-            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", 'grid_point'))
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "lead_time", "ensemble_member", 'grid_point'))
          else:
-            vars[var.name] = file.createVariable(var.name, "f4", ("time", "ensemble_member", yname, xname))
+            vars[var.name] = file.createVariable(var.name, "f4", ("time", "lead_time", "ensemble_member", yname, xname))
          if var.units is not None:
             vars[var.name].units = var.units
          if database.crs is not None:
@@ -212,19 +217,19 @@ class Netcdf(Output):
             # Insert a singleton dimension at dimension index 1
             values = np.expand_dims(values, 1)
             if use_single_gridpoint:
-               vars[variables[v].name][:, m, :] = values[:, :, Xref, Yref]
+               vars[variables[v].name][0, :, m, :] = values[:, :, Xref, Yref]
             elif has_single_spatial_dim:
-               vars[variables[v].name][:, m, :] = values[:, :, :, :]
+               vars[variables[v].name][0, :, m, :] = np.squeeze(values[:, :, :, :])
             else:
-               vars[variables[v].name][:, m, :, :] = values[:, :, :, :]
+               vars[variables[v].name][0, :, m, :, :] = values[:, :, :, :]
          if self.acc is not None and v in self.acc:
             vars[variables[v].name][:, ...] = np.cumsum(vars[variables[v].name], axis=0)
 
       if self.write_indices:
-         var_segment_member = file.createVariable("segment_member", "i4", ("time", "ensemble_member"))
-         var_segment_leadtime = file.createVariable("segment_lead_time", "i4", ("time", "ensemble_member"))
+         var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
+         var_segment_leadtime = file.createVariable("segment_lead_time", "i4", ("lead_time", "ensemble_member"))
          var_segment_leadtime.units = "seconds"
-         var_segment_time = file.createVariable("segment_time", "f8", ("time", "ensemble_member"))
+         var_segment_time = file.createVariable("segment_time", "f8", ("lead_time", "ensemble_member"))
          var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
          var_segment_time.standard_name = "lead_time"
          var_segment_time.long_name = "lead_time"
