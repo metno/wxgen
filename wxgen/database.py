@@ -26,6 +26,9 @@ class Database(object):
       num (int): Number of trajectories
       lats (np.array): 2D grid of latitudes
       lons (np.array): 2D grid of longitudes
+      x (np.array): 1D array of x-coordinates
+      y (np.array): 1D grid of y-coordinates
+      crs (np.array): Projection variable
       altitudes (np.array): 2D grid of altitudes
       X (int): Number of X-axis points
       Y (int): Number of Y-axis points
@@ -64,6 +67,10 @@ class Database(object):
       self._climate_states_cache = None
       self._label = None
       self.deacc = None
+      self.x = None
+      self.y = None
+      # self.z = None
+      self.crs = None
 
    @property
    def label(self):
@@ -512,6 +519,14 @@ class Netcdf(Database):
          if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
             wxgen.util.debug("Meshing latitudes and longitudes")
             self.lons, self.lats = np.meshgrid(self.lons, self.lats)
+      if "x" in self._file.variables:
+         self.x = self._file.variables['x']
+      if "y" in self._file.variables:
+         self.y = self._file.variables['y']
+      # if "z" in self._file.variables:
+      #    self.z = self._file.variables['z']
+      if "crs" in self._file.variables:
+         self.crs = self._file.variables['crs']
 
       """
       Read altitude information

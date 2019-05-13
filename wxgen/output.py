@@ -100,6 +100,37 @@ class Netcdf(Output):
       var_proj.earth_radius = 6367470
       var_proj.proj4 = "+proj=longlat +a=6367470 +e=0 +no_defs"
 
+      if database.x is not None and database.y is not None:
+         if has_single_spatial_dim:
+            var_x = file.createVariable("x", "f8", ['grid_point'])
+            var_y = file.createVariable("y", "f8", ['grid_point'])
+            # var_z = file.createVariable("z", "f8", ['grid_point'])
+         else:
+            var_x = file.createVariable("x", "f8", xname)
+            var_y = file.createVariable("y", "f8", yname)
+            # var_z = file.createVariable("z", "f8", ('yname', 'xname'))
+         var_x.units = database.x.units
+         var_x.axis = database.x.axis
+         var_x.standard_name = database.x.standard_name
+
+         var_y.units = database.y.units
+         var_y.axis = database.y.axis
+         var_y.standard_name = database.y.standard_name
+
+         # var_z.units = database.z.units
+         # var_z.axis = database.z.axis
+         # var_z.standard_name = database.z.standard_name
+
+         var_x[:] = database.x[:]
+         var_y[:] = database.y[:]
+         # var_z[:] = database.z[:]
+
+      if database.crs is not None:
+         var_crs = file.createVariable("crs", "i4", [])
+         var_crs.grid_mapping_name = database.crs.grid_mapping_name
+         var_crs.proj4 = database.crs.proj4
+         var_crs.epsg_code = database.crs.epsg_code
+
       # Latitude
       if has_single_spatial_dim:
          # Assume a lat/lon grid
