@@ -406,8 +406,9 @@ class Netcdf(Database):
 
       # Set dimensions
       var_names = [name for name in self._file.variables if name not in ["lat", "lon", "latitude",
-      "longitude", "altitude", "x", "y", "ensemble_member", "lead_time", "dummy",
-      "longitude_latitude", "time", "projection_regular_ll", "segment_lead_time", "segment_member", "segment_time"]]
+         "longitude", "altitude", "x", "y", "z", "ensemble_member", "lead_time", "dummy",
+         "forecast_is_complete", "crs",
+         "longitude_latitude", "time", "projection_regular_ll", "segment_lead_time", "segment_member", "segment_time"]]
       if vars is None:
          vars = range(len(var_names))
 
@@ -533,6 +534,11 @@ class Netcdf(Database):
       """
       if "altitude" in self._file.variables:
          self.altitudes = self._copy(self._file.variables["altitude"])
+         if self.altitudes.shape != self.lats.shape:
+            # Try to remove singleton dimensions
+            self.altitudes = np.squeeze(self.altitudes)
+      elif "z" in self._file.variables:
+         self.altitudes = self._copy(self._file.variables["z"])
          if self.altitudes.shape != self.lats.shape:
             # Try to remove singleton dimensions
             self.altitudes = np.squeeze(self.altitudes)
