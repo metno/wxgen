@@ -577,7 +577,7 @@ class Netcdf(Database):
             # If one or more values are missing for a member, set all values to nan
             NM = np.sum(np.isnan(data[:, :, :, index]))
             if NM > 0:
-               data[:, :, index] = np.nan
+               data[:, :, :, index] = np.nan
                wxgen.util.debug("Removing member %d because of %d missing values" % (index, NM))
             index = index + 1
       # Quality control
