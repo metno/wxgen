@@ -226,7 +226,8 @@ class Netcdf(Output):
             else:
                vars[variables[v].name][0, :, m, :, :] = values[:, :, :, :]
          if self.acc is not None and v in self.acc:
-            vars[variables[v].name][:, ...] = np.cumsum(vars[variables[v].name], axis=1)
+            vars[variables[v].name][:, 1:, ...] = np.cumsum(vars[variables[v].name][:, 1:, ...], axis=1)
+            vars[variables[v].name][:, 0, ...] = 0
 
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
