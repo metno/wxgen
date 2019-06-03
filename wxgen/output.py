@@ -115,15 +115,18 @@ class Netcdf(Output):
             var_y = file.createVariable("y", "f8", yname)
             # var_z = file.createVariable("z", "f8", ('yname', 'xname'))
          var_x.units = database.x.units
-         var_x.axis = database.x.axis
+         if hasattr(database.x, 'axis'):
+            var_x.axis = database.x.axis
          var_x.standard_name = database.x.standard_name
 
          var_y.units = database.y.units
-         var_y.axis = database.y.axis
+         if hasattr(database.y, 'axis'):
+            var_y.axis = database.y.axis
          var_y.standard_name = database.y.standard_name
 
          # var_z.units = database.z.units
-         # var_z.axis = database.z.axis
+         # if hasattr(database.z, 'axis'):
+            # var_z.axis = database.z.axis
          # var_z.standard_name = database.z.standard_name
 
          var_x[:] = database.x[:]
