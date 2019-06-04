@@ -10,6 +10,7 @@ import copy
 import netCDF4
 import time as timing
 import wxgen.config
+import pyproj
 
 
 class Database(object):
@@ -503,11 +504,38 @@ class Netcdf(Database):
          raise NotImplementedError
 
       """
+      Read projection information
+      """
+      if "x" in self._file.variables:
+         self.x = self._file.variables['x']
+      if "y" in self._file.variables:
+         self.y = self._file.variables['y']
+      # if "z" in self._file.variables:
+      #    self.z = self._file.variables['z']
+      if "crs" in self._file.variables:
+         self.crs = self._file.variables['crs']
+
+
+      """
       Read lat/lon/elev variables
       """
       if self.has_single_spatial_dim:
-         self.lats = self._copy(self._file.variables["latitude"])
-         self.lons = self._copy(self._file.variables["longitude"])
+         if "latitude" in self._file.variables:
+            self.lats = self._copy(self._file.variables["latitude"])
+            self.lons = self._copy(self._file.variables["longitude"])
+         elif "lat" in self._file.variables:
+            self.lats = self._copy(self._file.variables["lat"])
+            self.lons = self._copy(self._file.variables["lon"])
+         else:
+            if self.x is not None and self.y is not None:
+               wxgen.util.debug("Diagnosing lat/lon from projection information")
+               proj = pyproj.Proj(self.crs.proj4)
+               self.lons, self.lats = proj(self.x[:], self.y[:], inverse=True)
+            else:
+               wxgen.util.warning("Could not determine lat/lon values")
+               self.lons = np.nan * np.zeros(len(self.x))
+               self.lats = np.nan * np.zeros(len(self.x))
+
          self.lats = np.expand_dims(self.lats, 1)
          self.lons = np.expand_dims(self.lons, 1)
       else:
@@ -520,15 +548,6 @@ class Netcdf(Database):
          if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
             wxgen.util.debug("Meshing latitudes and longitudes")
             self.lons, self.lats = np.meshgrid(self.lons, self.lats)
-      if "x" in self._file.variables:
-         self.x = self._file.variables['x']
-      if "y" in self._file.variables:
-         self.y = self._file.variables['y']
-      # if "z" in self._file.variables:
-      #    self.z = self._file.variables['z']
-      if "crs" in self._file.variables:
-         self.crs = self._file.variables['crs']
-
       """
       Read altitude information
       """
