@@ -111,12 +111,19 @@ class Generator(object):
             Also account for the fact that the last timestep in the segment must be at the same time
             of day as the first timestep in the segment so that matching occurrs with the same time
             of day.
+
+            Finally, don't use the first timestep of the new segment, because it might be missing,
+            which is the case for precipitation and other accumulated variables.
             """
             Tsegment = len(indices_curr)
             end = start + Tsegment  # Ending index
             end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
-            Iout = range(start, end)  # Index into trajectory
-            Iin = range(0, end - start)  # Index into segment
+            if start == 0:
+               Iout = range(start, end)  # Index into trajectory
+               Iin = range(0, end - start)  # Index into segment
+            else:
+               Iout = range(start+1, end)  # Index into trajectory
+               Iin = range(1, end - start)  # Index into segment
             trajectory_indices[Iout, :] = indices_curr[Iin, :]
             # print Tsegment, start, end, time_of_day//3600
             # print Iin, Iout
