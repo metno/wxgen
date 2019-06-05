@@ -5,8 +5,8 @@ import numpy as np
 
 
 class TrajectoryTest(unittest.TestCase):
-   pass
+    pass
 
 
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()

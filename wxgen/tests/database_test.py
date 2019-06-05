@@ -5,8 +5,8 @@ import numpy as np
 
 
 class DatabaseTest(unittest.TestCase):
-   pass
+    pass
 
 
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()
