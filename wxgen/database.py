@@ -502,6 +502,7 @@ class Netcdf(Database):
          self.has_single_spatial_dim = True
       else:
          raise NotImplementedError
+      wxgen.util.debug("Has single spatial dimension? %d" % self.has_single_spatial_dim)
 
       """
       Read projection information
@@ -514,7 +515,6 @@ class Netcdf(Database):
       #    self.z = self._file.variables['z']
       if "crs" in self._file.variables:
          self.crs = self._file.variables['crs']
-
 
       """
       Read lat/lon/elev variables
@@ -553,22 +553,22 @@ class Netcdf(Database):
       """
       if "altitude" in self._file.variables:
          self.altitudes = self._copy(self._file.variables["altitude"])
-         if self.altitudes.shape != self.lats.shape:
-            # Try to remove singleton dimensions
-            self.altitudes = np.squeeze(self.altitudes)
       elif "z" in self._file.variables:
          self.altitudes = self._copy(self._file.variables["z"])
-         if self.altitudes.shape != self.lats.shape:
-            # Try to remove singleton dimensions
-            self.altitudes = np.squeeze(self.altitudes)
       elif "surface_geopotential" in self._file.variables:
          self.altitudes = np.squeeze(self._copy(self._file.variables["surface_geopotential"]/9.81))
-         if self.altitudes.shape != self.lats.shape:
-            self.altitudes = np.squeeze(self.altitudes)
       else:
          self.altitudes = np.nan * self.lats
+
+      if self.altitudes.shape != self.lats.shape:
+         # Try to remove singleton dimensions
+         self.altitudes = np.squeeze(self.altitudes)
+
       if self.has_single_spatial_dim:
          self.altitudes = np.expand_dims(self.altitudes, 1)
+         if len(self.altitudes.shape) == 1:
+            self.altitudes = np.expand_dims(self.altitudes, 1)
+
       if self.altitudes.shape != self.lons.shape:
          wxgen.util.error("Altitude dimensions do not match those of lat/lon")
 
