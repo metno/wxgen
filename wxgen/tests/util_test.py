@@ -92,5 +92,21 @@ class TestParseColors(unittest.TestCase):
       self.assertEqual([0.6, 0.6, 0.6], colors[0])
 
 
+class TestParseVariables(unittest.TestCase):
+   def test_simple(self):
+      values = wxgen.util.parse_variables("1,2,3")
+      self.assertEqual(values, [1, 2, 3])
+      values = wxgen.util.parse_variables("1,air_temperature,3")
+      self.assertEqual(values, [1, "air_temperature", 3])
+      values = wxgen.util.parse_variables("air_temperature")
+      self.assertEqual(values, ["air_temperature"])
+      values = wxgen.util.parse_variables("air_temperature,1")
+      self.assertEqual(values, ["air_temperature", 1])
+      values = wxgen.util.parse_variables("air_temperature,precipitation_amount")
+      self.assertEqual(values, ["air_temperature", "precipitation_amount"])
+      values = wxgen.util.parse_variables("1")
+      self.assertEqual(values, [1])
+
+
 if __name__ == '__main__':
    unittest.main()

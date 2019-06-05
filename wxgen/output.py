@@ -126,7 +126,7 @@ class Netcdf(Output):
 
          # var_z.units = database.z.units
          # if hasattr(database.z, 'axis'):
-            # var_z.axis = database.z.axis
+         # var_z.axis = database.z.axis
          # var_z.standard_name = database.z.standard_name
 
          var_x[:] = database.x[:]
@@ -213,21 +213,21 @@ class Netcdf(Output):
       # Write forecast variables
       if use_single_gridpoint:
          Xref, Yref = wxgen.util.get_i_j(database.lats, database.lons, self.lat, self.lon)
-      for v in range(len(variables)):
+      for v, var in enumerate(variables):
          # Save variable after writing. Combine this loop with previous var loop.
          for m in range(len(trajectories)):
-            values = database.extract_grid(trajectories[m], variables[v])
+            values = database.extract_grid(trajectories[m], var)
             # Insert a singleton dimension at dimension index 1
             values = np.expand_dims(values, 1)
             if use_single_gridpoint:
-               vars[variables[v].name][0, :, m, :] = values[:, :, Xref, Yref]
+               vars[var.name][0, :, m, :] = values[:, :, Xref, Yref]
             elif has_single_spatial_dim:
-               vars[variables[v].name][0, :, m, :] = np.squeeze(values[:, :, :, :])
+               vars[var.name][0, :, m, :] = np.squeeze(values[:, :, :, :])
             else:
-               vars[variables[v].name][0, :, m, :, :] = values[:, :, :, :]
-         if self.acc is not None and v in self.acc:
-            vars[variables[v].name][:, 1:, ...] = np.cumsum(vars[variables[v].name][:, 1:, ...], axis=1)
-            vars[variables[v].name][:, 0, ...] = 0
+               vars[var.name][0, :, m, :, :] = values[:, :, :, :]
+         if self.acc is not None and var.name in self.acc:
+            vars[var.name][:, 1:, ...] = np.cumsum(vars[var.name][:, 1:, ...], axis=1)
+            vars[var.name][:, 0, ...] = 0
 
       if self.write_indices:
          var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))

@@ -284,7 +284,7 @@ def get_parsers():
    for driver in ["sim", "truth", "verif"]:
       sp[driver].add_argument('-lat', type=float, help="Compute for this latitude only (also use -lon)")
       sp[driver].add_argument('-lon', type=float, help="Compute for this longitude only (also use -lat)")
-      sp[driver].add_argument('-v', metavar="INDICES", help="Which variables to use? Use indices, starting at 0.", required=False, type=wxgen.util.parse_ints, dest="vars")
+      sp[driver].add_argument('-v', metavar="VARIABLES", help="Which variables to use? Use indices, starting at 0, or variable names", required=False, type=wxgen.util.parse_variables, dest="vars")
 
    for driver in ["sim"]:
        sp[driver].add_argument('-rs', type=int, help="Random number seed", dest="seed")
@@ -300,8 +300,8 @@ def get_parsers():
       sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
       sp[driver].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
       sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
-      sp[driver].add_argument('--deacc', type=wxgen.util.parse_ints, help="Deaccumulate these variables before the generator", dest="deacc")
-      sp[driver].add_argument('--acc', type=wxgen.util.parse_ints, help="Accumulate these variables in the output", dest="acc")
+      sp[driver].add_argument('--deacc', type=wxgen.util.parse_variables, help="Deaccumulate these variables before the generator", dest="deacc")
+      sp[driver].add_argument('--acc', type=wxgen.util.parse_variables, help="Accumulate these variables in the output", dest="acc")
 
    for driver in sp.keys():
       sp[driver].add_argument('--debug', help="Display debug information", action="store_true")

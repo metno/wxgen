@@ -120,7 +120,7 @@ class Database(object):
 
          # Get data from subclass
          data = self._load(variable)
-         if self.deacc is not None and variable in [self.variables[i] for i in self.deacc]:
+         if self.deacc is not None and variable.name in self.deacc:
             data[1:, ...] = np.diff(data, axis=0)
             data[0, ...] = data[0, ...]
             wxgen.util.debug("Deaccumulating variable: %s" % variable.name)
@@ -413,8 +413,14 @@ class Netcdf(Database):
       if vars is None:
          vars = range(len(var_names))
 
-      if vars is not None and max(vars) >= len(var_names):
-         wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
+      """ Check if all variables are available """
+      for var in vars:
+         if wxgen.util.is_number(var):
+            if var >= len(var_names):
+               wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
+         else:
+            if var not in var_names:
+               wxgen.util.error("Input does not have variable '%s'" % var)
 
       if "lead_time" in self._file.dimensions and "time" in self._file.dimensions:
          lead_time_dim = "lead_time"
@@ -427,8 +433,11 @@ class Netcdf(Database):
       else:
          wxgen.util.error("Cannot read file. Missing 'time' and/or 'lead_time' dimensions")
       self.variables = list()
-      for i in vars:
-         var_name = var_names[i]
+      for i, var in enumerate(vars):
+         if wxgen.util.is_number(var):
+            var_name = var_names[var]
+         else:
+            var_name = var
          units = None
          label = None
          dims = self._file.variables[var_name].dimensions
@@ -438,8 +447,11 @@ class Netcdf(Database):
             if hasattr(self._file.variables[var_name], "standard_name"):
                label = self._file.variables[var_name].standard_name
             var = wxgen.variable.Variable(var_name, units, label)
-            self.variables.append(var)
-            wxgen.util.debug("Using variable '%s'" % var_name)
+            if var in self.variables:
+               wxgen.util.warning("Variable '%s' is specified multiple times. Only using it once." % var.name)
+            else:
+               self.variables.append(var)
+               wxgen.util.debug("Using variable '%s'" % var_name)
 
       # Load data
       self.length = len(self._file.dimensions[lead_time_dim])

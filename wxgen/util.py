@@ -109,6 +109,17 @@ def parse_ints(ints):
    return [int(num) for num in parse_numbers(ints, True)]
 
 
+def parse_variables(string):
+   values = string.split(',')
+   new_values = list()
+   for value in values:
+      if is_number(value):
+         new_values += [int(value)]
+      else:
+         new_values += [value]
+   return new_values
+
+
 def parse_numbers(numbers, isDate=False):
    """
    Convert a string into an array of numbers. allowable formats:
