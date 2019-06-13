@@ -34,31 +34,26 @@ class Generator(object):
         trajectories = list()
         V = len(self._database.variables)
         if self._database.length < 2:
-            wxgen.util.error("Cannot create simulation with a database with segments shorter than 2 days")
+            wxgen.util.error("Cannot create simulation with a database with segments shorter than 2 timesteps")
         X = self._database.X
         Y = self._database.Y
 
-        time_of_day_end = self._database.leadtimes[-1] % 86400
         for n in range(0, N):
             wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
-            trajectory_indices = -1+np.zeros([T, 2], int)
+            trajectory_indices = -1 + np.zeros([T, 2], int)
 
             time = self.start_unixtime
             time_of_day = self.start_unixtime % 86400
             start_hour = self.start_unixtime // 3600 % 24
-            # Istart = start_hour / (self._database.timestep / 3600)
-            Istart = np.where(self._database.leadtimes % 86400 == start_hour * 3600)[0][0]
 
-            climate_state = self._database.model.get([self.start_unixtime])[0]
+            climate_state_curr = self._database.model.get([self.start_unixtime])[0]
             if initial_state is None:
                 wxgen.util.debug("Finding random starting state", color="yellow")
                 I = np.random.randint(self._database.num)
                 num_vars = self._database._data_matching.shape[1]
-                tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state)
-                if 1:
-                    state_curr = self._database.extract_matching(tr)[Istart, :]
-                else:
-                    state_curr = self._database.extract(tr)[Istart, :]
+                tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state_curr)
+                Istart = np.where(self._database.leadtimes % 86400 == start_hour * 3600)[0][0]
+                state_curr = self._database.extract_matching(tr)[Istart, :]
             else:
                 state_curr = initial_state
 
@@ -74,7 +69,7 @@ class Generator(object):
             start = 0  # Starting index into output trajectory where we are inserting a segment
             join = 0
             while start < T-1:
-                climate_state = self._database.model.get([time])[0]
+                climate_state_curr = self._database.model.get([time])[0]
 
                 """
                 Prejoin multiple segments that are nearby in time. This is done by passing
@@ -86,7 +81,7 @@ class Generator(object):
                     search_times = [end_times - 5*86400, end_times + 5*86400]
                 wxgen.util.debug("Found random segment", color="yellow")
                 wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
-                segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state, search_times)
+                segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
                 timesteps_per_day = int(86400 / self._database.timestep)
 
                 """
