@@ -485,17 +485,24 @@ class Netcdf(Database):
                 times = np.array([self._file.variables["forecast_reference_time"][:]])
             else:
                 times = np.array([self._file.variables["time"][0]])
-            self.num = len(self._file.dimensions["ensemble_member"])
+            self.ens = len(self._file.dimensions["ensemble_member"])
             self.inittimes = times
-            self.ens = self.num
+            self._Itimes = [0]
         else:
             times = self._file.variables["time"][:]
             self.ens = len(self._file.dimensions["ensemble_member"])
-            self.num = len(self._file.dimensions["time"]) * self.ens
             self.inittimes = np.repeat(times, self.ens)
 
-        self._Itimes = np.where(np.isnan(times) == 0)[0]
-        times = times[self._Itimes]
+            """ Find for which time indices there is valid data """
+            if "forecast_is_complete" in self._file.variables:
+                wxgen.util.debug("Using forecast_is_complete to remove missing times")
+                self._Itimes = np.where((np.isnan(times) == 0) & (self._file.variables["forecast_is_complete"][:] == 1))[0]
+                if len(self._Itimes) != len(times):
+                    wxgen.util.debug("Removing %d times due to missing values" % (len(times) - len(self._Itimes)))
+            else:
+                self._Itimes = np.where(np.isnan(times) == 0)[0]
+            times = times[self._Itimes]
+        self.num = len(self._Itimes) * self.ens
 
         # Read lat/lon dimensions
         if "lon" in self._file.dimensions:
@@ -588,9 +595,10 @@ class Netcdf(Database):
         if variable.name not in self._file.variables:
             wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
         wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
-        temp = self._file.variables[variable.name][:]
+        temp = self._file.variables[variable.name][self._Itimes, ...]
 
-        data = np.nan * np.zeros([self.length, self.Y, self.X, self.num], 'float32')
+        sizes = [self.length, self.Y, self.X, self.num]
+        data = np.nan * np.zeros(sizes, 'float32')
 
         index = 0
         for d in range(len(self._Itimes)):
@@ -599,12 +607,12 @@ class Netcdf(Database):
                     if self.single_run:
                         data[:, :, 0, index] = temp[:, m, :]
                     else:
-                        data[:, :, 0, index] = temp[self._Itimes[d], :, m, :]
+                        data[:, :, 0, index] = temp[d, :, m, :]
                 else:
                     if self.single_run:
                         data[:, :, :, index] = temp[:, m, :, :]
                     else:
-                        data[:, :, :, index] = temp[self._Itimes[d], :, m, :, :]
+                        data[:, :, :, index] = temp[d, :, m, :, :]
                 # If one or more values are missing for a member, set all values to nan
                 NM = np.sum(np.isnan(data[:, :, :, index]))
                 if NM > 0:
