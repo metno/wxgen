@@ -151,13 +151,25 @@ class Database(object):
            start_date (int): Starting date of scenario (YYYYMMDD)
            end_date (int): Starting date of scenario (YYYYMMDD)
            which_leadtime (int): Which lead time should be used to create the truth?
+           start_time_of_day (int): What time of day (in seconds) should the scenario start and end at?
 
         Returns:
            trajectory.Trajectory: Truth trajectory
         """
+        if start_time_of_day not in self.leadtimes:
+            wxgen.util.error("A start time of %d h is not possible when the timestep is %d h" %
+                    (start_time_of_day // 3600, self.timestep // 3600))
+
+
+        """ Compute the unixtimes to find truth for """
+        include_extra_time_step_at_end = True
         start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
         end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
-        times = np.arange(start, end, self.timestep)
+        if include_extra_time_step_at_end:
+            times = np.arange(start, end + self.timestep, self.timestep)
+        else:
+            times = np.arange(start, end, self.timestep)
+
         indices = -1*np.ones([len(times), 2], int)
         wxgen.util.debug("Start: %d End: %d" % (start, end))
         for i in range(len(times)):
@@ -165,6 +177,7 @@ class Database(object):
             I = np.where(time >= self.inittimes)[0]
             if len(I) == 0:
                 wxgen.util.error("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date( np.min(self.inittimes))))
+
             """ Find the inittime and leadtime that is closest to the desired date and 'which_leadtime' """
             curr_times = self.inittimes[I] + self.timestep * which_leadtime
             Ibest = np.argmin(np.abs(curr_times - time))
@@ -177,22 +190,30 @@ class Database(object):
                 indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
                 indices[i, 1] = lt
             else:
-                wxgen.util.warning("Did not find an index for %d = %d. Using the previous state." % (time, wxgen.util.unixtime_to_date(time)))
                 assert(i > 0)
-                indices[i, 0] = indices[i-1, 0]
-                indices[i, 1] = indices[i-1, 1]
+                dI = int(86400 / self.timestep)
+                if i - dI < 0:
+                    wxgen.util.error("It is not possible to create a truth scenario because there are missing days and the segments are too short to cover the holes. Processing stopped at %dT%d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time)))
+                wxgen.util.warning("Did not find an index for %d = %dT%02dZ. Using the previous day's state." % (time, wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time)))
+                indices[i, 0] = indices[i-dI, 0]
+                indices[i, 1] = indices[i-dI, 1]
 
         if start_time_of_day is not None:
-            # Crop away the first few timesteps to make the trajectory start at the right time of day
+            """ Crop the timeseries such that the starting and ending hour of the day is as desired """
             Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][0]
             indices = indices[Iindices:, :]
 
-            # Crop away at the end
+            """ Crop away at the end """
             Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][-1]
-            indices = indices[:Iindices, :]
+            if include_extra_time_step_at_end:
+                indices = indices[:(Iindices+1), :]
+            else:
+                indices = indices[:Iindices, :]
 
             # Crop last few hours
             # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
+            if start_time_of_day != 0:
+                wxgen.util.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. This has not been implemented perfectly yet.")
 
         return wxgen.trajectory.Trajectory(indices)
 

@@ -211,6 +211,11 @@ def unixtime_to_date(unixtime):
     return date
 
 
+def unixtime_to_hour(unixtime):
+    hour = (unixtime % 86400) // 3600
+    return hour
+
+
 def correlation(ar1, ar2, axis):
     """
     Computes the correlation between two multi-dimensional arrays
