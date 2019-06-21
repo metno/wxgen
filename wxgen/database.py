@@ -122,7 +122,7 @@ class Database(object):
             data = self._load(variable)
             if self.deacc is not None and variable.name in self.deacc:
                 data[1:, ...] = np.diff(data, axis=0)
-                data[0, ...] = data[0, ...]
+                data[0, ...] = 0
                 wxgen.util.debug("Deaccumulating variable: %s" % variable.name)
             self._data_cache[variable] = data
             e = timing.time()
@@ -143,7 +143,7 @@ class Database(object):
         assert(np.sum(np.isnan(indices)) == 0)
         return wxgen.trajectory.Trajectory(indices)
 
-    def get_truth(self, start_date=None, end_date=None, start_time_of_day=None, which_leadtime=0):
+    def get_truth(self, start_date=None, end_date=None, start_time_of_day=None, which_leadtime=0, ignore_first_timestep=False):
         """
         Concatenate the initialization state of all trajectories
 
@@ -160,19 +160,20 @@ class Database(object):
         times = np.arange(start, end, self.timestep)
         indices = -1*np.ones([len(times), 2], int)
         wxgen.util.debug("Start: %d End: %d" % (start, end))
-        for i in range(0, len(times)):
+        for i in range(len(times)):
             time = times[i]
             I = np.where(time >= self.inittimes)[0]
             if len(I) == 0:
-                wxgen.util.error("There are no inittimes available before %d. The earliest is %d." %
-                      (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(
-                         np.min(self.inittimes))))
+                wxgen.util.error("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date( np.min(self.inittimes))))
             """ Find the inittime and leadtime that is closest to the desired date and 'which_leadtime' """
             curr_times = self.inittimes[I] + self.timestep * which_leadtime
             Ibest = np.argmin(np.abs(curr_times - time))
             inittime = self.inittimes[I][Ibest]
             lt = int((time - inittime)/self.timestep)
             if lt < self.length:
+                # Don't use the first timestep
+                if ignore_first_timestep and lt == 0:
+                    lt += 86400 / self.timestep
                 indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
                 indices[i, 1] = lt
             else:

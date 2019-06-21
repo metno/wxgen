@@ -77,8 +77,9 @@ def run(argv):
     elif args.command == "truth":
         db = get_db(args)
         start_time_of_day = args.init_hour * 3600
+        ignore_first_timestep = args.deacc != None
         if args.n is None and args.t is None:
-            trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day, args.which_leadtime)]
+            trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day, args.which_leadtime, ignore_first_timestep)]
         else:
             """
             Create a number of ensemble members, by sampling long timeseries from database (no
@@ -119,7 +120,8 @@ def run(argv):
                 e = wxgen.util.get_date(s, args.t)
                 if e < end_date:
                     wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
-                    trajectory = db.get_truth(s, e, start_time_of_day, args.which_leadtime)
+                    trajectory = db.get_truth(s, e, start_time_of_day, args.which_leadtime,
+                            ignore_first_timestep)
                     trajectories += [trajectory]
                 else:
                     wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
@@ -285,6 +287,7 @@ def get_parsers():
         sp[driver].add_argument('-lat', type=float, help="Compute for this latitude only (also use -lon)")
         sp[driver].add_argument('-lon', type=float, help="Compute for this longitude only (also use -lat)")
         sp[driver].add_argument('-v', metavar="VARIABLES", help="Which variables to use? Use indices, starting at 0, or variable names", required=False, type=wxgen.util.parse_variables, dest="vars")
+        sp[driver].add_argument('--deacc', type=wxgen.util.parse_variables, help="Deaccumulate these variables before the generator. For truth scenarios, this means that the first timestep will never be used.", dest="deacc")
 
     for driver in ["sim"]:
         sp[driver].add_argument('-rs', type=int, help="Random number seed", dest="seed")
@@ -300,7 +303,6 @@ def get_parsers():
         sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
         sp[driver].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
         sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
-        sp[driver].add_argument('--deacc', type=wxgen.util.parse_variables, help="Deaccumulate these variables before the generator", dest="deacc")
         sp[driver].add_argument('--acc', type=wxgen.util.parse_variables, help="Accumulate these variables in the output", dest="acc")
 
     for driver in sp.keys():
