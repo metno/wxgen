@@ -102,15 +102,20 @@ def run(argv):
                 end_date = wxgen.util.unixtime_to_date(np.max(db.inittimes))
             dates = np.array(wxgen.util.parse_dates("%d:%d" % (start_date, end_date)))
 
+            if args.init_date is None:
+                init_date = start_date
+            else:
+                init_date = args.init_date
+
             # Figure out which time indices are possible starting dates, by finding dates that have the
             # same day of year as the first date of the allowable dates
             months = dates / 100 % 100
             days = dates % 100
-            start_day = args.init_date % 100
-            start_month = args.init_date / 100 % 100
+            start_day = init_date % 100
+            start_month = init_date // 100 % 100
             Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
             if len(Ipossible_start_days) == 0:
-                wxgen.util.error("Cannot use starting date %d, since there are not segments that start at this day of the year. Use -d to set a different starting date" % (args.init_date))
+                wxgen.util.error("Cannot use starting date %d, since there are no segments that start at this day of the year. Use -d to set a different starting date" % (init_date))
             if args.n > len(Ipossible_start_days):
                 wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
 
@@ -130,7 +135,7 @@ def run(argv):
             max_length = np.floor((wxgen.util.date_to_unixtime(end_date) - earliest_start_date - 1)/86400.0)
             wxgen.util.error("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
-        start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
+        start_unixtime = wxgen.util.date_to_unixtime(init_date) + args.init_hour * 3600
 
         output = wxgen.output.Netcdf(args.filename)
         output.lat = args.lat
@@ -239,6 +244,7 @@ def get_parsers():
     sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
     sp["sim"].add_argument('-p', default="top5", metavar="POLICY", help="Randomization policy. One of 'random', 'top<N>'", dest="policy")
     sp["sim"].add_argument('-g', help="Randomly truncate the first segment so that potential jumps are staggered", dest="stagger", action="store_true")
+    sp["sim"].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
 
     """
     Truth trajetory driver
@@ -247,6 +253,7 @@ def get_parsers():
     sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
     sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
     sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
+    sp["truth"].add_argument('-id', type=int, help="Overwrite the start date of simulation (YYYYMMDD). If not specified, use the start date from the frist truth scenario.", dest="init_date")
 
     """
     Verification driver
@@ -301,7 +308,6 @@ def get_parsers():
         sp[driver].add_argument('-s', type=parse_spatial_decomposition, default=0, metavar="LEVEL", help="Spatial decomposition: =0 Aggregate all points; =1,=2,=3... decompose using wavelets; =all Use all points. Ignored if -jc specified.", dest="spatial_decomposition")
         sp[driver].add_argument('-jc', metavar="CONFIG", help="Configuration file for joining", dest="join_config")
         sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
-        sp[driver].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
         sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
         sp[driver].add_argument('--acc', type=wxgen.util.parse_variables, help="Accumulate these variables in the output", dest="acc")
 
