@@ -491,7 +491,6 @@ class Netcdf(Database):
         else:
             times = self._file.variables["time"][:]
             self.ens = len(self._file.dimensions["ensemble_member"])
-            self.inittimes = np.repeat(times, self.ens)
 
             """ Find for which time indices there is valid data """
             if "forecast_is_complete" in self._file.variables:
@@ -502,6 +501,7 @@ class Netcdf(Database):
             else:
                 self._Itimes = np.where(np.isnan(times) == 0)[0]
             times = times[self._Itimes]
+            self.inittimes = np.repeat(times, self.ens)
         self.num = len(self._Itimes) * self.ens
 
         # Read lat/lon dimensions
