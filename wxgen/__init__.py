@@ -77,9 +77,8 @@ def run(argv):
     elif args.command == "truth":
         db = get_db(args)
         start_time_of_day = args.init_hour * 3600
-        ignore_first_timestep = args.deacc != None
         if args.n is None and args.t is None:
-            trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day, args.which_leadtime, ignore_first_timestep)]
+            trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day)]
         else:
             """
             Create a number of ensemble members, by sampling long timeseries from database (no
@@ -125,8 +124,7 @@ def run(argv):
                 e = wxgen.util.get_date(s, args.t)
                 if e < end_date:
                     wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
-                    trajectory = db.get_truth(s, e, start_time_of_day, args.which_leadtime,
-                            ignore_first_timestep)
+                    trajectory = db.get_truth(s, e, start_time_of_day)
                     trajectories += [trajectory]
                 else:
                     wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
@@ -252,7 +250,6 @@ def get_parsers():
     sp["truth"] = subparsers.add_parser('truth', help='Create truth scenario')
     sp["truth"].add_argument('-n', metavar="NUM", type=int, help="Number of trajectories (if -n and -t are unspecified, create one trajectory with all data)")
     sp["truth"].add_argument('-t', metavar="DAYS", type=int, help="Length of trajectory")
-    sp["truth"].add_argument('-ltd', metavar="DAY", default=0, type=int, help="Which lead time should be used as truth?", dest="which_leadtime")
     sp["truth"].add_argument('-id', type=int, help="Overwrite the start date of simulation (YYYYMMDD). If not specified, use the start date from the frist truth scenario.", dest="init_date")
 
     """

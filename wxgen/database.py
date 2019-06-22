@@ -66,6 +66,7 @@ class Database(object):
         self._data_cache = dict()
         self._data_agg_cache = None
         self._climate_states_cache = None
+
         self._label = None
         self.deacc = None
         self.x = None
@@ -143,23 +144,28 @@ class Database(object):
         assert(np.sum(np.isnan(indices)) == 0)
         return wxgen.trajectory.Trajectory(indices)
 
-    def get_truth(self, start_date=None, end_date=None, start_time_of_day=None, which_leadtime=0, ignore_first_timestep=False):
+    @property
+    def remove_first_timestep(self):
+        return self.deacc is not None
+
+    def get_truth(self, start_date=None, end_date=None, start_time_of_day=None):
         """
         Concatenate the initialization state of all trajectories
 
         Arguments:
            start_date (int): Starting date of scenario (YYYYMMDD)
-           end_date (int): Starting date of scenario (YYYYMMDD)
-           which_leadtime (int): Which lead time should be used to create the truth?
+           end_date (int): End date of scenario (YYYYMMDD)
            start_time_of_day (int): What time of day (in seconds) should the scenario start and end at?
 
         Returns:
            trajectory.Trajectory: Truth trajectory
-        """
-        if start_time_of_day not in self.leadtimes:
-            wxgen.util.error("A start time of %d h is not possible when the timestep is %d h" %
-                    (start_time_of_day // 3600, self.timestep // 3600))
 
+        Note that if (for example) start_date=20180101, end_date=20180103, start_time_of_day=0, then the
+        tracjectory ends at 00Z on 20180103, i.e. it doesn't include the whole end_date.
+
+        """
+        if start_time_of_day is not None and start_time_of_day not in self.leadtimes:
+            wxgen.util.error("A start time of %d h is not possible when the timestep is %d h" % (start_time_of_day // 3600, self.timestep // 3600))
 
         """ Compute the unixtimes to find truth for """
         include_extra_time_step_at_end = True
@@ -174,19 +180,24 @@ class Database(object):
         wxgen.util.debug("Start: %d End: %d" % (start, end))
         for i in range(len(times)):
             time = times[i]
-            I = np.where(time >= self.inittimes)[0]
-            if len(I) == 0:
-                wxgen.util.error("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date( np.min(self.inittimes))))
 
-            """ Find the inittime and leadtime that is closest to the desired date and 'which_leadtime' """
-            curr_times = self.inittimes[I] + self.timestep * which_leadtime
+            """
+            When we have accumulatd variables, we allow the first timestep to be used at the
+            beginning of the scenario. However, later in the scenario we cannot use it.
+            """
+            if i == 0 or not self.remove_first_timestep:
+                I = np.where(time >= self.inittimes)[0]
+            else:
+                I = np.where(time > self.inittimes)[0]
+            if len(I) == 0:
+                wxgen.util.error("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(np.min(self.inittimes))))
+
+            """ Find the inittime and leadtime that is closest to the desired date """
+            curr_times = self.inittimes[I]
             Ibest = np.argmin(np.abs(curr_times - time))
             inittime = self.inittimes[I][Ibest]
             lt = int((time - inittime)/self.timestep)
             if lt < self.length:
-                # Don't use the first timestep
-                if ignore_first_timestep and lt == 0:
-                    lt += 86400 / self.timestep
                 indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
                 indices[i, 1] = lt
             else:
@@ -213,7 +224,7 @@ class Database(object):
             # Crop last few hours
             # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
             if start_time_of_day != 0:
-                wxgen.util.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. This has not been implemented perfectly yet.")
+                wxgen.util.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. A fix for this has not been implemented yet.")
 
         return wxgen.trajectory.Trajectory(indices)
 
@@ -447,11 +458,6 @@ class Netcdf(Database):
         if "lead_time" in self._file.dimensions and "time" in self._file.dimensions:
             lead_time_dim = "lead_time"
             time_dim = "time"
-            self.single_run = False
-        elif "time" in self._file.dimensions:
-            lead_time_dim = "time"
-            time_dim = None
-            self.single_run = True
         else:
             wxgen.util.error("Cannot read file. Missing 'time' and/or 'lead_time' dimensions")
         self.variables = list()
@@ -476,21 +482,22 @@ class Netcdf(Database):
                     wxgen.util.debug("Using variable '%s'" % var_name)
 
         # Load data
-        self.length = len(self._file.dimensions[lead_time_dim])
-        timevar = self._file.variables[lead_time_dim]
+        lead_time_var = self._file.variables[lead_time_dim]
 
         # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
         self.timestep = 86400
         leadtimes = wxgen.util.clean(self._file.variables[lead_time_dim][:])
-        if hasattr(timevar, "units"):
-            if len(timevar.units) >= 7 and timevar.units[0:7] == "seconds":
+        self.length = len(leadtimes)
+        if hasattr(lead_time_var, "units"):
+            if len(lead_time_var.units) >= 7 and lead_time_var.units[0:7] == "seconds":
                 pass
-            elif timevar.units == "days":
+            elif lead_time_var.units == "days":
                 leadtimes *= 86400
-            elif timevar.units == "hours":
+            elif lead_time_var.units == "hours":
                 leadtimes *= 3600
             else:
                 wxgen.error("Cannot parse time units")
+        self.first_lead_time = leadtimes[0]
 
         if len(np.unique(np.diff(leadtimes))) != 1:
             wxgen.util.error("Cannot handle databases with leadtimes that are not spaced evenly: %s" %
@@ -502,28 +509,19 @@ class Netcdf(Database):
             wxgen.util.error("Cannot determine timestep from database")
 
         self.has_single_spatial_dim = False
-        if self.single_run:
-            if "forecast_reference_time" in self._file.variables:
-                times = np.array([self._file.variables["forecast_reference_time"][:]])
-            else:
-                times = np.array([self._file.variables["time"][0]])
-            self.ens = len(self._file.dimensions["ensemble_member"])
-            self.inittimes = times
-            self._Itimes = [0]
-        else:
-            times = self._file.variables["time"][:]
-            self.ens = len(self._file.dimensions["ensemble_member"])
+        times = self._file.variables["time"][:]
+        self.ens = len(self._file.dimensions["ensemble_member"])
 
-            """ Find for which time indices there is valid data """
-            if "forecast_is_complete" in self._file.variables:
-                wxgen.util.debug("Using forecast_is_complete to remove missing times")
-                self._Itimes = np.where((np.isnan(times) == 0) & (self._file.variables["forecast_is_complete"][:] == 1))[0]
-                if len(self._Itimes) != len(times):
-                    wxgen.util.debug("Removing %d times due to missing values" % (len(times) - len(self._Itimes)))
-            else:
-                self._Itimes = np.where(np.isnan(times) == 0)[0]
-            times = times[self._Itimes]
-            self.inittimes = np.repeat(times, self.ens)
+        """ Find for which time indices there is valid data """
+        if "forecast_is_complete" in self._file.variables:
+            wxgen.util.debug("Using forecast_is_complete to remove missing times")
+            self._Itimes = np.where((np.isnan(times) == 0) & (self._file.variables["forecast_is_complete"][:] == 1))[0]
+            if len(self._Itimes) != len(times):
+                wxgen.util.debug("Removing %d times due to missing values" % (len(times) - len(self._Itimes)))
+        else:
+            self._Itimes = np.where(np.isnan(times) == 0)[0]
+        times = times[self._Itimes]
+        self.inittimes = np.repeat(times, self.ens)
         self.num = len(self._Itimes) * self.ens
 
         # Read lat/lon dimensions
@@ -626,15 +624,9 @@ class Netcdf(Database):
         for d in range(len(self._Itimes)):
             for m in range(0, self.ens):
                 if self.has_single_spatial_dim:
-                    if self.single_run:
-                        data[:, :, 0, index] = temp[:, m, :]
-                    else:
-                        data[:, :, 0, index] = temp[d, :, m, :]
+                    data[:, :, 0, index] = temp[d, :, m, :]
                 else:
-                    if self.single_run:
-                        data[:, :, :, index] = temp[:, m, :, :]
-                    else:
-                        data[:, :, :, index] = temp[d, :, m, :, :]
+                    data[:, :, :, index] = temp[d, :, m, :, :]
                 # If one or more values are missing for a member, set all values to nan
                 NM = np.sum(np.isnan(data[:, :, :, index]))
                 if NM > 0:
