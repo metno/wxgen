@@ -74,6 +74,14 @@ class IntegrationTest(unittest.TestCase):
         run_command("wxgen truth")
         run_command("wxgen verif")
 
+"""
+class TruthTest(IntegrationTest):
+   def test_basic(self):
+      filename = self.run_with_output("wxgen truth -db wxgen/tests/test_simple.nc -n 2 -t 5")
+
+
+"""
+
 
 """
 class SimTest(IntegrationTest):
