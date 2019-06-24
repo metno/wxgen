@@ -30,6 +30,11 @@ def get(name):
     return m
 
 
+def get_var_indices(sims):
+    """ Helper function to find matching of variables across files """
+    pass
+
+
 class Plot(object):
     """
     Class for representing a verification plot of trajectory information
@@ -392,7 +397,12 @@ class Variance(Plot):
     def compute_daily(self, array, timestep):
         timesteps_per_day = int(86400 / timestep)
         shape = [int(array.shape[0]/timesteps_per_day), timesteps_per_day, array.shape[1]]
-        return np.mean(np.reshape(array, shape), axis=1)
+        It = range(array.shape[0])
+        if array.shape[0] % timesteps_per_day != 0:
+            It = range((array.shape[0] // timesteps_per_day) * timesteps_per_day)
+            N = array.shape[0] - len(It)
+            wxgen.util.warning("Truncating the last %d timesteps to compute variance" % N)
+        return np.mean(np.reshape(array[It, ...], shape), axis=1)
 
 
 class Distribution(Plot):

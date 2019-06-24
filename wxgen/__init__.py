@@ -62,7 +62,7 @@ def run(argv):
         generator.db_start_date = args.start_date
         generator.db_end_date = args.end_date
 
-        Ntimesteps = int(np.ceil(args.t * 1.0 / db.timestep * 86400))
+        Ntimesteps = int(np.ceil(args.t * 1.0 / db.timestep * 86400)) + 1
         trajectories = generator.get(args.n, Ntimesteps, initial_state)
 
         # Create output
