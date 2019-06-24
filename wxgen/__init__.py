@@ -77,6 +77,19 @@ def run(argv):
     elif args.command == "truth":
         db = get_db(args)
         start_time_of_day = args.init_hour * 3600
+
+        # Determine allowable dates from database
+        start_date = args.start_date
+        end_date = args.end_date
+        if args.start_date is None:
+            start_date = wxgen.util.unixtime_to_date(np.min(db.inittimes))
+        if args.end_date is None:
+            end_date = wxgen.util.unixtime_to_date(np.max(db.inittimes))
+        if args.init_date is None:
+            init_date = start_date
+        else:
+            init_date = args.init_date
+
         if args.n is None and args.t is None:
             trajectories = [db.get_truth(args.start_date, args.end_date, start_time_of_day)]
         else:
@@ -92,19 +105,7 @@ def run(argv):
             if args.t is None:
                 wxgen.util.error("-t not specified")
 
-            # Determine allowable dates from database
-            start_date = args.start_date
-            end_date = args.end_date
-            if args.start_date is None:
-                start_date = wxgen.util.unixtime_to_date(np.min(db.inittimes))
-            if args.end_date is None:
-                end_date = wxgen.util.unixtime_to_date(np.max(db.inittimes))
             dates = np.array(wxgen.util.parse_dates("%d:%d" % (start_date, end_date)))
-
-            if args.init_date is None:
-                init_date = start_date
-            else:
-                init_date = args.init_date
 
             # Figure out which time indices are possible starting dates, by finding dates that have the
             # same day of year as the first date of the allowable dates
