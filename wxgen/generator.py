@@ -48,12 +48,15 @@ class Generator(object):
 
             climate_state_curr = self._database.model.get([self.start_unixtime])[0]
             if initial_state is None:
+                """
                 wxgen.util.debug("Finding random starting state", color="yellow")
                 I = np.random.randint(self._database.num)
                 num_vars = self._database._data_matching.shape[1]
                 tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state_curr)
                 Istart = np.where(self._database.leadtimes % 86400 == start_hour * 3600)[0][0]
                 state_curr = self._database.extract_matching(tr)[Istart, :]
+                """
+                state_curr = None
             else:
                 state_curr = initial_state
 
@@ -80,7 +83,10 @@ class Generator(object):
                     end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*self._database.timestep
                     search_times = [end_times - 5*86400, end_times + 5*86400]
                 wxgen.util.debug("Found random segment", color="yellow")
-                wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
+                if state_curr is None:
+                    wxgen.util.debug("Target state: None")
+                else:
+                    wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
                 segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
                 timesteps_per_day = int(86400 / self._database.timestep)
 
@@ -151,7 +157,7 @@ class Generator(object):
 
         Arguments:
            target_state (np.array): Try to match this state when finding the trajectory. One value
-              for each variable in the database.
+              for each variable in the database. Or if None, then pick a random start segment.
            time_of_day (int):
            metric (wxgen.metric): Metric to use when finding matches
            climate_state (np.array): External state representing what state the climate is in
@@ -160,11 +166,15 @@ class Generator(object):
         Returns:
            wxgen.trajectory: Random trajectory
         """
-        assert(np.sum(np.isnan(target_state)) == 0)
+        assert(target_state is None or np.sum(np.isnan(target_state)) == 0)
 
         Istart = np.where(self._database.leadtimes % 86400 == time_of_day)[0][0]
 
-        weights = metric.compute(target_state, self._database._data_matching[Istart, :, :])
+        assert(self._database._data_matching.shape[2] == self._database.num)
+        if target_state is None:
+            weights = np.ones(self._database.num)
+        else:
+            weights = metric.compute(target_state, self._database._data_matching[Istart, :, :])
         use_climate_state = climate_state is not None
 
         # Find valid segments
@@ -175,6 +185,12 @@ class Generator(object):
             db_start_date = wxgen.util.date_to_unixtime(self.db_start_date)
             db_end_date = wxgen.util.date_to_unixtime(self.db_end_date)
             Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > db_start_date) & (self._database.inittimes < db_end_date))[0]
+        elif self.db_start_date is not None:
+            db_start_date = wxgen.util.date_to_unixtime(self.db_start_date)
+            Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > db_start_date))[0]
+        elif self.db_end_date is not None:
+            db_end_date = wxgen.util.date_to_unixtime(self.db_end_date)
+            Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes < db_end_date))[0]
         else:
             do_prejoin = True
             Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) & (self._database.inittimes < time_range[1]))[0]
