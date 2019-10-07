@@ -107,9 +107,16 @@ class Database(object):
 
             if len(self._data_cache) > 0:
                 # Check if we need to remove data from cache
+
+                """
+                Calculate the size of the data in the cache. Explicitly convert shape to int64,
+                since on Windows64 this defaults to int32 and can causes overflow in np.product.
+                """
                 akey = list(self._data_cache.keys())[0]
                 bytes_per_value = 4
-                size_per_key = np.product(self._data_cache[akey].shape) * bytes_per_value
+                shape = np.array(self._data_cache[akey].shape, 'int64')
+                size_per_key = np.product(shape) * bytes_per_value
+
                 next_size = float(len(self._data_cache) + 1) * size_per_key
                 next_size_gb = next_size / 1e9
                 if self.mem is not None and next_size_gb > self.mem:

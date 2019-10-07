@@ -13,6 +13,7 @@ import wxgen.version
 
 
 def run(argv):
+    np.seterr(over='raise')
     parser, sp = get_parsers()
 
     # Show help message when no options are provided
