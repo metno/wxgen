@@ -172,7 +172,13 @@ class Generator(object):
 
         assert(self._database._data_matching.shape[2] == self._database.num)
         if target_state is None:
+            """
+            A bit of a hack. Here we want to select a random segment, therefore set all the
+            weights to one.  However, we do not want to select a segment with missing values, so
+            we have to insert nans for such segments.
+            """
             weights = np.ones(self._database.num)
+            weights[np.sum(np.isnan(self._database._data_matching[Istart, :, :]), axis=0) > 0] = np.nan
         else:
             weights = metric.compute(target_state, self._database._data_matching[Istart, :, :])
         use_climate_state = climate_state is not None
