@@ -168,7 +168,11 @@ class Generator(object):
         """
         assert(target_state is None or np.sum(np.isnan(target_state)) == 0)
 
-        Istart = np.where(self._database.leadtimes % 86400 == time_of_day)[0][0]
+        if self._database.remove_first_timestep:
+            Istart = np.where((self._database.leadtimes % 86400 == time_of_day) &
+                    (self._database.leadtimes != self._database.leadtimes[0]))[0][0]
+        else:
+            Istart = np.where(self._database.leadtimes % 86400 == time_of_day)[0][0]
 
         assert(self._database._data_matching.shape[2] == self._database.num)
         if target_state is None:
@@ -231,7 +235,7 @@ class Generator(object):
         # Do a weighted random choice of the weights
         wxgen.util.debug("Num candidates:  %d" % len(weights_v))
         wxgen.util.debug("Date range:  %d %d" % (wxgen.util.unixtime_to_date(np.min(self._database.inittimes[Itime])), wxgen.util.unixtime_to_date(np.max(self._database.inittimes[Itime]))))
-        wxgen.util.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[0, :, I]]))
+        wxgen.util.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[Istart, :, I]]))
         wxgen.util.debug("Found date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
         wxgen.util.debug("Climate: %s" % (climate_state))
         wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
