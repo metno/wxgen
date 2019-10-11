@@ -130,7 +130,10 @@ class Database(object):
             data = self._load(variable)
             if self.deacc is not None and variable.name in self.deacc:
                 data[1:, ...] = np.diff(data, axis=0)
+                I = np.isnan(data[0, ...])
                 data[0, ...] = 0
+                # Preserve nans
+                data[0, ...][I] = np.nan
                 wxgen.util.debug("Deaccumulating variable: %s" % variable.name)
             self._data_cache[variable] = data
             e = timing.time()
