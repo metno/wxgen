@@ -4,6 +4,9 @@ import calendar
 import datetime
 import sys
 import copy
+import os
+import psutil
+import pyproj
 
 
 DEBUG = False
@@ -419,3 +422,24 @@ def clean(variable, dtype=None):
 
 def nprange(data, axis):
     return np.max(data, axis=axis) - np.min(data, axis=axis)
+
+
+""" Returns the memory used by this process in bytes """
+def get_memory_usage():
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss
+
+
+""" Writes memory usage to standard out, prefixing it with message """
+def print_memory_usage(message=None):
+    output = "Memory: %.2f MB" % (get_memory_usage() / 1e6)
+    if message is not None:
+        output = message + ' ' + output
+    print(output)
+
+
+def get_latlon_from_proj(proj4, x, y):
+    proj = pyproj.Proj(proj4)
+    lons, lats = proj(x[:], y[:], inverse=True)
+
+    return lats, lons

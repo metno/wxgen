@@ -358,24 +358,31 @@ class Database(object):
                 config = wxgen.config.Config(self.join_config)
 
                 # Preload all required variables
-                Ivars = set([int(point['variable']) for point in config.points])
-                data = dict()
-                for Ivar in Ivars:
-                    data[Ivar] = self.load(self.variables[Ivar])
-
+                variable_names = set([point['variable'] for point in config.points])
                 self._data_matching_cache = np.zeros([self.length, len(config.points), self.num], 'float32')
-                for p, point in enumerate(config.points):
-                    # Find nearest neighbour
-                    dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
-                    indices = np.unravel_index(dist.argmin(), dist.shape)
-                    Ivar = point['variable']
-                    weight = point['weight']
-                    self._data_matching_cache[:, p, :] = data[Ivar][:, indices[0], indices[1], :] * weight
+
+                count = 0
+                for variable_name in variable_names:
+                    variable = self.get_variable_by_name(variable_name)
+                    if variable == None:
+                        wxgen.util.error("Cannot use variable %s in join config, since this is not in the database" % variable_name)
+                    temp = self.load(variable)
+                    for p, point in enumerate(config.points):
+                        if point['variable'] == variable_name:
+                            # Find nearest neighbour
+                            dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
+                            indices = np.unravel_index(dist.argmin(), dist.shape)
+                            weight = point['weight']
+                            self._data_matching_cache[:, count, :] = temp[:, indices[0], indices[1], :] * weight
+                            count += 1
             elif self.spatial_decomposition == 0:
                 self._data_matching_cache = self._data_agg
             elif self.spatial_decomposition == 'all':
                 N = int(self.X * self.Y)
-                self._data_matching_cache = np.zeros([self.length, self.V*N, self.num], 'float32')
+                size = [self.length, self.V*N, self.num]
+                wxgen.util.debug("Allocating %g GB for matching values" % (np.product(size) * 4.0 / 1e9))
+
+                self._data_matching_cache = np.zeros(size, 'float32')
                 for v in range(self.V):
                     data = self.load(self.variables[v])
                     data = data[:, :, 0, :]
@@ -414,6 +421,15 @@ class Database(object):
     @property
     def leadtimes(self):
         return np.arange(0, (self.length+1) * self.timestep, step=self.timestep)
+
+    """
+        Returns the variable object with the given variable name
+    """
+    def get_variable_by_name(self, name):
+        for variable in self.variables:
+            if variable.name == name:
+                return variable
+        return None
 
 
 class Netcdf(Database):
@@ -578,8 +594,9 @@ class Netcdf(Database):
             else:
                 if self.x is not None and self.y is not None:
                     wxgen.util.debug("Diagnosing lat/lon from projection information")
-                    proj = pyproj.Proj(self.crs.proj4)
-                    self.lons, self.lats = proj(self.x[:], self.y[:], inverse=True)
+                    self.lats, self.lons = wxgen.util.get_latlon_from_proj(self.crs.proj4, self.x, self.y)
+                    #proj = pyproj.Proj(self.crs.proj4)
+                    #self.lons, self.lats = proj(self.x[:], self.y[:], inverse=True)
                 else:
                     wxgen.util.warning("Could not determine lat/lon values")
                     self.lons = np.nan * np.zeros(len(self.x))
