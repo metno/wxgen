@@ -20,7 +20,10 @@ class Variable(object):
         return hash((self.name, self.units, self.label))
 
     def __eq__(self, other):
-        return self.name == other.name
+        if other is None:
+            return False
+        else:
+            return self.name == other.name
 
     def __ne__(self, other):
         return not self.__eq__(other)
