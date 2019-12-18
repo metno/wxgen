@@ -44,8 +44,11 @@ def run(argv):
             if len(initial_state) != V:
                 wxgen.util.error("Initial state must match the number of variables (%d)" % (V))
 
+        if args.join_config is not None and args.weights is not None:
+            wxgen.util.error("-jc and -w cannot both be specified")
+
         # Check that the number of weights equals the number of variables in the database
-        if args.weights is not None and len(args.weights) != V:
+        if args.join_config is None and args.weights is not None and len(args.weights) != V:
             wxgen.util.error("Number of weights (-w) must match number of variables (-v)")
 
         start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
