@@ -113,7 +113,7 @@ def run(argv):
 
             # Figure out which time indices are possible starting dates, by finding dates that have the
             # same day of year as the first date of the allowable dates
-            months = dates / 100 % 100
+            months = dates // 100 % 100
             days = dates % 100
             start_day = init_date % 100
             start_month = init_date // 100 % 100
