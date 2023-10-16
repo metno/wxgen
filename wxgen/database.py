@@ -1,16 +1,16 @@
-import numpy as np
-import wxgen.util
-import pywt
-import os
-import sys
-import datetime
-import wxgen.variable
-import wxgen.climate_model
 import copy
-import netCDF4
+import os
 import time as timing
+
+import netCDF4
+import numpy as np
+import pywt
+import xarray as xr
+
+import wxgen.climate_model
 import wxgen.config
-import pyproj
+import wxgen.util
+import wxgen.variable
 
 
 class Database(object):
@@ -460,6 +460,7 @@ class Netcdf(Database):
             wxgen.util.error("File '%s' does not exist" % filename)
 
         self.name = filename[filename.rfind('/') + 1:]
+        self.filename = filename
 
         self.mem = mem
         self._file = netCDF4.Dataset(filename)
@@ -642,24 +643,47 @@ class Netcdf(Database):
         if variable.name not in self._file.variables:
             wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
         wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
-        temp = self._file.variables[variable.name][self._Itimes, ...]
+
+        # Loading whole data-set and perfrom slicing afterwards is much faster. 
+        # Additionally, h5netcdf seemed to be ~2x faster then default.
+        with xr.open_dataset(self.filename, engine='h5netcdf') as data_file:
+            temp = data_file[variable.name].load()
+            temp = temp[self._Itimes, ...] 
 
         sizes = [self.length, self.Y, self.X, self.num]
         data = np.nan * np.zeros(sizes, 'float32')
 
-        index = 0
-        for d in range(len(self._Itimes)):
-            for m in range(0, self.ens):
-                if self.has_single_spatial_dim:
-                    data[:, :, 0, index] = temp[d, :, m, :]
-                else:
-                    data[:, :, :, index] = temp[d, :, m, :, :]
-                # If one or more values are missing for a member, set all values to nan
-                NM = np.sum(np.isnan(data[:, :, :, index]))
-                if NM > 0:
-                    data[:, :, :, index] = np.nan
-                    wxgen.util.debug("Removing member %d because of %d missing values" % (index, NM))
-                index = index + 1
+        # TODO: attempt 1d solution -- need to fix 2d solution(!)
+        data_stack = temp.stack(n_segment=["time", "ensemble_member"])
+        idx_segments_has_nan = np.isnan(data_stack).any(dim=["lead_time", "grid_point"])
+        # data_stack.isel(n_segment=idx_segments_has_nan) = np.nan
+        removing_members = data_stack.n_segment[idx_segments_has_nan]
+        wxgen.util.debug(f"Removing members {removing_members} because of missing values")
+        # TODO: replace by xr.where?
+        data_stack.loc[removing_members.values] = np.nan
+        data_stack = data_stack.expand_dims(dim={"X": 1}, axis=2)
+        data = data_stack.values.copy() # copy, since expand_dims is a view only
+
+        
+        # # TODO: loop below should be vectorized to gain speed
+        # index = 0
+        # for d in range(len(self._Itimes)):
+        #     for m in range(0, self.ens):
+        #         if self.has_single_spatial_dim:
+        #             data[:, :, 0, index] = temp[d, :, m, :]
+        #         else:
+        #             data[:, :, :, index] = temp[d, :, m, :, :]
+        #         # If one or more values are missing for a member, set all values to nan
+        #         NM = np.sum(np.isnan(data[:, :, :, index]))
+        #         if NM > 0:
+        #             data[:, :, :, index] = np.nan
+        #             wxgen.util.debug("Removing member %d because of %d missing values" % (index, NM))
+        #         index = index + 1
+
+        # print(variable)
+        # np.testing.assert_allclose(data_stack, data)
+        # print("done")
+
         # Quality control
         if variable.name == "precipitation_amount":
             data[data < 0] = 0
