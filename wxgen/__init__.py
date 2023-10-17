@@ -1,5 +1,6 @@
 import sys
 import argparse
+import logging
 import numpy as np
 import wxgen.climate_model
 import wxgen.database
@@ -11,6 +12,7 @@ import wxgen.plot
 import wxgen.parameters
 import wxgen.version
 
+logger = logging.getLogger(__name__)
 
 def run(argv):
     np.seterr(over='raise')
@@ -32,7 +34,9 @@ def run(argv):
     """
     Run commands
     """
-    wxgen.util.DEBUG = args.debug
+    log_level = logging.DEBUG if args.debug else logging.WARNING
+    logging.basicConfig(level=log_level)
+    
     if args.command == "sim":
         db = get_db(args)
 
@@ -42,14 +46,14 @@ def run(argv):
         else:
             initial_state = np.array(wxgen.util.parse_numbers(args.initial))
             if len(initial_state) != V:
-                wxgen.util.error("Initial state must match the number of variables (%d)" % (V))
+                raise RuntimeError("Initial state must match the number of variables (%d)" % (V))
 
         if args.join_config is not None and args.weights is not None:
-            wxgen.util.error("-jc and -w cannot both be specified")
+            raise RuntimeError("-jc and -w cannot both be specified")
 
         # Check that the number of weights equals the number of variables in the database
         if args.join_config is None and args.weights is not None and len(args.weights) != V:
-            wxgen.util.error("Number of weights (-w) must match number of variables (-v)")
+            raise RuntimeError("Number of weights (-w) must match number of variables (-v)")
 
         start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
 
@@ -105,9 +109,9 @@ def run(argv):
             We only want to create scenarios that all start at the same time of the year.
             """
             if args.n is None:
-                wxgen.util.error("-n not specified")
+                raise RuntimeError("-n not specified")
             if args.t is None:
-                wxgen.util.error("-t not specified")
+                raise RuntimeError("-t not specified")
 
             dates = np.array(wxgen.util.parse_dates("%d:%d" % (start_date, end_date)))
 
@@ -119,24 +123,24 @@ def run(argv):
             start_month = init_date // 100 % 100
             Ipossible_start_days = np.where((months == start_month) & (days == start_day))[0]
             if len(Ipossible_start_days) == 0:
-                wxgen.util.error("Cannot use starting date %d, since there are no segments that start at this day of the year. Use -d to set a different starting date" % (init_date))
+                raise RuntimeError("Cannot use starting date %d, since there are no segments that start at this day of the year. Use -d to set a different starting date" % (init_date))
             if args.n > len(Ipossible_start_days):
-                wxgen.util.warning("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
+                logger.warninging("Not enough possible starting days (%d < %d)" % (len(Ipossible_start_days), args.n))
 
             trajectories = list()
             for n in range(min(args.n, len(Ipossible_start_days))):
                 s = dates[Ipossible_start_days[n]]
                 e = wxgen.util.get_date(s, args.t)
                 if e < end_date:
-                    wxgen.util.debug("Member %d dates: %d - %d" % (n, s, e))
+                    logger.debug("Member %d dates: %d - %d" % (n, s, e))
                     trajectory = db.get_truth(s, e, start_time_of_day)
                     trajectories += [trajectory]
                 else:
-                    wxgen.util.debug("Skipping member %d: Goes outside date range" % n, "yellow")
+                    logger.debug("Skipping member %d: Goes outside date range" % n, "yellow")
         if len(trajectories) == 0:
             earliest_start_date = wxgen.util.date_to_unixtime(np.min(dates[Ipossible_start_days]))
             max_length = np.floor((wxgen.util.date_to_unixtime(end_date) - earliest_start_date - 1)/86400.0)
-            wxgen.util.error("Could not create any trajectories that are long enough (max length is %d)" % max_length)
+            raise RuntimeError("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
         start_unixtime = wxgen.util.date_to_unixtime(init_date) + args.init_hour * 3600
 
@@ -173,36 +177,36 @@ def run(argv):
 
         if args.timescale is not None:
             if not plot.supports_timescale:
-                wxgen.util.error("Plot does not support -ts")
+                raise RuntimeError("Plot does not support -ts")
             plot.timescale = args.timescale
 
         if args.timemod is not None:
             if not plot.supports_timemod:
-                wxgen.util.error("Plot does not support -tm")
+                raise RuntimeError("Plot does not support -tm")
             plot.timemod = args.timemod
 
         transform = get_transform(args)
         if transform is not None:
             if not plot.supports_transform:
-                wxgen.util.error("Plot does not support -tr")
+                raise RuntimeError("Plot does not support -tr")
             plot.transform = transform
 
         if args.aggregator is not None:
             aggregator = get_aggregator(args.aggregator)
             if aggregator is not None:
                 if not plot.supports_time_aggregator and not plot.supports_ens_aggregator:
-                    wxgen.util.error("Plot does not support -a")
+                    raise RuntimeError("Plot does not support -a")
                 plot.time_aggregator = aggregator
                 plot.ens_aggregator = aggregator
         else:
             if args.ens_aggregator is not None:
                 if not plot.supports_ens_aggregator:
-                    wxgen.util.error("Plot does not support -ea")
+                    raise RuntimeError("Plot does not support -ea")
                 aggregator = get_aggregator(args.ens_aggregator)
                 plot.ens_aggregator = aggregator
             if args.time_aggregator is not None:
                 if not plot.supports_time_aggregator:
-                    wxgen.util.error("Plot does not support -ta")
+                    raise RuntimeError("Plot does not support -ta")
                 aggregator = get_aggregator(args.time_aggregator)
                 plot.time_aggregator = aggregator
 
@@ -211,12 +215,12 @@ def run(argv):
         # Check that we aren't trying to use a variable out of range
         sim_num_variables = [len(sim.variables) for sim in sims]
         if args.vars is not None and max(args.vars) >= max(sim_num_variables):
-            wxgen.util.error("One or more inputs has only %d variables. Variable %d is outside range." % (max(sim_num_variables), max(args.vars)))
+            raise RuntimeError("One or more inputs has only %d variables. Variable %d is outside range." % (max(sim_num_variables), max(args.vars)))
 
         if args.legend is not None:
             labels = [lab.replace('_', ' ') for lab in args.legend.split(',')]
             if len(labels) != len(sims):
-                wxgen.util.error("Number of legend labels (%d) does not equal number of simulations (%d)" % (len(labels), len(sims)))
+                raise RuntimeError("Number of legend labels (%d) does not equal number of simulations (%d)" % (len(labels), len(sims)))
             for i in range(len(sims)):
                 sims[i].label = labels[i]
         plot.plot(sims)
@@ -331,7 +335,7 @@ def get_db(args):
 
     if dbtype == "netcdf":
         if args.db is None:
-            wxgen.util.error("Missing -db")
+            raise RuntimeError("Missing -db")
         if hasattr(args, "vars"):
             vars = args.vars
         else:
@@ -350,7 +354,7 @@ def get_db(args):
         elif dbtype == "lorenz63":
             db = wxgen.database.Lorenz63(10, 50, model=wxgen.climate_model.Zero())
         else:
-            wxgen.util.error("Cannot understand -dbtype %s" % dbtype)
+            raise RuntimeError("Cannot understand -dbtype %s" % dbtype)
 
     if hasattr(args, "spatial_decomposition"):
         db.spatial_decomposition = args.spatial_decomposition

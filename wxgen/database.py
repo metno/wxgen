@@ -12,8 +12,10 @@ import wxgen.config
 import wxgen.util
 import wxgen.variable
 
+import logging
 
-class Database(object):
+
+class Database:
     """
     Abstract class which stores weather segments (short time-series)
 
@@ -74,6 +76,8 @@ class Database(object):
         # self.z = None
         self.crs = None
 
+        self.logger = logging.getLogger(self.__class__.__name__)
+
     @property
     def label(self):
         """
@@ -103,7 +107,7 @@ class Database(object):
         """
         t = timing.time()
         if variable not in self._data_cache:
-            wxgen.util.debug("Cache miss variable '%s'" % variable.name)
+            self.logger.debug("Cache miss variable '%s'", variable.name)
 
             if len(self._data_cache) > 0:
                 # Check if we need to remove data from cache
@@ -124,7 +128,7 @@ class Database(object):
                     I = np.random.randint(len(self._data_cache))
                     rmkey = list(self._data_cache.keys())[I]
                     self._data_cache.pop(rmkey)
-                    wxgen.util.warning("Cache full (%2.1fGB): Removing member '%s' from cache" % (next_size_gb, rmkey.name))
+                    self.logger.warning("Cache full (%2.1fGB): Removing member '%s' from cache", next_size_gb, rmkey.name)
 
             # Get data from subclass
             data = self._load(variable)
@@ -134,12 +138,12 @@ class Database(object):
                 data[0, ...] = 0
                 # Preserve nans
                 data[0, ...][I] = np.nan
-                wxgen.util.debug("Deaccumulating variable: %s" % variable.name)
+                self.logger.debug("Deaccumulating variable: %s", variable.name)
             self._data_cache[variable] = data
             e = timing.time()
             # print "Timing: %g" % (e - t)
         else:
-            wxgen.util.debug("Cache hit '%s'" % variable.name)
+            self.logger.debug("Cache hit '%s'", variable.name)
 
         return self._data_cache[variable]
 
@@ -175,7 +179,7 @@ class Database(object):
 
         """
         if start_time_of_day is not None and start_time_of_day not in self.leadtimes:
-            wxgen.util.error("A start time of %d h is not possible when the timestep is %d h" % (start_time_of_day // 3600, self.timestep // 3600))
+            RuntimeError("A start time of %d h is not possible when the timestep is %d h" % (start_time_of_day // 3600, self.timestep // 3600))
 
         """ Compute the unixtimes to find truth for """
         include_extra_time_step_at_end = True
@@ -187,7 +191,7 @@ class Database(object):
             times = np.arange(start, end, self.timestep)
 
         indices = -1*np.ones([len(times), 2], int)
-        wxgen.util.debug("Start: %d End: %d" % (start, end))
+        self.logger.debug("Start: %d End: %d", start, end)
         for i in range(len(times)):
             time = times[i]
 
@@ -200,7 +204,7 @@ class Database(object):
             else:
                 I = np.where(time > self.inittimes)[0]
             if len(I) == 0:
-                wxgen.util.error("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(np.min(self.inittimes))))
+                RuntimeError("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(np.min(self.inittimes))))
 
             """ Find the inittime and leadtime that is closest to the desired date """
             curr_times = self.inittimes[I]
@@ -214,8 +218,8 @@ class Database(object):
                 assert(i > 0)
                 dI = int(86400 / self.timestep)
                 if i - dI < 0:
-                    wxgen.util.error("It is not possible to create a truth scenario because there are missing days and the segments are too short to cover the holes. Processing stopped at %dT%d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time)))
-                wxgen.util.warning("Did not find an index for %d = %dT%02dZ. Using the previous day's state." % (time, wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time)))
+                    RuntimeError("It is not possible to create a truth scenario because there are missing days and the segments are too short to cover the holes. Processing stopped at %dT%d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time)))
+                self.logger.warning("Did not find an index for %d = %dT%02dZ. Using the previous day's state.", time, wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time))
                 indices[i, 0] = indices[i-dI, 0]
                 indices[i, 1] = indices[i-dI, 1]
 
@@ -234,7 +238,7 @@ class Database(object):
             # Crop last few hours
             # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
             if start_time_of_day != 0:
-                wxgen.util.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. A fix for this has not been implemented yet.")
+                self.logger.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. A fix for this has not been implemented yet.")
 
         return wxgen.trajectory.Trajectory(indices)
 
@@ -365,7 +369,7 @@ class Database(object):
                 for variable_name in variable_names:
                     variable = self.get_variable_by_name(variable_name)
                     if variable == None:
-                        wxgen.util.error("Cannot use variable %s in join config, since this is not in the database" % variable_name)
+                        RuntimeError("Cannot use variable %s in join config, since this is not in the database" % variable_name)
                     temp = self.load(variable)
                     for p, point in enumerate(config.points):
                         if point['variable'] == variable_name:
@@ -380,7 +384,7 @@ class Database(object):
             elif self.spatial_decomposition == 'all':
                 N = int(self.X * self.Y)
                 size = [self.length, self.V*N, self.num]
-                wxgen.util.debug("Allocating %g GB for matching values" % (np.product(size) * 4.0 / 1e9))
+                self.logger.debug("Allocating %g GB for matching values", (np.product(size) * 4.0 / 1e9))
 
                 self._data_matching_cache = np.zeros(size, 'float32')
                 for v in range(self.V):
@@ -395,7 +399,7 @@ class Database(object):
                 variable, leadtime, and ensemble member and store the values in
                 self._data_matching_cache.
                 """
-                wxgen.util.debug("Computing wavelets")
+                self.logger.debug("Computing wavelets")
                 s = timing.time()
                 NX, NY = self.get_wavelet_size()
                 N = int(NX * NY)
@@ -414,7 +418,7 @@ class Database(object):
                     self._data_matching_cache[:, I, :] = dec
 
                 e = timing.time()
-                wxgen.util.debug("Wavelet time: %f" % (e - s))
+                self.logger.debug("Wavelet time: %f", (e - s))
 
         return self._data_matching_cache
 
@@ -457,7 +461,7 @@ class Netcdf(Database):
         """
         Database.__init__(self, model)
         if not os.path.isfile(filename):
-            wxgen.util.error("File '%s' does not exist" % filename)
+            RuntimeError("File '%s' does not exist" % filename)
 
         self.name = filename[filename.rfind('/') + 1:]
         self.filename = filename
@@ -477,16 +481,16 @@ class Netcdf(Database):
         for var in vars:
             if wxgen.util.is_number(var):
                 if var >= len(var_names):
-                    wxgen.util.error("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
+                    RuntimeError("Input has only %d variables. Variable %d is outside range." % (len(var_names), max(vars)))
             else:
                 if var not in var_names:
-                    wxgen.util.error("Input does not have variable '%s'" % var)
+                    RuntimeError("Input does not have variable '%s'" % var)
 
         if "lead_time" in self._file.dimensions and "time" in self._file.dimensions:
             lead_time_dim = "lead_time"
             time_dim = "time"
         else:
-            wxgen.util.error("Cannot read file. Missing 'time' and/or 'lead_time' dimensions")
+            RuntimeError("Cannot read file. Missing 'time' and/or 'lead_time' dimensions")
         self.variables = list()
         for i, var in enumerate(vars):
             if wxgen.util.is_number(var):
@@ -503,10 +507,10 @@ class Netcdf(Database):
                     label = self._file.variables[var_name].standard_name
                 var = wxgen.variable.Variable(var_name, units, label)
                 if var in self.variables:
-                    wxgen.util.warning("Variable '%s' is specified multiple times. Only using it once." % var.name)
+                    self.logger.warning("Variable '%s' is specified multiple times. Only using it once.", var.name)
                 else:
                     self.variables.append(var)
-                    wxgen.util.debug("Using variable '%s'" % var_name)
+                    self.logger.debug("Using variable '%s'", var_name)
 
         # Load data
         lead_time_var = self._file.variables[lead_time_dim]
@@ -527,13 +531,13 @@ class Netcdf(Database):
         self.first_lead_time = leadtimes[0]
 
         if len(np.unique(np.diff(leadtimes))) != 1:
-            wxgen.util.error("Cannot handle databases with leadtimes that are not spaced evenly: %s" %
+            RuntimeError("Cannot handle databases with leadtimes that are not spaced evenly: %s" %
                   (','.join(["%g" % leadtime for leadtime in leadtimes])))
 
         self.timestep = leadtimes[1] - leadtimes[0]
 
         if np.isnan(self.timestep):
-            wxgen.util.error("Cannot determine timestep from database")
+            RuntimeError("Cannot determine timestep from database")
 
         self.has_single_spatial_dim = False
         times = self._file.variables["time"][:]
@@ -541,10 +545,10 @@ class Netcdf(Database):
 
         """ Find for which time indices there is valid data """
         if "forecast_is_complete" in self._file.variables:
-            wxgen.util.debug("Using forecast_is_complete to remove missing times")
+            self.logger.debug("Using forecast_is_complete to remove missing times")
             self._Itimes = np.where((np.isnan(times) == 0) & (self._file.variables["forecast_is_complete"][:] == 1))[0]
             if len(self._Itimes) != len(times):
-                wxgen.util.debug("Removing %d times due to missing values" % (len(times) - len(self._Itimes)))
+                self.logger.debug("Removing %d times due to missing values", (len(times) - len(self._Itimes)))
         else:
             self._Itimes = np.where(np.isnan(times) == 0)[0]
         times = times[self._Itimes]
@@ -568,7 +572,7 @@ class Netcdf(Database):
             self.has_single_spatial_dim = True
         else:
             raise NotImplementedError
-        wxgen.util.debug("Has single spatial dimension? %d" % self.has_single_spatial_dim)
+        self.logger.debug("Has single spatial dimension? %d", self.has_single_spatial_dim)
 
         """
         Read projection information
@@ -594,12 +598,12 @@ class Netcdf(Database):
                 self.lons = self._copy(self._file.variables["lon"])
             else:
                 if self.x is not None and self.y is not None:
-                    wxgen.util.debug("Diagnosing lat/lon from projection information")
+                    self.logger.debug("Diagnosing lat/lon from projection information")
                     self.lats, self.lons = wxgen.util.get_latlon_from_proj(self.crs.proj4, self.x, self.y)
                     #proj = pyproj.Proj(self.crs.proj4)
                     #self.lons, self.lats = proj(self.x[:], self.y[:], inverse=True)
                 else:
-                    wxgen.util.warning("Could not determine lat/lon values")
+                    self.logger.warning("Could not determine lat/lon values")
                     self.lons = np.nan * np.zeros(len(self.x))
                     self.lats = np.nan * np.zeros(len(self.x))
 
@@ -613,7 +617,7 @@ class Netcdf(Database):
                 self.lats = self._copy(self._file.variables["latitude"])
                 self.lons = self._copy(self._file.variables["longitude"])
             if len(self.lats.shape) == 1 and len(self.lons.shape) == 1:
-                wxgen.util.debug("Meshing latitudes and longitudes")
+                self.logger.debug("Meshing latitudes and longitudes")
                 self.lons, self.lats = np.meshgrid(self.lons, self.lats)
         """
         Read altitude information
@@ -637,7 +641,7 @@ class Netcdf(Database):
                 self.altitudes = np.expand_dims(self.altitudes, 1)
 
         if self.altitudes.shape != self.lons.shape:
-            wxgen.util.error("Altitude dimensions do not match those of lat/lon")
+            RuntimeError("Altitude dimensions do not match those of lat/lon")
 
     def _load(self, variable) -> np.ndarray:
         """Reads from netcdf
@@ -657,8 +661,8 @@ class Netcdf(Database):
             Data with dimensions [lead_time, Y, X, segment_member]
             """
         if variable.name not in self._file.variables:
-            wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
-        wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
+            RuntimeError("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
+        self.logger.debug("Allocating %g GB for '%s'", np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name)
 
         # Loading whole data-set and perfrom slicing afterwards is much faster. 
         # Additionally, h5netcdf seemed to be ~2x faster then default.
@@ -671,7 +675,8 @@ class Netcdf(Database):
 
         # If one or more values are missing for a member (segment), set all values to nan
         members_to_nan = data.n_segment[idx_segments_has_nan]
-        wxgen.util.debug(f"Removing (set to nan) members {members_to_nan} because of missing values")
+        if len(members_to_nan.values) > 0:
+            self.logger.debug(f"Setting all entries of following members to nan because of missing values: {members_to_nan.values}")
         data.loc[members_to_nan.values] = np.nan
 
         if self.has_single_spatial_dim:

@@ -43,23 +43,8 @@ def random_weighted(weights, policy):
             II = np.random.randint(Nsearch)
             I = Isorted[II]
     else:
-        error("Invalid randomization policy '%s'" % policy)
+        raise ValueError("Invalid randomization policy '%s'" % policy)
     return I
-
-
-def error(message):
-    print("\033[1;31mError: " + message + "\033[0m")
-    sys.exit(1)
-
-
-def warning(message):
-    print("\033[1;33mWarning: " + message + "\033[0m")
-
-
-def debug(message, color="green"):
-    col = COLORS[color]
-    if DEBUG:
-        print("\033[1;%imDebug: " % (col) + message + "\033[0m")
 
 
 def parse_colors(color_string):
@@ -78,7 +63,7 @@ def parse_colors(color_string):
                 string = string.replace("[", "")
                 numList.append(float(string))
             else:
-                error("Invalid rgba arg \"{}\"".format(string))
+                raise ValueError("Invalid rgba arg \"{}\"".format(string))
 
         elif "]" in string:
             if numList:
@@ -87,7 +72,7 @@ def parse_colors(color_string):
                 colors.append(numList)
                 numList = []
             else:
-                error("Invalid rgba arg \"{}\"".format(string))
+                raise ValueError("Invalid rgba arg \"{}\"".format(string))
 
         # append to rgba lists if present, otherwise grayscale intensity
         elif is_number(string):
@@ -100,7 +85,7 @@ def parse_colors(color_string):
             if not numList:  # string args and hexcodes
                 colors.append(string)
             else:
-                error("Cannot read color args.")
+                raise RuntimeError("Cannot read color args.")
     return colors
 
 
@@ -136,7 +121,7 @@ def parse_numbers(numbers, isDate=False):
 
     # Check if valid string
     if(any(char not in set('-01234567890.:,') for char in numbers)):
-        error("Could not translate '" + numbers + "' into numbers")
+        raise RuntimeError("Could not translate '" + numbers + "' into numbers")
 
     values = list()
     commaLists = numbers.split(',')
@@ -170,7 +155,7 @@ def parse_numbers(numbers, isDate=False):
                     stepSign = step / abs(step)
                     values = values + list(np.arange(start, end + stepSign*0.0001, step))
         else:
-            error("Could not translate '" + numbers + "' into numbers")
+            raise RuntimeError("Could not translate '" + numbers + "' into numbers")
         if(isDate):
             for i in range(0, len(values)):
                 values[i] = int(values[i])
@@ -328,7 +313,7 @@ def climatology(array, window=1, use_future_years=False):
     """
     import astropy.convolution
     if window < 1:
-        error("Cannot have a window size of less than 1")
+        raise ValueError("Cannot have a window size of less than 1")
     elif window == 1:
         clim = np.nanmean(array, axis=1)
     else:

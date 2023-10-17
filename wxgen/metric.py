@@ -18,7 +18,7 @@ def get(name):
         if(name == mm[0].lower()):
             m = mm[1]()
     if m is None:
-        wxgen.util.error("Cannot find metric called '%s'" % name)
+        raise RuntimeError("Cannot find metric called '%s'" % name)
     return m
 
 
