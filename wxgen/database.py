@@ -639,7 +639,23 @@ class Netcdf(Database):
         if self.altitudes.shape != self.lons.shape:
             wxgen.util.error("Altitude dimensions do not match those of lat/lon")
 
-    def _load(self, variable):
+    def _load(self, variable) -> np.ndarray:
+        """Reads from netcdf
+
+        It processes data from an input form 
+           [forecast issue time, lead_time, Y, X, ensemble member], or
+           [forecast issue time, lead_time, grid_point, ensemble member]
+        to 
+           [lead_time, Y, X, segment_member],
+
+        where the segment_member is extracted from the product of forecast issue time and the ensemble_member.
+        If there is a only a single spatial dimension (grid-point), the data is mapped to two dimensions, X, Y, but
+        one of them has length=1. 
+        
+        Returns:
+            # TODO: [self.length, self.Y, self.X, self.num] or [self.length, self.X, self.Y, self.num]
+            Data with dimensions [lead_time, Y, X, segment_member]
+            """
         if variable.name not in self._file.variables:
             wxgen.util.error("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
         wxgen.util.debug("Allocating %g GB for '%s'" % (np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name))
@@ -650,39 +666,17 @@ class Netcdf(Database):
             temp = data_file[variable.name].load()
             temp = temp[self._Itimes, ...] 
 
-        sizes = [self.length, self.Y, self.X, self.num]
-        data = np.nan * np.zeros(sizes, 'float32')
+        data = temp.stack(n_segment=["time", "ensemble_member"])
+        idx_segments_has_nan = np.isnan(data).any(dim=["lead_time", "grid_point"])
 
-        # TODO: attempt 1d solution -- need to fix 2d solution(!)
-        data_stack = temp.stack(n_segment=["time", "ensemble_member"])
-        idx_segments_has_nan = np.isnan(data_stack).any(dim=["lead_time", "grid_point"])
-        # data_stack.isel(n_segment=idx_segments_has_nan) = np.nan
-        removing_members = data_stack.n_segment[idx_segments_has_nan]
-        wxgen.util.debug(f"Removing members {removing_members} because of missing values")
-        # TODO: replace by xr.where?
-        data_stack.loc[removing_members.values] = np.nan
-        data_stack = data_stack.expand_dims(dim={"X": 1}, axis=2)
-        data = data_stack.values.copy() # copy, since expand_dims is a view only
+        # If one or more values are missing for a member (segment), set all values to nan
+        members_to_nan = data.n_segment[idx_segments_has_nan]
+        wxgen.util.debug(f"Removing (set to nan) members {members_to_nan} because of missing values")
+        data.loc[members_to_nan.values] = np.nan
 
-        
-        # # TODO: loop below should be vectorized to gain speed
-        # index = 0
-        # for d in range(len(self._Itimes)):
-        #     for m in range(0, self.ens):
-        #         if self.has_single_spatial_dim:
-        #             data[:, :, 0, index] = temp[d, :, m, :]
-        #         else:
-        #             data[:, :, :, index] = temp[d, :, m, :, :]
-        #         # If one or more values are missing for a member, set all values to nan
-        #         NM = np.sum(np.isnan(data[:, :, :, index]))
-        #         if NM > 0:
-        #             data[:, :, :, index] = np.nan
-        #             wxgen.util.debug("Removing member %d because of %d missing values" % (index, NM))
-        #         index = index + 1
-
-        # print(variable)
-        # np.testing.assert_allclose(data_stack, data)
-        # print("done")
+        if self.has_single_spatial_dim:
+            data = data.expand_dims(dim={"X": 1}, axis=2)
+            data = data.values.copy() # copy, since expand_dims is a view only
 
         # Quality control
         if variable.name == "precipitation_amount":
