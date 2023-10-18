@@ -26,10 +26,10 @@ class Trajectory(object):
     def __str__(self):
         max_print = 10
         idx_str = ','.join(["[%d,%d]" % (index[0], index[1]) for index in self.indices[:max_print]])
-        if len(self) > max_print:
-            return f"Trajectory([{idx_str}])"
+        if len(self) <= max_print:
+            return f"Trajectory(length={len(self)}, indices=[{idx_str}])"
         else:
-            return f"Trajectory({len(self)} like [{idx_str}, ...])"
+            return f"Trajectory(length={len(self)}, indices=[{idx_str}, ...])"
 
     def __len__(self) -> int:
         return self.indices.shape[0]
