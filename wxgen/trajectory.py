@@ -3,8 +3,8 @@ import numpy as np
 
 class Trajectory(object):
     """
-    Represents a trajectory of states. This is represented as a sequence of indicies into some
-    database: (Ensemble member index, day index).
+    Represents a trajectory of states. This is represented as a sequence of indicies into the
+    database: (Segment index, lead-time index).
 
     Attributes:
        indices (np.array): Indices for database
@@ -13,17 +13,23 @@ class Trajectory(object):
     def __init__(self, indices):
         """
         Arguments:
-           indices (np.array): Array with two columns ints. The first column is the trajectory index
-              and the second is the day index.
+           indices (np.array): Array with dimensions [Segment index, lead-time index]
         """
         assert(len(indices.shape) == 2)
         assert(indices.shape[1] == 2)
         self.indices = indices
 
     @property
-    def length(self):
-        return self.indices.shape[0]
+    def length(self) -> int:
+        return len(self)
 
     def __str__(self):
-        str = ','.join(["[%d,%d]" % (index[0], index[1]) for index in self.indices])
-        return str
+        max_print = 10
+        idx_str = ','.join(["[%d,%d]" % (index[0], index[1]) for index in self.indices[:max_print]])
+        if len(self) > max_print:
+            return f"Trajectory([{idx_str}])"
+        else:
+            return f"Trajectory({len(self)} like [{idx_str}, ...])"
+
+    def __len__(self) -> int:
+        return self.indices.shape[0]

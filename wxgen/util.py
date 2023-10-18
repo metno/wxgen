@@ -13,7 +13,7 @@ DEBUG = False
 COLORS = {"red": 31, "yellow": 33, "green": 32}
 
 
-def random_weighted(weights, policy):
+def random_weighted(weights, policy) -> int:
     """
     Randomly selects an index into an array based on weights
 

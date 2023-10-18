@@ -1,6 +1,7 @@
 import copy
 import os
 import time as timing
+from typing import TypeAlias
 
 import netCDF4
 import numpy as np
@@ -9,6 +10,7 @@ import xarray as xr
 
 import wxgen.climate_model
 import wxgen.config
+from wxgen.trajectory import Trajectory
 import wxgen.util
 import wxgen.variable
 
@@ -150,13 +152,18 @@ class Database:
     def _load(self, variable):
         raise NotImplementedError()
 
-    def get(self, i):
-        """ Get the i'th trajectory in the database """
-        indices = np.zeros([self.length, 2], int)
+    def get(self, i: int, i_lead_time_start: int = 0) -> Trajectory:
+        """ Get the i'th trajectory in the database.
+
+        Args:
+            i: segment index
+            i_lead_time_start: first index of the lead_times to consider
+        """
+        indices = np.zeros([self.length-i_lead_time_start, 2], int)
         indices[:, 0] = i
-        indices[:, 1] = np.arange(0, self.length)
+        indices[:, 1] = np.arange(i_lead_time_start, self.length)
         assert(np.sum(np.isnan(indices)) == 0)
-        return wxgen.trajectory.Trajectory(indices)
+        return Trajectory(indices)
 
     @property
     def remove_first_timestep(self):
@@ -240,14 +247,14 @@ class Database:
             if start_time_of_day != 0:
                 self.logger.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. A fix for this has not been implemented yet.")
 
-        return wxgen.trajectory.Trajectory(indices)
+        return Trajectory(indices)
 
-    def extract(self, trajectory):
+    def extract(self, trajectory: Trajectory) -> np.ndarray:
         """
         Extract a trajectory of large-scale aggregated values from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory (Trajectory): Trajectory to extract
 
         Returns:
            np.array: A 2D array (Time, variable) sequence of values
@@ -260,12 +267,12 @@ class Database:
                 values[i, :] = self._data_agg[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
         return values
 
-    def extract_grid(self, trajectory, variable):
+    def extract_grid(self, trajectory: Trajectory, variable):
         """
         Extract a trajectory of large-scale values from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory (Trajectory): Trajectory to extract
            variable (wxgen.variable.Variable): Variable to extract
 
         Returns:
@@ -296,7 +303,7 @@ class Database:
         Extract a trajectory of values used to match states from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory (Trajectory): Trajectory to extract
 
         Returns:
            np.array: A 2D array (Time, variable) sequence of values
@@ -436,6 +443,13 @@ class Database:
         return None
 
 
+SegmentIndices: TypeAlias = np.ndarray
+"""Array with index of sements in the database.
+
+Can e.g. be used to collect the indices of all segments that have valid values (non-nan for all variables)
+"""
+
+
 class Netcdf(Database):
     """
     Segments stored in a netcdf database. This can either be an aggregated or a gridded database.
@@ -515,6 +529,7 @@ class Netcdf(Database):
         # Load data
         lead_time_var = self._file.variables[lead_time_dim]
 
+        # TODO: SEEMS LIKE self.length is set wrong, if if should be # days! - why is it not reset?
         # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
         self.timestep = 86400
         leadtimes = wxgen.util.clean(self._file.variables[lead_time_dim][:])
@@ -535,6 +550,8 @@ class Netcdf(Database):
                   (','.join(["%g" % leadtime for leadtime in leadtimes])))
 
         self.timestep = leadtimes[1] - leadtimes[0]
+        # # TODO: at least approx -- should find out on whether to use ceil or floor...
+        # self.length = int(len(leadtimes) / (86400 / self.timestep)) 
 
         if np.isnan(self.timestep):
             RuntimeError("Cannot determine timestep from database")
