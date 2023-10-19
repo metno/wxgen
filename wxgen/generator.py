@@ -25,17 +25,19 @@ class Generator(object):
         self.db_start_date = None
         self.db_end_date = None
 
-    def get(self, N, T, initial_state=None):
-        """
-        Returns a list of N trajectories, where each trajectory has a length of T.
+    def get(self, N: int, T: int, initial_state: Optional[np.ndarray] = None) -> list[Trajectory]:
+        """Randomly generated trajectories
 
         If initial_state is provided then the trajectory will start with a state similar to this. If
         no initial state is provided, start with a random segment from the database.
 
         Arguments:
-           N (int): Number of trajectories
-           T (int): Number of timesteps in each trajectory
-           initial_state (np.array): An array of the initial state (must be of length V)
+           N: Number of trajectories
+           T: Number of timesteps in each trajectory
+           initial_state: An array of the initial state (must be of length V)
+
+        Returns:
+            List of N trajectories, where each trajectory has a length of T
         """
         trajectories = list()
         V = len(self._database.variables)
@@ -191,7 +193,7 @@ class Generator(object):
 
         # Find valid segments
         idx_segments, do_prejoin = self._find_valid_segments(weights, time_range)
-        idx_segments = self.filter_on_climate_state(climate_state_to_match=climate_state, do_prejoin=do_prejoin,
+        idx_segments = self._filter_on_climate_state(climate_state_to_match=climate_state, do_prejoin=do_prejoin,
                                              idx_segments=idx_segments)
 
         weights = self._flip_weights_for_negative_metric(weights, metric)
@@ -274,7 +276,7 @@ class Generator(object):
             weights = metric.compute(target_state, self._database._data_matching[idx0, :, :])
         return weights
     
-    def filter_on_climate_state(self, climate_state_to_match: Optional[np.ndarray], do_prejoin: bool,
+    def _filter_on_climate_state(self, climate_state_to_match: Optional[np.ndarray], do_prejoin: bool,
                                 idx_segments: SegmentIndices) -> SegmentIndices:
         """Filter on 'climate state' (if applies)
         Args:

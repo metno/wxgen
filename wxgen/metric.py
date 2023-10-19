@@ -71,7 +71,8 @@ class Rmsd(Metric):
 
     def _compute(self, state1, state2):
         weights = wxgen.util.resize(self._weights, state2.shape)
-        total = np.sum(weights*abs(state1 - state2)**2, axis=0)
+        # weights = np.tile(self._weights, state2.shape)
+        total = np.sum(weights*(state1 - state2)**2, axis=0)
         return np.sqrt(total)
 
 

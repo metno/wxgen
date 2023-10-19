@@ -298,12 +298,12 @@ class Database:
         # print "Q Timing: %g" % (e - st)
         return values
 
-    def extract_matching(self, trajectory):
+    def extract_matching(self, trajectory: Trajectory):
         """
         Extract a trajectory of values used to match states from the database
 
         Arguments:
-           trajectory (Trajectory): Trajectory to extract
+           trajectory: Trajectory to extract
 
         Returns:
            np.array: A 2D array (Time, variable) sequence of values
@@ -356,13 +356,14 @@ class Database:
         return self.lats.shape[0]
 
     @property
-    def _data_matching(self):
-        """
-        Get the data used to match states. This may be different than data_agg, since it can include
-        wavelet information.
+    def _data_matching(self) -> np.ndarray:
+        """Data used to match states
+        
+        This may be different than data_agg, since it can include wavelet information.
 
         Returns:
-           np.array: Dimensions self.length, variable, self.num
+           Array with dimensions [segment_lead_time, variable_at_point, idx_segment], where `variable_at_point` are
+           the variable values at a the matching points `p`.
         """
         if self._data_matching_cache is None:
             if self.join_config is not None:
@@ -676,7 +677,7 @@ class Netcdf(Database):
         Returns:
             # TODO: [self.length, self.Y, self.X, self.num] or [self.length, self.X, self.Y, self.num]
             Data with dimensions [lead_time, Y, X, segment_member]
-            """
+        """
         if variable.name not in self._file.variables:
             RuntimeError("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
         self.logger.debug("Allocating %g GB for '%s'", np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name)
