@@ -67,11 +67,19 @@ class Rmsd(Metric):
     def __init__(self, weights=None):
         self._weights = weights
         if self._weights is None:
-            self._weights = 0
+            self._weights = 0 # todo: remove this default?
+
+        self._weights_reshaped_cache = {}
+
+    def _weights_reshaped(self, repetitions: int) -> np.ndarray:
+        if repetitions not in self._weights_reshaped_cache:
+            arr = np.tile(self._weights, (repetitions,1)).T
+            self._weights_reshaped_cache[repetitions] = arr
+        return self._weights_reshaped_cache[repetitions]
 
     def _compute(self, state1, state2):
-        weights = wxgen.util.resize(self._weights, state2.shape)
-        # weights = np.tile(self._weights, state2.shape)
+        # weights = wxgen.util.resize(0, state2.shape) # = old version
+        weights = self._weights_reshaped(state2.shape[1])
         total = np.sum(weights*(state1 - state2)**2, axis=0)
         return np.sqrt(total)
 

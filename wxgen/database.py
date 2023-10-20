@@ -59,7 +59,7 @@ class Database:
     def __init__(self, model=None):
         self._data_matching_cache = None
         self.spatial_decomposition = 0
-        self.join_config = None
+        self.join_config_fn = None
         self.mem = None
         if model is None:
             self.model = wxgen.climate_model.Bin(10)
@@ -77,6 +77,8 @@ class Database:
         self.y = None
         # self.z = None
         self.crs = None
+
+        self._join_config_cache = None
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -354,6 +356,12 @@ class Database:
     @property
     def Y(self):
         return self.lats.shape[0]
+    
+    @property
+    def join_config(self) -> wxgen.config.Config:
+        if self._join_config_cache is None:
+            self._join_config_cache = wxgen.config.Config(self.join_config_fn)
+        return self._join_config_cache
 
     @property
     def _data_matching(self) -> np.ndarray:
@@ -366,27 +374,23 @@ class Database:
            the variable values at a the matching points `p`.
         """
         if self._data_matching_cache is None:
-            if self.join_config is not None:
-                config = wxgen.config.Config(self.join_config)
-
+            if self.join_config_fn is not None:
                 # Preload all required variables
-                variable_names = set([point['variable'] for point in config.points])
-                self._data_matching_cache = np.zeros([self.length, len(config.points), self.num], 'float32')
+                self._data_matching_cache = np.zeros([self.length, len(self.join_config.points), self.num], 'float32')
 
                 count = 0
-                for variable_name in variable_names:
+                for variable_name, points_df in self.join_config.group_by_variable().items():
                     variable = self.get_variable_by_name(variable_name)
                     if variable == None:
                         RuntimeError("Cannot use variable %s in join config, since this is not in the database" % variable_name)
                     temp = self.load(variable)
-                    for p, point in enumerate(config.points):
-                        if point['variable'] == variable_name:
-                            # Find nearest neighbour
-                            dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
-                            indices = np.unravel_index(dist.argmin(), dist.shape)
-                            weight = point['weight']
-                            self._data_matching_cache[:, count, :] = temp[:, indices[0], indices[1], :] * weight
-                            count += 1
+                    for _, point in points_df.iterrows():
+                        # Find nearest neighbour
+                        dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
+                        indices = np.unravel_index(dist.argmin(), dist.shape)
+                        self._data_matching_cache[:, count, :] = temp[:, indices[0], indices[1], :]
+                        count += 1
+
             elif self.spatial_decomposition == 0:
                 self._data_matching_cache = self._data_agg
             elif self.spatial_decomposition == 'all':
