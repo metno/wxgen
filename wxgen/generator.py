@@ -5,6 +5,7 @@ import wxgen.metric
 from wxgen.trajectory import Trajectory
 import wxgen.util
 import wxgen.climate_model
+from tqdm import tqdm
 
 import logging
 
@@ -40,11 +41,8 @@ class Generator(object):
             List of N trajectories, where each trajectory has a length of T
         """
         trajectories = list()
-        V = len(self._database.variables)
         if self._database.length < 2:
             raise RuntimeError("Cannot create simulation with a database with segments shorter than 2 timesteps")
-        X = self._database.X
-        Y = self._database.Y
 
         for n in range(0, N):
             logger.info("Generating trajectory %d/%d", n+1, N)
@@ -79,85 +77,88 @@ class Generator(object):
             """
             start = 0  # Starting index into output trajectory where we are inserting a segment
             join = 0
-            while start < T-1:
-                climate_state_curr = self._database.model.get([time])[0]
+            with tqdm(total=T, mininterval=1) as pbar:
+                while start < T-1:
+                    inc = start - pbar.n
+                    pbar.update(inc)
+                    climate_state_curr = self._database.model.get([time])[0]
 
-                """
-                Prejoin multiple segments that are nearby in time. This is done by passing
-                'search_times' to get_random.
-                """
-                search_times = None
-                if join > 0:
-                    end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*self._database.timestep
-                    search_times = [end_times - 5*86400, end_times + 5*86400]
-                logger.debug("Found random segment")
-                if state_curr is None:
-                    logger.debug("Target state: None")
-                else:
-                    logger.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
-                segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
-                timesteps_per_day = int(86400 / self._database.timestep)
+                    """
+                    Prejoin multiple segments that are nearby in time. This is done by passing
+                    'search_times' to get_random.
+                    """
+                    search_times = None
+                    if join > 0:
+                        end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*self._database.timestep
+                        search_times = [end_times - 5*86400, end_times + 5*86400]
+                    logger.debug("Found random segment")
+                    if state_curr is None:
+                        logger.debug("Target state: None")
+                    else:
+                        logger.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
+                    segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
+                    timesteps_per_day = int(86400 / self._database.timestep)
 
-                """
-                Stagger the trajectories so that they don't all potentially have jumps at the same
-                leadtimes. This is done by truncating the first segment to a random length. Note that
-                the upper end of randint is exclusive, hence the "+ 1".
+                    """
+                    Stagger the trajectories so that they don't all potentially have jumps at the same
+                    leadtimes. This is done by truncating the first segment to a random length. Note that
+                    the upper end of randint is exclusive, hence the "+ 1".
 
-                For subdaily timesteps, this must cut whole days
-                """
-                if self.stagger and start == 0:
-                    I = np.random.randint(1, segment_curr.indices.shape[0]/timesteps_per_day + 1) * timesteps_per_day
-                    if I > segment_curr.indices.shape[0] + 1:
-                        I = segment_curr.indices.shape[0] + 1
-                    segment_curr.indices = segment_curr.indices[0:I, :]
+                    For subdaily timesteps, this must cut whole days
+                    """
+                    if self.stagger and start == 0:
+                        I = np.random.randint(1, segment_curr.indices.shape[0]/timesteps_per_day + 1) * timesteps_per_day
+                        if I > segment_curr.indices.shape[0] + 1:
+                            I = segment_curr.indices.shape[0] + 1
+                        segment_curr.indices = segment_curr.indices[0:I, :]
 
-                indices_curr = segment_curr.indices
+                    indices_curr = segment_curr.indices
 
-                """
-                Account for the fact that the desired trajectory length is not a whole multiple of the
-                segment length: Only take the first part of the segment if needed.
+                    """
+                    Account for the fact that the desired trajectory length is not a whole multiple of the
+                    segment length: Only take the first part of the segment if needed.
 
-                Also account for the fact that the last timestep in the segment must be at the same time
-                of day as the first timestep in the segment so that matching occurrs with the same time
-                of day.
+                    Also account for the fact that the last timestep in the segment must be at the same time
+                    of day as the first timestep in the segment so that matching occurrs with the same time
+                    of day.
 
-                Finally, don't use the first timestep of the new segment, because it might be missing,
-                which is the case for precipitation and other accumulated variables.
-                """
-                Tsegment = len(indices_curr)
-                end = start + Tsegment  # Ending index
-                end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
-                if start == 0:
-                    Iout = range(start, end)  # Index into trajectory
-                    Iin = range(0, end - start)  # Index into segment
-                else:
-                    Iout = range(start+1, end)  # Index into trajectory
-                    Iin = range(1, end - start)  # Index into segment
-                trajectory_indices[Iout, :] = indices_curr[Iin, :]
-                # print Tsegment, start, end, time_of_day//3600
-                # print Iin, Iout
+                    Finally, don't use the first timestep of the new segment, because it might be missing,
+                    which is the case for precipitation and other accumulated variables.
+                    """
+                    Tsegment = len(indices_curr)
+                    end = start + Tsegment  # Ending index
+                    end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
+                    if start == 0:
+                        Iout = range(start, end)  # Index into trajectory
+                        Iin = range(0, end - start)  # Index into segment
+                    else:
+                        Iout = range(start+1, end)  # Index into trajectory
+                        Iin = range(1, end - start)  # Index into segment
+                    trajectory_indices[Iout, :] = indices_curr[Iin, :]
+                    # print Tsegment, start, end, time_of_day//3600
+                    # print Iin, Iout
 
-                logger.debug("Current state: %s", state_curr)
-                logger.debug("Chosen segment: %s", segment_curr)
-                logger.debug("Trajectory indices: %s", Iout)
-                logger.debug("Segment indices: %s", Iin)
+                    logger.debug("Current state: %s", state_curr)
+                    logger.debug("Chosen segment: %s", segment_curr)
+                    logger.debug("Trajectory indices: %s", Iout)
+                    logger.debug("Segment indices: %s", Iin)
 
-                # Get the last state of the segment, and corresponding time
-                state_curr = self._database.extract_matching(segment_curr)[Iin[-1], :]
-                start = start + Tsegment - 1
-                time = time + (Tsegment - 1) * self._database.timestep
-                time_of_day = time % 86400
-                if self.prejoin is not None and self.prejoin > 0:
-                    join = (join + 1) % self.prejoin
+                    # Get the last state of the segment, and corresponding time
+                    state_curr = self._database.extract_matching(segment_curr)[Iin[-1], :]
+                    start = start + Tsegment - 1
+                    time = time + (Tsegment - 1) * self._database.timestep
+                    time_of_day = time % 86400
+                    if self.prejoin is not None and self.prejoin > 0:
+                        join = (join + 1) % self.prejoin
 
-            if len(np.where(trajectory_indices == -1)[0]) > 0:
-                raise RuntimeError("Internal error. The trajectory was not properly filled")
-            trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
-            if logger.debug:
-                logger.debug("Trajectory: %s", trajectory)
-            trajectories.append(trajectory)
+                if len(np.where(trajectory_indices == -1)[0]) > 0:
+                    raise RuntimeError("Internal error. The trajectory was not properly filled")
+                trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
+                if logger.debug:
+                    logger.debug("Trajectory: %s", trajectory)
+                trajectories.append(trajectory)
 
-        return trajectories
+            return trajectories
 
     def get_random(self, target_state: np.ndarray, 
                    time_of_day: int, 
