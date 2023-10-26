@@ -201,10 +201,16 @@ class Netcdf(Output):
         variables = database.variables
         vars = dict()
         for var in variables:
-            if has_single_spatial_dim:
-                vars[var.name] = file.createVariable(var.name, "f4", ("time", "lead_time", "ensemble_member", 'grid_point'))
+            # accumulated variables can be very(!) large. Alternatively, use scale_factor
+            if self.acc is not None and var.name in self.acc:
+               dtype = "f8"
             else:
-                vars[var.name] = file.createVariable(var.name, "f4", ("time", "lead_time", "ensemble_member", yname, xname))
+               dtype = "f4"
+            
+            if has_single_spatial_dim:
+                vars[var.name] = file.createVariable(var.name, dtype, ("time", "lead_time", "ensemble_member", 'grid_point'))
+            else:
+                vars[var.name] = file.createVariable(var.name, dtype, ("time", "lead_time", "ensemble_member", yname, xname))
             if var.units is not None:
                 vars[var.name].units = var.units
             if database.crs is not None:
