@@ -139,6 +139,7 @@ class Netcdf(Output):
             var_crs.proj4 = database.crs.proj4
             var_crs.epsg_code = database.crs.epsg_code
 
+   
         # Latitude
         if has_single_spatial_dim:
             # Assume a lat/lon grid
@@ -231,18 +232,31 @@ class Netcdf(Output):
 
         if self.write_indices:
             var_segment_member = file.createVariable("segment_member", "i4", ("lead_time", "ensemble_member"))
+            
+            var_src_time = file.createVariable("src_time", "f8", ("lead_time", "ensemble_member"))
+            var_src_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
+            var_src_time.long_name = "'time' in forecast database used by wxgen"
+
+            var_src_ensemble_member = file.createVariable("src_ensemble_member", "i4", ("lead_time", "ensemble_member"))
+            var_src_ensemble_member.long_name = "'ensemble_member' in forecast database used by wxgen"
+            
             var_segment_leadtime = file.createVariable("segment_lead_time", "i4", ("lead_time", "ensemble_member"))
             var_segment_leadtime.units = "seconds"
+
             var_segment_time = file.createVariable("segment_time", "f8", ("lead_time", "ensemble_member"))
             var_segment_time.units = "seconds since 1970-01-01 00:00:00 +00:00"
             var_segment_time.standard_name = "lead_time"
             var_segment_time.long_name = "lead_time"
+
             dt = database.timestep
             for m in range(0, len(trajectories)):
                 trajectory = trajectories[m]
                 var_segment_member[:, m] = trajectory.indices[:, 0]
                 var_segment_leadtime[:, m] = database.leadtimes[trajectory.indices[:, 1]]
                 var_segment_time[:, m] = database.inittimes[trajectory.indices[:, 0]]
+                if hasattr(database, "src_time") and hasattr(database, "src_ensemble_member"):
+                    var_src_time[:, m] = database.src_time[trajectory.indices[:, 0]].astype("datetime64[s]").astype(float)
+                    var_src_ensemble_member[:, m] = database.src_ensemble_member[trajectory.indices[:, 0]]
 
         # Global attributes
         file.Conventions = "CF-1.0"

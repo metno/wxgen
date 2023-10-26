@@ -665,6 +665,10 @@ class Netcdf(Database):
         if self.altitudes.shape != self.lons.shape:
             RuntimeError("Altitude dimensions do not match those of lat/lon")
 
+        self._src_time = None
+        self._src_ensemble_member = None      
+
+
     def _load(self, variable) -> np.ndarray:
         """Reads from netcdf
 
@@ -689,29 +693,49 @@ class Netcdf(Database):
         # Loading whole data-set and perfrom slicing afterwards is much faster. 
         # Additionally, h5netcdf seemed to be ~2x faster then default.
         with xr.open_dataset(self.filename, engine='h5netcdf') as data_file:
-            temp = data_file[variable.name].load()
-            temp = temp[self._Itimes, ...] 
+            data = data_file[variable.name].load()
+            # src_time = data_file.time.load()
+            # ensemble_member = data_file.ensemble_member.load()
 
-        data = temp.stack(n_segment=["time", "ensemble_member"])
-        idx_segments_has_nan = np.isnan(data).any(dim=["lead_time", "grid_point"])
+        # remove where not 'forecast_is_complete'
+        data = data[self._Itimes, ...]
+        # src_time = src_time[self._Itimes]
 
-        # If one or more values are missing for a member (segment), set all values to nan
-        members_to_nan = data.n_segment[idx_segments_has_nan]
-        if len(members_to_nan.values) > 0:
-            self.logger.debug(f"Setting all entries of following members to nan because of missing values: {members_to_nan.values}")
-        data.loc[members_to_nan.values] = np.nan
+        # same action, if forecast_is_complete did not exists
+        if np.isnan(data).any():
+            arr_data_is_finite = np.isfinite(data).all(dim=["lead_time", "grid_point", "ensemble_member"])
+            idx_time_is_finite = np.nonzero(arr_data_is_finite.values)[0]
+            self.logger.warning(f"Removing {len(src_time) - len(idx_time_is_finite)}  member due to nan values.")
+            # src_time = src_time[idx_time_is_finite]
+            data = data.isel(time=idx_time_is_finite)
+
+        data = data.stack(n_segment=["time", "ensemble_member"])
+        self._src_time = data.time.values
+        self._src_ensemble_member = data.ensemble_member.values
 
         if self.has_single_spatial_dim:
             data = data.expand_dims(dim={"X": 1}, axis=2)
             data = data.values.copy() # copy, since expand_dims is a view only
+        else:
+            data = data.values
 
-        # Quality control
+        # Hotfix
         if variable.name == "precipitation_amount":
             data[data < 0] = 0
 
         # data[data == netCDF4.default_fillvals['f4']] = np.nan
 
         return data
+
+    @property
+    def src_time(self) -> None | np.ndarray["datetime64[ns]"]:
+        """'time' variable of each segment_member in the database"""
+        return self._src_time
+        
+    @property
+    def src_ensemble_member(self) -> None | np.ndarray[int]:
+        """'ensemble_member' variable of each segment_member in the database"""
+        return self._src_ensemble_member
 
     def _copy(self, data):
         data = data[:].astype(float)
