@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wxgen"
+authors = [
+    {name = "Thomas Nipen", email = "thomas.nipen@met.no"},
+]
+description = "A package for generating arbitrarily long weather time-series"
+readme = "README.rst"
+keywords = ["meteorology", "generator", "stochastic weather"]
+license = {text = "LGPL-3"}
+classifiers=[
+        # How mature is this project? Common values are
+        #   3 - Alpha
+        #   4 - Beta
+        #   5 - Production/Stable
+        'Development Status :: 4 - Beta',
+
+        # Indicate who your project is intended for
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Atmospheric Science',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+
+        # Pick your license as you wish (should match "license" above)
+        'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
+
+        'Programming Language :: Python :: 3',
+    ]
+dependencies = [
+    "requests",
+    'importlib-metadata; python_version<"3.8"',
+]
+dynamic = ["version"] # TODO: check where to read from
+
+[project.optional-dependencies]
+test = ["scipy", "numpy>=1.7", "matplotlib", "PyWavelets", "pyproj", "h5netcdf"]
+climatoloy = ["astropy==1.3.2"] # TODO: why version fixed 
+cdi = ["coveralls", "pack ==1.1, ==1.3"]
+
+[tool.setuptools_scm]
+version_file = "wxgen/_version.py"
+
+[project.scripts]
+wxgen = "wxgen:main"

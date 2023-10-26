@@ -10,9 +10,16 @@ import wxgen.metric
 import wxgen.output
 import wxgen.plot
 import wxgen.parameters
-import wxgen.version
+
+try:
+    from wxgen._version import version as __version__
+    from wxgen._version import version_tuple
+except ImportError:
+    __version__ = "development version"
+    version_tuple = (0, 0, "development version")
 
 logger = logging.getLogger(__name__)
+
 
 def run(argv):
     np.seterr(over='raise')
@@ -21,9 +28,6 @@ def run(argv):
     # Show help message when no options are provided
     if len(argv) < 2:
         parser.print_help()
-        return
-    elif len(argv) == 2 and argv[1] == "--version":
-        print(wxgen.version.__version__)
         return
     elif len(argv) == 2 and argv[1] in sp.keys():
         sp[argv[1]].print_help()
@@ -234,7 +238,6 @@ def get_parsers():
        sp: A list of subparsers
     """
     parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
-    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
     subparsers = parser.add_subparsers(title="Choose one of these commands", dest="command")
 
     """
