@@ -10,9 +10,16 @@ import wxgen.metric
 import wxgen.output
 import wxgen.plot
 import wxgen.parameters
-import wxgen.version
+
+try:
+    from wxgen._version import version as __version__
+    from wxgen._version import version_tuple
+except ImportError:
+    __version__ = "development version"
+    version_tuple = (0, 0, "development version")
 
 logger = logging.getLogger(__name__)
+
 
 def run(argv):
     np.seterr(over='raise')
@@ -21,9 +28,6 @@ def run(argv):
     # Show help message when no options are provided
     if len(argv) < 2:
         parser.print_help()
-        return
-    elif len(argv) == 2 and argv[1] == "--version":
-        print(wxgen.version.__version__)
         return
     elif len(argv) == 2 and argv[1] in sp.keys():
         sp[argv[1]].print_help()
@@ -234,7 +238,6 @@ def get_parsers():
        sp: A list of subparsers
     """
     parser = argparse.ArgumentParser(prog="wxgen", description="Hybrid weather generator, combining stochastic and physical modelling")
-    parser.add_argument('--version', action="version", version=wxgen.version.__version__)
     subparsers = parser.add_subparsers(title="Choose one of these commands", dest="command")
 
     """
@@ -360,7 +363,7 @@ def get_db(args):
         db.spatial_decomposition = args.spatial_decomposition
 
     if hasattr(args, "join_config"):
-        db.join_config = args.join_config
+        db.join_config_fn = args.join_config
 
     if hasattr(args, 'deacc'):
         db.deacc = args.deacc
@@ -371,29 +374,35 @@ def get_db(args):
     return db
 
 
-def get_metric(args, db):
-    if args.weights is not None:
+def get_metric(args, db: wxgen.database.Database):
+    if args.weights is None and args.join_config is None:
+        return wxgen.metric.get(args.metric)
+    elif args.weights is not None:
         weights = args.weights
-        if args.spatial_decomposition is not None:
-            """
-            If we are using wavelets, then the weights in the metric must be repeated such that each
-            wavelet component gets the same weight for a given variable.
-            """
-            NX, NY = db.get_wavelet_size()
-            N = int(NX * NY)
-            weights = np.repeat(weights, N)
+    elif args.join_config is not None:
+        weights = db.join_config.weights_as_arr()
 
-        if args.metric == "rmsd":
-            metric = wxgen.metric.Rmsd(weights)
-        elif args.metric == "max":
-            metric = wxgen.metric.Max(weights)
-        elif args.metric == "mad":
-            metric = wxgen.metric.Mad(weights)
-        elif args.metric == "exp":
-            metric = wxgen.metric.Exp(weights)
+    if args.spatial_decomposition is not None:
+        # TODO: should check/test this option in combination with rest
+        """
+        If we are using wavelets, then the weights in the metric must be repeated such that each
+        wavelet component gets the same weight for a given variable.
+        """
+        NX, NY = db.get_wavelet_size()
+        N = int(NX * NY)
+        weights = np.repeat(weights, N)
+
+    if args.metric == "rmsd":
+        metric = wxgen.metric.Rmsd(weights)
+    elif args.metric == "max":
+        metric = wxgen.metric.Max(weights)
+    elif args.metric == "mad":
+        metric = wxgen.metric.Mad(weights)
+    elif args.metric == "exp":
+        metric = wxgen.metric.Exp(weights)
     else:
-        metric = wxgen.metric.get(args.metric)
-
+        raise NotImplementedError
+    
     return metric
 
 

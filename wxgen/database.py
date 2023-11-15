@@ -1,6 +1,7 @@
 import copy
 import os
 import time as timing
+from typing import TypeAlias
 
 import netCDF4
 import numpy as np
@@ -9,6 +10,7 @@ import xarray as xr
 
 import wxgen.climate_model
 import wxgen.config
+from wxgen.trajectory import Trajectory
 import wxgen.util
 import wxgen.variable
 
@@ -57,7 +59,7 @@ class Database:
     def __init__(self, model=None):
         self._data_matching_cache = None
         self.spatial_decomposition = 0
-        self.join_config = None
+        self.join_config_fn = None
         self.mem = None
         if model is None:
             self.model = wxgen.climate_model.Bin(10)
@@ -75,6 +77,8 @@ class Database:
         self.y = None
         # self.z = None
         self.crs = None
+
+        self._join_config_cache = None
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -150,13 +154,18 @@ class Database:
     def _load(self, variable):
         raise NotImplementedError()
 
-    def get(self, i):
-        """ Get the i'th trajectory in the database """
-        indices = np.zeros([self.length, 2], int)
+    def get(self, i: int, i_lead_time_start: int = 0) -> Trajectory:
+        """ Get the i'th trajectory in the database.
+
+        Args:
+            i: segment index
+            i_lead_time_start: first index of the lead_times to consider
+        """
+        indices = np.zeros([self.length-i_lead_time_start, 2], int)
         indices[:, 0] = i
-        indices[:, 1] = np.arange(0, self.length)
+        indices[:, 1] = np.arange(i_lead_time_start, self.length)
         assert(np.sum(np.isnan(indices)) == 0)
-        return wxgen.trajectory.Trajectory(indices)
+        return Trajectory(indices)
 
     @property
     def remove_first_timestep(self):
@@ -240,14 +249,14 @@ class Database:
             if start_time_of_day != 0:
                 self.logger.warning("The scenario will likely be one day too short, since the requested start time is not 00Z. A fix for this has not been implemented yet.")
 
-        return wxgen.trajectory.Trajectory(indices)
+        return Trajectory(indices)
 
-    def extract(self, trajectory):
+    def extract(self, trajectory: Trajectory) -> np.ndarray:
         """
         Extract a trajectory of large-scale aggregated values from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory (Trajectory): Trajectory to extract
 
         Returns:
            np.array: A 2D array (Time, variable) sequence of values
@@ -260,12 +269,12 @@ class Database:
                 values[i, :] = self._data_agg[trajectory.indices[i, 1], :, trajectory.indices[i, 0]]
         return values
 
-    def extract_grid(self, trajectory, variable):
+    def extract_grid(self, trajectory: Trajectory, variable):
         """
         Extract a trajectory of large-scale values from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory (Trajectory): Trajectory to extract
            variable (wxgen.variable.Variable): Variable to extract
 
         Returns:
@@ -291,12 +300,12 @@ class Database:
         # print "Q Timing: %g" % (e - st)
         return values
 
-    def extract_matching(self, trajectory):
+    def extract_matching(self, trajectory: Trajectory):
         """
         Extract a trajectory of values used to match states from the database
 
         Arguments:
-           trajectory (wxgen.trajectory.Trajectory): Trajectory to extract
+           trajectory: Trajectory to extract
 
         Returns:
            np.array: A 2D array (Time, variable) sequence of values
@@ -347,38 +356,41 @@ class Database:
     @property
     def Y(self):
         return self.lats.shape[0]
+    
+    @property
+    def join_config(self) -> wxgen.config.Config:
+        if self._join_config_cache is None:
+            self._join_config_cache = wxgen.config.Config(self.join_config_fn)
+        return self._join_config_cache
 
     @property
-    def _data_matching(self):
-        """
-        Get the data used to match states. This may be different than data_agg, since it can include
-        wavelet information.
+    def _data_matching(self) -> np.ndarray:
+        """Data used to match states
+        
+        This may be different than data_agg, since it can include wavelet information.
 
         Returns:
-           np.array: Dimensions self.length, variable, self.num
+           Array with dimensions [segment_lead_time, variable_at_point, idx_segment], where `variable_at_point` are
+           the variable values at a the matching points `p`.
         """
         if self._data_matching_cache is None:
-            if self.join_config is not None:
-                config = wxgen.config.Config(self.join_config)
-
+            if self.join_config_fn is not None:
                 # Preload all required variables
-                variable_names = set([point['variable'] for point in config.points])
-                self._data_matching_cache = np.zeros([self.length, len(config.points), self.num], 'float32')
+                self._data_matching_cache = np.zeros([self.length, len(self.join_config.points), self.num], 'float32')
 
                 count = 0
-                for variable_name in variable_names:
+                for variable_name, points_df in self.join_config.group_by_variable().items():
                     variable = self.get_variable_by_name(variable_name)
                     if variable == None:
                         RuntimeError("Cannot use variable %s in join config, since this is not in the database" % variable_name)
                     temp = self.load(variable)
-                    for p, point in enumerate(config.points):
-                        if point['variable'] == variable_name:
-                            # Find nearest neighbour
-                            dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
-                            indices = np.unravel_index(dist.argmin(), dist.shape)
-                            weight = point['weight']
-                            self._data_matching_cache[:, count, :] = temp[:, indices[0], indices[1], :] * weight
-                            count += 1
+                    for _, point in points_df.iterrows():
+                        # Find nearest neighbour
+                        dist = (self.lats - point['lat']) ** 2 + (self.lons - point['lon']) ** 2
+                        indices = np.unravel_index(dist.argmin(), dist.shape)
+                        self._data_matching_cache[:, count, :] = temp[:, indices[0], indices[1], :]
+                        count += 1
+
             elif self.spatial_decomposition == 0:
                 self._data_matching_cache = self._data_agg
             elif self.spatial_decomposition == 'all':
@@ -434,6 +446,13 @@ class Database:
             if variable.name == name:
                 return variable
         return None
+
+
+SegmentIndices: TypeAlias = np.ndarray
+"""Array with index of sements in the database.
+
+Can e.g. be used to collect the indices of all segments that have valid values (non-nan for all variables)
+"""
 
 
 class Netcdf(Database):
@@ -515,6 +534,7 @@ class Netcdf(Database):
         # Load data
         lead_time_var = self._file.variables[lead_time_dim]
 
+        # TODO: SEEMS LIKE self.length is set wrong, if if should be # days! - why is it not reset?
         # Assume dataset has a daily timestep, except if it is possible to deduce otherwise
         self.timestep = 86400
         leadtimes = wxgen.util.clean(self._file.variables[lead_time_dim][:])
@@ -535,6 +555,8 @@ class Netcdf(Database):
                   (','.join(["%g" % leadtime for leadtime in leadtimes])))
 
         self.timestep = leadtimes[1] - leadtimes[0]
+        # # TODO: at least approx -- should find out on whether to use ceil or floor...
+        # self.length = int(len(leadtimes) / (86400 / self.timestep)) 
 
         if np.isnan(self.timestep):
             RuntimeError("Cannot determine timestep from database")
@@ -643,6 +665,10 @@ class Netcdf(Database):
         if self.altitudes.shape != self.lons.shape:
             RuntimeError("Altitude dimensions do not match those of lat/lon")
 
+        self._src_time = None
+        self._src_ensemble_member = None      
+
+
     def _load(self, variable) -> np.ndarray:
         """Reads from netcdf
 
@@ -659,7 +685,7 @@ class Netcdf(Database):
         Returns:
             # TODO: [self.length, self.Y, self.X, self.num] or [self.length, self.X, self.Y, self.num]
             Data with dimensions [lead_time, Y, X, segment_member]
-            """
+        """
         if variable.name not in self._file.variables:
             RuntimeError("Variable '%s' does not exist in file '%s'" % (variable.name, self.name))
         self.logger.debug("Allocating %g GB for '%s'", np.product(self._file.variables[variable.name].shape) * 4.0 / 1e9, variable.name)
@@ -667,29 +693,49 @@ class Netcdf(Database):
         # Loading whole data-set and perfrom slicing afterwards is much faster. 
         # Additionally, h5netcdf seemed to be ~2x faster then default.
         with xr.open_dataset(self.filename, engine='h5netcdf') as data_file:
-            temp = data_file[variable.name].load()
-            temp = temp[self._Itimes, ...] 
+            data = data_file[variable.name].load()
+            # src_time = data_file.time.load()
+            # ensemble_member = data_file.ensemble_member.load()
 
-        data = temp.stack(n_segment=["time", "ensemble_member"])
-        idx_segments_has_nan = np.isnan(data).any(dim=["lead_time", "grid_point"])
+        # remove where not 'forecast_is_complete'
+        data = data[self._Itimes, ...]
+        # src_time = src_time[self._Itimes]
 
-        # If one or more values are missing for a member (segment), set all values to nan
-        members_to_nan = data.n_segment[idx_segments_has_nan]
-        if len(members_to_nan.values) > 0:
-            self.logger.debug(f"Setting all entries of following members to nan because of missing values: {members_to_nan.values}")
-        data.loc[members_to_nan.values] = np.nan
+        # same action, if forecast_is_complete did not exists
+        if np.isnan(data).any():
+            arr_data_is_finite = np.isfinite(data).all(dim=["lead_time", "grid_point", "ensemble_member"])
+            idx_time_is_finite = np.nonzero(arr_data_is_finite.values)[0]
+            self.logger.warning(f"Removing {len(src_time) - len(idx_time_is_finite)}  member due to nan values.")
+            # src_time = src_time[idx_time_is_finite]
+            data = data.isel(time=idx_time_is_finite)
+
+        data = data.stack(n_segment=["time", "ensemble_member"])
+        self._src_time = data.time.values
+        self._src_ensemble_member = data.ensemble_member.values
 
         if self.has_single_spatial_dim:
             data = data.expand_dims(dim={"X": 1}, axis=2)
             data = data.values.copy() # copy, since expand_dims is a view only
+        else:
+            data = data.values
 
-        # Quality control
+        # Hotfix
         if variable.name == "precipitation_amount":
             data[data < 0] = 0
 
         # data[data == netCDF4.default_fillvals['f4']] = np.nan
 
         return data
+
+    @property
+    def src_time(self) -> None | np.ndarray["datetime64[ns]"]:
+        """'time' variable of each segment_member in the database"""
+        return self._src_time
+        
+    @property
+    def src_ensemble_member(self) -> None | np.ndarray[int]:
+        """'ensemble_member' variable of each segment_member in the database"""
+        return self._src_ensemble_member
 
     def _copy(self, data):
         data = data[:].astype(float)

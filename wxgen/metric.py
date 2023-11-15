@@ -22,7 +22,7 @@ def get(name):
     return m
 
 
-class Metric(object):
+class Metric:
     """
     Class to compute the similarity between two states
     """
@@ -30,6 +30,7 @@ class Metric(object):
     _orientation = 1
 
     def __init__(self):
+        self._weights_reshaped_cache = {}
         pass
 
     def compute(self, state1, state2):
@@ -55,6 +56,13 @@ class Metric(object):
         """
         raise NotImplementedError()
 
+    def _weights_reshaped(self, repetitions: int) -> np.ndarray:
+        """reshaped weights to match state stize"""
+        if repetitions not in self._weights_reshaped_cache:
+            arr = np.tile(self._weights, (repetitions, 1)).T
+            self._weights_reshaped_cache[repetitions] = arr
+        return self._weights_reshaped_cache[repetitions]
+
 
 class Rmsd(Metric):
     """ Root mean squared difference of the states
@@ -65,13 +73,15 @@ class Rmsd(Metric):
     _orientation = -1
 
     def __init__(self, weights=None):
+        super().__init__()
         self._weights = weights
         if self._weights is None:
-            self._weights = 0
+            self._weights = 0 # TODO: here and elsewhere remove this default / set to 1?
 
     def _compute(self, state1, state2):
-        weights = wxgen.util.resize(self._weights, state2.shape)
-        total = np.sum(weights*abs(state1 - state2)**2, axis=0)
+        # weights = wxgen.util.resize(0, state2.shape) # = old version
+        weights = self._weights_reshaped(state2.shape[1])
+        total = np.sum(weights*(state1 - state2)**2, axis=0)
         return np.sqrt(total)
 
 
@@ -84,12 +94,13 @@ class Max(Metric):
     _orientation = -1
 
     def __init__(self, weights=None):
+        super().__init__()
         self._weights = weights
         if self._weights is None:
             self._weights = 0
 
     def _compute(self, state1, state2):
-        weights = wxgen.util.resize(self._weights, state2.shape)
+        weights = self._weights_reshaped(state2.shape[1])
         total = np.max(weights*abs(state1 - state2), axis=0)
         return total
 
@@ -103,12 +114,13 @@ class Mad(Metric):
     _orientation = -1
 
     def __init__(self, weights=None):
+        super().__init__()
         self._weights = weights
         if self._weights is None:
             self._weights = 0
 
     def _compute(self, state1, state2):
-        weights = wxgen.util.resize(self._weights, state2.shape)
+        weights = self._weights_reshaped(state2.shape[1])
         total = np.mean(weights*abs(state1 - state2), axis=0)
         return total
 
@@ -117,16 +129,17 @@ class Exp(Metric):
     """ Exponential score based on exp(-sum(|factor * diff|))
 
     Arguments:
-       factors (np.array): array of variable-weights
+       weights (np.array): array of variable-weights
     """
     _orientation = 1
 
-    def __init__(self, factors=None):
-        self._factors = factors
-        if factors is None:
-            self._factors = 1
+    def __init__(self, weights=None):
+        super().__init__()
+        self._weights = weights
+        if weights is None:
+            self._weights = 1
 
     def _compute(self, state1, state2):
-        factors = wxgen.util.resize(self._factors, state2.shape)
-        total = np.exp(-np.sum(factors*abs(state1 - state2), axis=0))
+        weights = self._weights_reshaped(state2.shape[1])
+        total = np.exp(-np.sum(weights*abs(state1 - state2), axis=0))
         return total
