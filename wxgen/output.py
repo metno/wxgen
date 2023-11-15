@@ -21,7 +21,7 @@ def get(name):
         if(name == mm[0].lower()):
             m = mm[1]
     if m is None:
-        wxgen.util.error("Cannot find output called '%s'" % name)
+        raise RuntimeError("Cannot find output called '%s'" % name)
     return m
 
 
@@ -56,7 +56,7 @@ class Netcdf(Output):
     """
     def write(self, trajectories, database, start_unixtime=wxgen.util.date_to_unixtime(20170101)):
         if len(trajectories) == 0:
-            wxgen.util.error("No trajectories to write")
+            raise RuntimeError("No trajectories to write")
         file = netCDF4.Dataset(self.filename, 'w')
 
         dim_leadtime = 'lead_time'

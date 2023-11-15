@@ -3,6 +3,9 @@ import wxgen.metric
 import wxgen.util
 import wxgen.climate_model
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Generator(object):
     """
@@ -34,12 +37,12 @@ class Generator(object):
         trajectories = list()
         V = len(self._database.variables)
         if self._database.length < 2:
-            wxgen.util.error("Cannot create simulation with a database with segments shorter than 2 timesteps")
+            raise RuntimeError("Cannot create simulation with a database with segments shorter than 2 timesteps")
         X = self._database.X
         Y = self._database.Y
 
         for n in range(0, N):
-            wxgen.util.debug("Generating trajectory %d/%d" % (n+1, N), color="red")
+            logger.info("Generating trajectory %d/%d", n+1, N)
             trajectory_indices = -1 + np.zeros([T, 2], int)
 
             time = self.start_unixtime
@@ -49,7 +52,7 @@ class Generator(object):
             climate_state_curr = self._database.model.get([self.start_unixtime])[0]
             if initial_state is None:
                 """
-                wxgen.util.debug("Finding random starting state", color="yellow")
+                logger.debug("Finding random starting state", color="yellow")
                 I = np.random.randint(self._database.num)
                 num_vars = self._database._data_matching.shape[1]
                 tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state_curr)
@@ -82,11 +85,11 @@ class Generator(object):
                 if join > 0:
                     end_times = self._database.inittimes[segment_curr.indices[-1, 0]] + segment_curr.indices[-1, 1]*self._database.timestep
                     search_times = [end_times - 5*86400, end_times + 5*86400]
-                wxgen.util.debug("Found random segment", color="yellow")
+                logger.debug("Found random segment")
                 if state_curr is None:
-                    wxgen.util.debug("Target state: None")
+                    logger.debug("Target state: None")
                 else:
-                    wxgen.util.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
+                    logger.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
                 segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
                 timesteps_per_day = int(86400 / self._database.timestep)
 
@@ -129,10 +132,10 @@ class Generator(object):
                 # print Tsegment, start, end, time_of_day//3600
                 # print Iin, Iout
 
-                # wxgen.util.debug("Current state: %s" % state_curr)
-                # wxgen.util.debug("Chosen segment: %s" % segment_curr)
-                # wxgen.util.debug("Trajectory indices: %s" % Iout)
-                # wxgen.util.debug("Segment indices: %s" % Iin)
+                # logger.debug("Current state: %s" % state_curr)
+                # logger.debug("Chosen segment: %s" % segment_curr)
+                # logger.debug("Trajectory indices: %s" % Iout)
+                # logger.debug("Segment indices: %s" % Iin)
 
                 # Get the last state of the segment, and corresponding time
                 state_curr = self._database.extract_matching(segment_curr)[Iin[-1], :]
@@ -143,10 +146,10 @@ class Generator(object):
                     join = (join + 1) % self.prejoin
 
             if len(np.where(trajectory_indices == -1)[0]) > 0:
-                wxgen.util.error("Internal error. The trajectory was not properly filled")
+                raise RuntimeError("Internal error. The trajectory was not properly filled")
             trajectory = wxgen.trajectory.Trajectory(trajectory_indices)
-            if wxgen.util.DEBUG:
-                wxgen.util.debug("Trajectory: %s" % trajectory)
+            if logger.debug:
+                logger.debug("Trajectory: %s", trajectory)
             trajectories.append(trajectory)
 
         return trajectories
@@ -206,8 +209,8 @@ class Generator(object):
             Itime = np.where((np.isnan(weights) == 0) & (self._database.inittimes > time_range[0]) & (self._database.inittimes < time_range[1]))[0]
             if len(Itime) == 0:
                 date_range = [wxgen.util.unixtime_to_date(t) for t in time_range]
-                wxgen.util.warning("Skipping this prejoin: No valid segment that start in date range [%d, %d]" %
-                      (date_range[0], date_range[1]))
+                logger.warning("Skipping this prejoin: No valid segment that start in date range [%d, %d]",
+                      date_range[0], date_range[1])
                 Itime = np.where(np.isnan(weights) == 0)[0]
                 # Without any prejoin segments, revert to the original plan of just finding a random segment
                 do_prejoin = False
@@ -216,7 +219,7 @@ class Generator(object):
         if climate_state is not None and not do_prejoin:
             Iclimate_state = np.where(self._database.climate_states[Itime] == climate_state)[0]
             if len(Iclimate_state) == 0:
-                wxgen.util.error("Cannot find a segment with climate state = %s" % str(climate_state))
+                raise RuntimeError("Cannot find a segment with climate state = %s" % str(climate_state))
             Itime = Itime[Iclimate_state]
 
         weights_v = weights[Itime]
@@ -233,12 +236,13 @@ class Generator(object):
         I = Itime[I_v]
 
         # Do a weighted random choice of the weights
-        wxgen.util.debug("Num candidates:  %d" % len(weights_v))
-        wxgen.util.debug("Date range:  %d %d" % (wxgen.util.unixtime_to_date(np.min(self._database.inittimes[Itime])), wxgen.util.unixtime_to_date(np.max(self._database.inittimes[Itime]))))
-        wxgen.util.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[Istart, :, I]]))
-        wxgen.util.debug("Found date: %s (%i)" % (wxgen.util.unixtime_to_date(self._database.inittimes[I]), I))
-        wxgen.util.debug("Climate: %s" % (climate_state))
-        wxgen.util.debug("Weight (max weight): %s (%s)" % (weights_v[I_v], np.max(weights_v)))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Num candidates:  %d", len(weights_v))
+            logger.debug("Date range:  %d %d", wxgen.util.unixtime_to_date(np.min(self._database.inittimes[Itime])), wxgen.util.unixtime_to_date(np.max(self._database.inittimes[Itime])))
+            logger.debug("Found state:  %s" % ' '.join(["%0.2f" % x for x in self._database._data_matching[Istart, :, I]]))
+            logger.debug("Found date: %s (%i)", wxgen.util.unixtime_to_date(self._database.inittimes[I]), I)
+            logger.debug("Climate: %s", climate_state)
+            logger.debug("Weight (max weight): %s (%s)", weights_v[I_v], np.max(weights_v))
         tr = self._database.get(I)
         tr.indices = tr.indices[Istart:]
         return tr

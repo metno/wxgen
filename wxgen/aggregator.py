@@ -26,7 +26,7 @@ def get(name):
     if a is None and wxgen.util.is_number(name):
         a = Quantile(float(name))
     if a is None:
-        wxgen.util.error("Cannot find aggregator called '%s'" % name)
+        raise RuntimeError("Cannot find aggregator called '%s'" % name)
 
     return a
 
@@ -160,7 +160,7 @@ class Quantile(Aggregator):
     def __init__(self, quantile):
         self.quantile = quantile
         if self.quantile < 0 or self.quantile > 1:
-            wxgen.util.error("Quantile must be between 0 and 1")
+            raise RuntimeError("Quantile must be between 0 and 1")
 
     def __call__(self, array):
         return np.percentile(array, self.quantile*100)

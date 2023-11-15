@@ -10,6 +10,9 @@ import wxgen.aggregator
 import matplotlib.dates
 import scipy.ndimage
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_all():
@@ -26,7 +29,7 @@ def get(name):
         if(name == mm[0].lower()):
             m = mm[1]
     if m is None:
-        wxgen.util.error("Cannot find output called '%s'" % name)
+        raise RuntimeError("Cannot find output called '%s'" % name)
     return m
 
 
@@ -233,7 +236,7 @@ class Timeseries(Plot):
             if use_single_gridpoint:
                 # Find nearest neighbour
                 Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
-                wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+                logger.debug("Using gridpoint %d,%d" % (Xref, Yref))
             for m in range(sim.num):
                 traj = sim.get(m)
                 if not use_single_gridpoint:
@@ -287,7 +290,7 @@ class Histogram(Plot):
                     values = sim.extract(traj)[:, Ivar]
                     values = self.transform(values)
                     if len(values) < 365:
-                        wxgen.util.error("Simulations must be longer than 365 days long")
+                        raise RuntimeError("Simulations must be longer than 365 days long")
                     values = self.create_yearly_series(values)
                     curr_agg = np.zeros(values.shape[1])
                     for k in range(values.shape[1]):
@@ -324,7 +327,7 @@ class Variance(Plot):
         else:
             scales = np.array(self.thresholds)
         if (scales % 2 == 0).any():
-            wxgen.util.error("All thresholds must be odd numbered")
+            raise RuntimeError("All thresholds must be odd numbered")
 
         if self.vars is None:
             Ivars = range(len(sims[0].variables))
@@ -401,7 +404,7 @@ class Variance(Plot):
         if array.shape[0] % timesteps_per_day != 0:
             It = range((array.shape[0] // timesteps_per_day) * timesteps_per_day)
             N = array.shape[0] - len(It)
-            wxgen.util.warning("Truncating the last %d timesteps to compute variance" % N)
+            logger.warninging("Truncating the last %d timesteps to compute variance" % N)
         return np.mean(np.reshape(array[It, ...], shape), axis=1)
 
 
@@ -433,7 +436,7 @@ class Distribution(Plot):
                 if use_single_gridpoint:
                     # Find nearest neighbour
                     Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
-                    wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+                    logger.debug("Using gridpoint %d,%d" % (Xref, Yref))
                 for m in range(sim.num):
                     traj = sim.get(m)
                     if use_single_gridpoint:
@@ -657,7 +660,7 @@ class Jump(Plot):
                 if use_single_gridpoint:
                     # Find nearest neighbour
                     Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
-                    wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+                    logger.debug("Using gridpoint %d,%d" % (Xref, Yref))
 
                 if self.timemod is None:
                     L = sim.length
@@ -716,7 +719,7 @@ class TimeStat(Plot):
             Ivars = self.vars
 
         if self.timemod is not None and self.timescale > 1:
-            wxgen.util.warning("-tm and -ts probably does not make sense for -m timestat")
+            logger.warninging("-tm and -ts probably does not make sense for -m timestat")
 
         X = 1
         Y = len(Ivars)
@@ -732,7 +735,7 @@ class TimeStat(Plot):
                 if use_single_gridpoint:
                     # Find nearest neighbour
                     Xref, Yref = wxgen.util.get_i_j(sim.lats, sim.lons, self.lat, self.lon)
-                    wxgen.util.debug("Using gridpoint %d,%d" % (Xref, Yref))
+                    logger.debug("Using gridpoint %d,%d" % (Xref, Yref))
 
                 if self.timemod is None:
                     L = sim.length
@@ -825,7 +828,7 @@ class SortStat(Plot):
                 else:
                     L = self.timemod
                 if L > 100:
-                    wxgen.util.error("Too many lines. Consider -tm.")
+                    raise RuntimeError("Too many lines. Consider -tm.")
                 values = [np.zeros([0])]*L
                 for m in range(sim.num):
                     traj = sim.get(m)
@@ -857,7 +860,7 @@ class CovarMap(Plot):
 
     def plot(self, sims):
         if self.lat is None or self.lon is None:
-            wxgen.util.error("-lat and/or -lon not specified")
+            raise RuntimeError("-lat and/or -lon not specified")
 
         if self.vars is None:
             Ivars = range(len(sims[0].variables))
@@ -913,7 +916,7 @@ class CovarMap(Plot):
                     ref = np.swapaxes(np.tile(val[:, Xref, Yref], [val.shape[2], val.shape[1], 1]), 0, 2)
                     scale = self.timescale
                     if scale % 2 != 1:
-                        wxgen.util.error("Time scale must be an odd number")
+                        raise RuntimeError("Time scale must be an odd number")
                     if scale > 1:
                         sarray = 1.0/scale*np.ones(scale)
                         for i in range(0, ref.shape[1]):
