@@ -52,7 +52,6 @@ class Generator(object):
             time_of_day = self.start_unixtime % 86400
             start_hour = self.start_unixtime // 3600 % 24
 
-            climate_state_curr = self._database.model.get([self.start_unixtime])[0]
             if initial_state is None:
                 """
                 logger.debug("Finding random starting state", color="yellow")
@@ -81,7 +80,6 @@ class Generator(object):
                 while start < T-1:
                     inc = start - pbar.n
                     pbar.update(inc)
-                    climate_state_curr = self._database.model.get([time])[0]
 
                     """
                     Prejoin multiple segments that are nearby in time. This is done by passing
@@ -94,9 +92,11 @@ class Generator(object):
                     logger.debug("Found random segment")
                     if state_curr is None:
                         logger.debug("Target state: None")
+                        state_curr_unix_time = None
                     else:
                         logger.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
-                    segment_curr = self.get_random(state_curr, time_of_day, self._metric, climate_state_curr, search_times)
+                        state_curr_unix_time = self._database.inittimes[segment_curr.indices[-1, 0]]
+                    segment_curr = self.get_random(state_curr, time_of_day, self._metric, state_curr_unix_time, search_times)
                     timesteps_per_day = int(86400 / self._database.timestep)
 
                     """
@@ -160,10 +160,10 @@ class Generator(object):
 
             return trajectories
 
-    def get_random(self, target_state: np.ndarray, 
+    def get_random(self, target_state: Optional[np.ndarray], 
                    time_of_day: int, 
                    metric: wxgen.metric.Metric, 
-                   climate_state: Optional[np.ndarray] = None, 
+                   target_state_unix_time: Optional[int], 
                    time_range: Optional[list] = None) -> Trajectory:
         """
         Returns a pseudo-random segment from the database chosen based on weights computed by a metric
@@ -173,7 +173,7 @@ class Generator(object):
               for each variable in the database. Or if None, then pick a random start segment.
            time_of_day:
            metric: Metric to use when finding matches
-           climate_state: External state representing what state the climate is in
+           target_state_unix_time: Time stamp of the target state.
            time_range: Start and end unixtimes for the search. If None, then do not restrict.
 
         Returns:
@@ -194,8 +194,10 @@ class Generator(object):
 
         # Find valid segments
         idx_segments, do_prejoin = self._find_valid_segments(weights, time_range)
-        idx_segments = self._filter_on_climate_state(climate_state_to_match=climate_state, do_prejoin=do_prejoin,
-                                             idx_segments=idx_segments)
+        if (target_state is not None) and (not do_prejoin):
+            assert target_state_unix_time is not None, f"{target_state_unix_time=} has to be provided"
+            idx_segments = self._filter_on_climate_state(target_state_unix_time=target_state_unix_time, 
+                                                         idx_segments=idx_segments)
 
         weights = self._flip_weights_for_negative_metric(weights, metric)
         tr = self._get_trajectory(weights=weights, idx_segments=idx_segments, idx0=idx0)
@@ -277,26 +279,24 @@ class Generator(object):
             weights = metric.compute(target_state, self._database._data_matching[idx0, :, :])
         return weights
     
-    def _filter_on_climate_state(self, climate_state_to_match: Optional[np.ndarray], do_prejoin: bool,
+    def _filter_on_climate_state(self, target_state_unix_time: int,
                                 idx_segments: SegmentIndices) -> SegmentIndices:
         """Filter on 'climate state' (if applies)
         Args:
-            climate_state_match: 'Climate state' that should be matched
-            do_prejoin: whether to prejoin segments
-            idx_segments: segment member indices (before filter)
+            target_state_unix_time: Unix time stamp of the 'Climate state' that should be matched
+            idx_segments: candidates segment member indices (before filter)
         
         Returns:
-            idx_segments: filtered segment member indices
+            Filtered segment member indices
 
         """
-        use_climate_state = climate_state_to_match is not None
-        if use_climate_state and not do_prejoin:
-            logger.debug("Filter on climate state: %s", climate_state_to_match)
-            Iclimate_state = np.where(self._database.climate_states[idx_segments] == climate_state_to_match)[0]
-            if len(Iclimate_state) == 0:
-                raise RuntimeError("Cannot find a segment with climate state = %s" % str(climate_state_to_match))
-            idx_segments = idx_segments[Iclimate_state]
-        return idx_segments
+        logger.debug("Filter on climate states")
+        time_stamps_candidates = self._database.inittimes[idx_segments]
+        idx_filtered = self._database.model.match(target_state_unix_time, time_stamps_candidates)
+        if len(idx_filtered) == 0:
+            raise RuntimeError(f"Cannot find a segment with matching climate states for {target_state_unix_time}")
+        idx_segments = idx_segments[idx_filtered]
+        return idx_filtered
     
     def _flip_weights_for_negative_metric(self, weights: np.ndarray, metric: wxgen.metric.Metric) -> np.ndarray:
         """Flip weights if the metric is negative oriented"""

@@ -6,6 +6,7 @@ import sys
 import copy
 import os
 import psutil
+import pandas as pd
 import pyproj
 
 
@@ -235,16 +236,17 @@ def get_date(date, diff):
     return int(date2.strftime('%Y%m%d'))
 
 
-def day_of_year(unixtime):
+def day_of_year(unixtimes: list[int]) -> np.ndarray[int]:
     """
     Arguments:
-       unixtime (int): Number of seconds since 1970-01-01
+       unixtimes: Number of seconds since 1970-01-01
 
     Returns:
        int: Day of year
     """
-    day = int(datetime.datetime.fromtimestamp(unixtime).strftime('%j'))
-    return day
+    # day = int(datetime.datetime.fromtimestamp(unixtime).strftime('%j'))
+    times_nump = np.array(unixtimes, dtype="datetime64[s]")
+    return pd.DatetimeIndex(times_nump).day_of_year.values
 
 
 def get_i_j(lats, lons, lat, lon):
