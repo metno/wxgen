@@ -39,7 +39,6 @@ class Database:
        Y (int): Number of Y-axis points
        inittimes (np.array): array with initialization time corresponding to each member
        leadtimes (np.array): array with leadtimes in seconds
-       climate_states (np.array): array of climate states (one for each ensemble member)
        name: Name of this database (e.g. filename)
 
     Subclass requirements (these must be filled out):
@@ -69,7 +68,6 @@ class Database:
         # Cache variables to store data returned by @property functions
         self._data_cache = dict()
         self._data_agg_cache = None
-        self._climate_states_cache = None
 
         self._label = None
         self.deacc = None
@@ -102,8 +100,6 @@ class Database:
         print("  Length of segments: %d" % self.length)
         print("  Number of segments: %d" % self.num)
         print("  Number of variables: %d" % len(self.variables))
-        unique_states = np.sort(np.unique(self.climate_states))
-        print("  Climate states: " + ', '.join([str(s) for s in unique_states]))
 
     def load(self, variable):
         """
@@ -338,12 +334,6 @@ class Database:
                 self._data_agg_cache[:, v, :] = np.mean(np.mean(data, axis=2), axis=1)
 
         return self._data_agg_cache
-
-    @property
-    def climate_states(self):
-        if self._climate_states_cache is None:
-            self._climate_states_cache = self.model.get(self.inittimes)
-        return self._climate_states_cache
 
     @property
     def V(self):

@@ -251,7 +251,9 @@ def get_parsers():
     sp["sim"].add_argument('-w', type=wxgen.util.parse_numbers, help="Weights for each variable when joining (comma-separated)", dest="weights")
     sp["sim"].add_argument('-i', help="Initial state (aggregated values for each variable). If unspecified, choose random starting states.", dest="initial")
     sp["sim"].add_argument('-j', type=int, metavar="NUM", help="How many times should segments be prejoined?", dest="prejoin")
+    sp["sim"].add_argument('-climate_model', type=str, help="Climate Model to use", dest="climate_model")
     sp["sim"].add_argument('-b', type=int, metavar="DAYS", help="Length of database bins", dest="bin_width")
+    sp["sim"].add_argument('-time_window', type=int, metavar="DAYS", help="Length of time window", dest="time_window")
     sp["sim"].add_argument('-p', default="top5", metavar="POLICY", help="Randomization policy. One of 'random', 'top<N>'", dest="policy")
     sp["sim"].add_argument('-g', help="Randomly truncate the first segment so that potential jumps are staggered", dest="stagger", action="store_true")
     sp["sim"].add_argument('-id', type=int, default=20170101, help="Start date of simulation (YYYYMMDD)", dest="init_date")
@@ -407,13 +409,12 @@ def get_metric(args, db: wxgen.database.Database):
 
 
 def get_climate_model(args):
-    model = None
-    try:
-        # args might not have bin_width
-        if args.bin_width is not None:
-            model = wxgen.climate_model.Bin(args.bin_width)
-    except:
-        pass
+    if args.climate_model == "CloseDayOfYear":
+        model = wxgen.climate_model.CloseDayOfYear(args.time_window)
+    elif args.climate_model == "Bin":
+        model = wxgen.climate_model.Bin(args.bin_width)
+    else:
+        raise ValueError(f"{args.climate_model=} not implemented")
     return model
 
 
