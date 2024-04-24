@@ -197,6 +197,9 @@ class Database:
 
         indices = -1*np.ones([len(times), 2], int)
         self.logger.debug("Start: %d End: %d", start, end)
+        lt_previous = 0
+        i_fc_ens_member = 0 # first time, use index 0
+
         for i in range(len(times)):
             time = times[i]
 
@@ -216,8 +219,19 @@ class Database:
             Ibest = np.argmin(np.abs(curr_times - time))
             inittime = self.inittimes[I][Ibest]
             lt = int((time - inittime)/self.timestep)
+
+            # # always pick fc ensemble member 0
+            # i_fc_ens_member = 0
+            # i_fc_ens_member = 1
+
+            # pick random ensemble member for each new day (more precisely, each new forecast that is used)
+            if lt_previous > lt: # change to new forecast
+                # generate new index - TODO: hardcode using 11 ensemble members
+                i_fc_ens_member = np.random.choice(np.arange(11))
+
             if lt < self.length:
-                indices[i, 0] = np.where(self.inittimes == inittime)[0][0]
+                # decide on which forecast ensemble member to use
+                indices[i, 0] = np.where(self.inittimes == inittime)[0][i_fc_ens_member]
                 indices[i, 1] = lt
             else:
                 assert(i > 0)
@@ -227,6 +241,7 @@ class Database:
                 self.logger.warning("Did not find an index for %d = %dT%02dZ. Using the previous day's state.", time, wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_hour(time))
                 indices[i, 0] = indices[i-dI, 0]
                 indices[i, 1] = indices[i-dI, 1]
+            lt_previous = lt
 
         if start_time_of_day is not None:
             """ Crop the timeseries such that the starting and ending hour of the day is as desired """
