@@ -2,13 +2,11 @@ from __future__ import division
 import numpy as np
 import calendar
 import datetime
-import sys
 import copy
 import os
 import psutil
-import pandas as pd
 import pyproj
-
+import shyft.time_series as sts
 
 DEBUG = False
 COLORS = {"red": 31, "yellow": 33, "green": 32}
@@ -243,10 +241,12 @@ def day_of_year(unixtimes: list[int]) -> np.ndarray[int]:
 
     Returns:
        int: Day of year
+
+    Note: Funciton should be usable for large times (outside ns range), so that one can create e.g. 1000years of 
+        synthetic data
     """
-    # day = int(datetime.datetime.fromtimestamp(unixtime).strftime('%j'))
-    times_nump = np.array(unixtimes, dtype="datetime64[s]")
-    return pd.DatetimeIndex(times_nump).day_of_year.values
+    utc = sts.Calendar("UTC")
+    return np.array([utc.day_of_year(sts.time(t)) for t in unixtimes])
 
 
 def get_i_j(lats, lons, lat, lon):

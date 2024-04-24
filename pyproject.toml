@@ -30,6 +30,7 @@ classifiers=[
     ]
 dependencies = [
     "requests",
+    "shyft.time_series",
     'importlib-metadata; python_version<"3.8"',
 ]
 dynamic = ["version"] # TODO: check where to read from

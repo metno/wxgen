@@ -99,7 +99,6 @@ class CloseDayOfYear(ClimateModel):
         self._candidates_cache = None
         
     def match(self, target: int, candidates: np.ndarray[int]) -> np.ndarray[int]:
-        t0 = sts.utctime_now()
         target_doy = wxgen.util.day_of_year([target])
         idx_range_selected = np.take(self._year_index, [target_doy - self.window_days, target_doy + self.window_days], mode="wrap")
 

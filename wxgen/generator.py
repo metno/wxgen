@@ -92,10 +92,9 @@ class Generator(object):
                     logger.debug("Found random segment")
                     if state_curr is None:
                         logger.debug("Target state: None")
-                        state_curr_unix_time = None
                     else:
                         logger.debug("Target state: %s" % ' '.join(["%0.2f" % x for x in state_curr]))
-                        state_curr_unix_time = self._database.inittimes[segment_curr.indices[-1, 0]]
+                    state_curr_unix_time = time
                     segment_curr = self.get_random(state_curr, time_of_day, self._metric, state_curr_unix_time, search_times)
                     timesteps_per_day = int(86400 / self._database.timestep)
 
@@ -194,7 +193,8 @@ class Generator(object):
 
         # Find valid segments
         idx_segments, do_prejoin = self._find_valid_segments(weights, time_range)
-        if (target_state is not None) and (not do_prejoin):
+        # TODO: why shouldn't we do this when prejoining? 
+        if (not do_prejoin):
             assert target_state_unix_time is not None, f"{target_state_unix_time=} has to be provided"
             idx_segments = self._filter_on_climate_state(target_state_unix_time=target_state_unix_time, 
                                                          idx_segments=idx_segments)

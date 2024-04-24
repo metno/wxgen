@@ -409,7 +409,9 @@ def get_metric(args, db: wxgen.database.Database):
 
 
 def get_climate_model(args):
-    if args.climate_model == "CloseDayOfYear":
+    if args.command == "truth":
+        model = None
+    elif args.climate_model == "CloseDayOfYear":
         model = wxgen.climate_model.CloseDayOfYear(args.time_window)
     elif args.climate_model == "Bin":
         model = wxgen.climate_model.Bin(args.bin_width)
