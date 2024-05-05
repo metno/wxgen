@@ -30,7 +30,7 @@ Features
     :width: 400
     :align: center
 
-Installating on Ubuntu
+Installing on Ubuntu
 ----------------------
 
 **Prerequisites**
