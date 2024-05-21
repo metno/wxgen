@@ -140,10 +140,11 @@ def run(argv):
                     trajectory = db.get_truth(s, e, start_time_of_day)
                     trajectories += [trajectory]
                 else:
-                    logger.debug("Skipping member %d: Goes outside date range" % n, "yellow")
+                    logger.debug("Skipping member %d: Goes outside date range" % n)
         if len(trajectories) == 0:
             earliest_start_date = wxgen.util.date_to_unixtime(np.min(dates[Ipossible_start_days]))
             max_length = np.floor((wxgen.util.date_to_unixtime(end_date) - earliest_start_date - 1)/86400.0)
+            logger.debug(f"{end_date=}, {wxgen.util.unixtime_to_date(earliest_start_date)=}")
             raise RuntimeError("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
         start_unixtime = wxgen.util.date_to_unixtime(init_date) + args.init_hour * 3600

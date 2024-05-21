@@ -233,7 +233,7 @@ class Netcdf(Output):
                 else:
                     vars[var.name][0, :, m, :, :] = values[:, :, :, :]
             if self.acc is not None and var.name in self.acc:
-                vars[var.name][:, 1:, ...] = np.cumsum(vars[var.name][:, 1:, ...], axis=1)
+                vars[var.name][:, 1:, ...] = np.cumsum(vars[var.name][:, :-1, ...], axis=1)
                 vars[var.name][:, 0, ...] = 0
 
         if self.write_indices:
