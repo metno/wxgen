@@ -161,10 +161,6 @@ class Database:
         assert(np.sum(np.isnan(indices)) == 0)
         return Trajectory(indices)
 
-    @property
-    def remove_first_timestep(self):
-        return self.deacc is not None
-
     def get_truth(self, start_date=None, end_date=None, start_time_of_day=None):
         """
         Concatenate the initialization state of all trajectories
@@ -185,27 +181,15 @@ class Database:
             RuntimeError("A start time of %d h is not possible when the timestep is %d h" % (start_time_of_day // 3600, self.timestep // 3600))
 
         """ Compute the unixtimes to find truth for """
-        include_extra_time_step_at_end = True
         start = np.min(self.inittimes) if start_date is None else wxgen.util.date_to_unixtime(start_date)
         end = np.max(self.inittimes) if end_date is None else wxgen.util.date_to_unixtime(end_date)
-        if include_extra_time_step_at_end:
-            times = np.arange(start, end + self.timestep, self.timestep)
-        else:
-            times = np.arange(start, end, self.timestep)
+        times = np.arange(start, end + self.timestep, self.timestep)
 
         indices = -1*np.ones([len(times), 2], int)
         self.logger.debug("Start: %d End: %d", start, end)
         for i in range(len(times)):
             time = times[i]
-
-            """
-            When we have accumulatd variables, we allow the first timestep to be used at the
-            beginning of the scenario. However, later in the scenario we cannot use it.
-            """
-            if i == 0 or not self.remove_first_timestep:
-                I = np.where(time >= self.inittimes)[0]
-            else:
-                I = np.where(time > self.inittimes)[0]
+            I = np.where(time >= self.inittimes)[0]
             if len(I) == 0:
                 RuntimeError("There are no inittimes available before %d. The earliest is %d." % (wxgen.util.unixtime_to_date(time), wxgen.util.unixtime_to_date(np.min(self.inittimes))))
 
@@ -227,16 +211,13 @@ class Database:
                 indices[i, 1] = indices[i-dI, 1]
 
         if start_time_of_day is not None:
-            """ Crop the timeseries such that the starting and ending hour of the day is as desired """
+            # Crop the timeseries such that the starting and ending hour of the day is as desired
             Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][0]
             indices = indices[Iindices:, :]
 
-            """ Crop away at the end """
+            # Crop away at the end
             Iindices = np.where(self.leadtimes[indices[:, 1]] % 86400 == start_time_of_day)[0][-1]
-            if include_extra_time_step_at_end:
-                indices = indices[:(Iindices+1), :]
-            else:
-                indices = indices[:Iindices, :]
+            indices = indices[:(Iindices+1), :]
 
             # Crop last few hours
             # TODO: Deal with the fact that the cropping makes it so that the trajectory is too short
