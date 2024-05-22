@@ -155,11 +155,20 @@ class Database:
             i: segment index
             i_lead_time_start: first index of the lead_times to consider
         """
-        indices = np.zeros([self.length-i_lead_time_start, 2], int)
+        length = self.length - self.ignore_last_n
+        indices = np.zeros([length-i_lead_time_start, 2], int)
         indices[:, 0] = i
-        indices[:, 1] = np.arange(i_lead_time_start, self.length)
+        indices[:, 1] = np.arange(i_lead_time_start, length)
         assert(np.sum(np.isnan(indices)) == 0)
         return Trajectory(indices)
+    
+    @property
+    def ignore_last_n(self) -> int:
+        """Ignore last lead-time if there are deaccumulated values to consider."""
+        if self.deacc is None:
+            return 0
+        else:
+            return 1
 
     def get_truth(self, start_date=None, end_date=None, start_time_of_day=None):
         """

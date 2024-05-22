@@ -59,7 +59,7 @@ def run(argv):
         if args.join_config is None and args.weights is not None and len(args.weights) != V:
             raise RuntimeError("Number of weights (-w) must match number of variables (-v)")
 
-        start_unixtime = wxgen.util.date_to_unixtime(args.init_date) + args.init_hour * 3600
+        start_unixtime = wxgen.util.date_to_unixtime(args.init_date)
 
         # Generate trajectories
         metric = get_metric(args, db)
@@ -68,7 +68,6 @@ def run(argv):
         generator.policy = args.policy
         generator.stagger = args.stagger
         generator.start_unixtime = start_unixtime
-        generator.start_hour = args.init_hour
 
         # Allowable dates from database
         generator.db_start_date = args.start_date
@@ -88,7 +87,7 @@ def run(argv):
 
     elif args.command == "truth":
         db = get_db(args)
-        start_time_of_day = args.init_hour * 3600
+        start_time_of_day = 0
 
         # Determine allowable dates from database
         start_date = args.start_date
@@ -147,7 +146,7 @@ def run(argv):
             logger.debug(f"{end_date=}, {wxgen.util.unixtime_to_date(earliest_start_date)=}")
             raise RuntimeError("Could not create any trajectories that are long enough (max length is %d)" % max_length)
 
-        start_unixtime = wxgen.util.date_to_unixtime(init_date) + args.init_hour * 3600
+        start_unixtime = wxgen.util.date_to_unixtime(init_date) 
 
         output = wxgen.output.Netcdf(args.filename)
         output.lat = args.lat
@@ -320,7 +319,6 @@ def get_parsers():
         sp[driver].add_argument('-s', type=parse_spatial_decomposition, default=0, metavar="LEVEL", help="Spatial decomposition: =0 Aggregate all points; =1,=2,=3... decompose using wavelets; =all Use all points. Ignored if -jc specified.", dest="spatial_decomposition")
         sp[driver].add_argument('-jc', metavar="CONFIG", help="Configuration file for joining", dest="join_config")
         sp[driver].add_argument('--write-indices', help="Write segment indicies into output. Used for debugging and analysis.", dest="write_indices", action="store_true")
-        sp[driver].add_argument('-ih', type=int, default=0, help="Start hour of simulation (HH)", dest="init_hour")
         sp[driver].add_argument('--acc', type=wxgen.util.parse_variables, help="Accumulate these variables in the output", dest="acc")
 
     for driver in sp.keys():

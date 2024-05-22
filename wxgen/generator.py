@@ -50,17 +50,8 @@ class Generator(object):
 
             time = self.start_unixtime
             time_of_day = self.start_unixtime % 86400
-            start_hour = self.start_unixtime // 3600 % 24
 
             if initial_state is None:
-                """
-                logger.debug("Finding random starting state", color="yellow")
-                I = np.random.randint(self._database.num)
-                num_vars = self._database._data_matching.shape[1]
-                tr = self.get_random(np.zeros(num_vars), time_of_day, wxgen.metric.Exp(np.zeros(num_vars)), climate_state_curr)
-                idx0 = np.where(self._database.leadtimes % 86400 == start_hour * 3600)[0][0]
-                state_curr = self._database.extract_matching(tr)[idx0, :]
-                """
                 state_curr = None
             else:
                 state_curr = initial_state
@@ -119,20 +110,18 @@ class Generator(object):
 
                     Also account for the fact that the last timestep in the segment must be at the same time
                     of day as the first timestep in the segment so that matching occurrs with the same time
-                    of day.
-
-                    Finally, don't use the first timestep of the new segment, because it might be missing,
-                    which is the case for precipitation and other accumulated variables.
+                    of day (and overwrite the necessary time-step in question).
                     """
                     Tsegment = len(indices_curr)
                     end = start + Tsegment  # Ending index
                     end = min(end, T)  # If this is the last segment, then make sure it doesn't go past the length of the desired trajectory
                     if start == 0:
+                        end = end-1
                         Iout = range(start, end)  # Index into trajectory
                         Iin = range(0, end - start)  # Index into segment
                     else:
-                        Iout = range(start+1, end)  # Index into trajectory
-                        Iin = range(1, end - start)  # Index into segment
+                        Iout = range(start, end)  # Index into trajectory
+                        Iin = range(0, end - start)  # Index into segment
                     trajectory_indices[Iout, :] = indices_curr[Iin, :]
                     # print Tsegment, start, end, time_of_day//3600
                     # print Iin, Iout
@@ -170,7 +159,7 @@ class Generator(object):
         Arguments:
            target_state: Try to match this state when finding the trajectory. One value
               for each variable in the database. Or if None, then pick a random start segment.
-           time_of_day:
+           time_of_day: Time of day to start simulation
            metric: Metric to use when finding matches
            target_state_unix_time: Time stamp of the target state.
            time_range: Start and end unixtimes for the search. If None, then do not restrict.
@@ -182,12 +171,7 @@ class Generator(object):
         assert(self._database._data_matching.shape[2] == self._database.num)
 
         # TODO: move idx0 into cutting the weights / segment indices?
-        if self._database.remove_first_timestep:
-            idx0 = np.where((self._database.leadtimes % 86400 == time_of_day) &
-                    (self._database.leadtimes != self._database.leadtimes[0]))[0][0]
-        else:
-            idx0 = np.where(self._database.leadtimes % 86400 == time_of_day)[0][0]
-
+        idx0 = np.searchsorted(self._database.leadtimes, time_of_day)
 
         weights = self._weights_per_state(target_state=target_state, idx0=idx0, metric=metric)
 
