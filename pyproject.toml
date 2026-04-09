@@ -37,7 +37,7 @@ dynamic = ["version"] # TODO: check where to read from
 
 [project.optional-dependencies]
 test = ["scipy", "numpy>=1.7", "matplotlib", "PyWavelets", "pyproj", "h5netcdf"]
-climatoloy = ["astropy==1.3.2"] # TODO: why version fixed 
+climatoloy = ["astropy==5.3.3"] # TODO: why version fixed 
 cdi = ["coveralls", "pack ==1.1, ==1.3"]
 
 [tool.setuptools_scm]
